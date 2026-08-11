@@ -1,0 +1,148 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <!--
+        Spring Boot 3.5.x chu khong phai 4.x.
+        Ly do: Spring Boot 4 co nhieu thay doi pha vo so voi 3.x, trong khi gan nhu
+        toan bo tai lieu, giao trinh va cau tra loi tren mang deu viet cho ban 3.x.
+        Do an nay uu tien tra cuu duoc khi bi bi, khong uu tien dung ban moi nhat.
+    -->
+    <parent>
+        <groupId>org.springframework.boot</groupId>
+        <artifactId>spring-boot-starter-parent</artifactId>
+        <version>3.5.16</version>
+        <relativePath/> <!-- lay parent tu kho Maven, khong tim trong thu muc cha -->
+    </parent>
+
+    <groupId>com.minhphu</groupId>
+    <artifactId>mproute</artifactId>
+    <version>0.0.1-SNAPSHOT</version>
+    <name>MPRoute</name>
+    <description>He thong quan ly va toi uu tuyen duong giao hang - Cong ty Minh Phu</description>
+
+    <properties>
+        <java.version>21</java.version>
+    </properties>
+
+    <dependencies>
+
+        <!-- ============ Cac starter cua Spring Boot ============ -->
+
+        <!-- Web MVC: nhan request, tra ve view. Da bao gom Tomcat nhung san -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-web</artifactId>
+        </dependency>
+
+        <!-- JPA + Hibernate: anh xa lop Java sang bang MySQL, tu sinh bang -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-data-jpa</artifactId>
+        </dependency>
+
+        <!-- Bao mat: dang nhap, phan quyen ba vai tro, ma hoa mat khau BCrypt -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-security</artifactId>
+        </dependency>
+
+        <!-- Thymeleaf: template engine sinh HTML phia may chu -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-thymeleaf</artifactId>
+        </dependency>
+
+        <!-- Validation: kiem tra du lieu nhap bang @NotNull, @Min, @Pattern... -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-validation</artifactId>
+        </dependency>
+
+        <!-- Mail: gui email ETA cho khach hang sau khi chot tuyen (BR04-11) -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-mail</artifactId>
+        </dependency>
+
+        <!-- ============ Thu vien bo tro ============ -->
+
+        <!--
+            Cho phep dung the sec:authorize trong file .html de an/hien menu
+            theo vai tro. Luu y: an nut tren giao dien la chua du, van phai
+            chan quyen o phia may chu bang @PreAuthorize (CBR-15).
+        -->
+        <dependency>
+            <groupId>org.thymeleaf.extras</groupId>
+            <artifactId>thymeleaf-extras-springsecurity6</artifactId>
+        </dependency>
+
+        <!--
+            Lombok: sinh getter/setter/constructor/toString luc bien dich.
+            optional=true vi day la thu vien chi can luc bien dich, khong can
+            dong goi vao file jar cuoi cung.
+        -->
+        <dependency>
+            <groupId>org.projectlombok</groupId>
+            <artifactId>lombok</artifactId>
+            <optional>true</optional>
+        </dependency>
+
+        <!-- Trinh dieu khien ket noi MySQL 8. runtime vi chi can luc chay -->
+        <dependency>
+            <groupId>com.mysql</groupId>
+            <artifactId>mysql-connector-j</artifactId>
+            <scope>runtime</scope>
+        </dependency>
+
+        <!-- ============ Kiem thu ============ -->
+
+        <!-- Da bao gom JUnit 5, AssertJ, Mockito -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-test</artifactId>
+            <scope>test</scope>
+        </dependency>
+
+    </dependencies>
+
+    <build>
+        <plugins>
+
+            <!--
+                Tu JDK 21 tro di, javac khong con tu dong chay annotation processor
+                tim thay tren classpath nua. Khong khai bao ro doan nay thi Lombok
+                se im lang khong sinh getter/setter, va code bao "cannot find symbol".
+            -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-compiler-plugin</artifactId>
+                <configuration>
+                    <annotationProcessorPaths>
+                        <path>
+                            <groupId>org.projectlombok</groupId>
+                            <artifactId>lombok</artifactId>
+                            <version>${lombok.version}</version>
+                        </path>
+                    </annotationProcessorPaths>
+                </configuration>
+            </plugin>
+
+            <plugin>
+                <groupId>org.springframework.boot</groupId>
+                <artifactId>spring-boot-maven-plugin</artifactId>
+                <configuration>
+                    <!-- Khong dong goi Lombok vao jar, vi no chi chay luc bien dich -->
+                    <excludes>
+                        <exclude>
+                            <groupId>org.projectlombok</groupId>
+                            <artifactId>lombok</artifactId>
+                        </exclude>
+                    </excludes>
+                </configuration>
+            </plugin>
+        </plugins>
+    </build>
+
+</project>
