@@ -3,7 +3,7 @@
 > Trạng thái hiện tại của đồ án. **Giữ dưới 60 dòng.**
 > Cập nhật sau mỗi mốc hoàn thành.
 
-**Cập nhật lần cuối:** 11/08/2026
+**Cập nhật lần cuối:** 12/08/2026 · Kho: `github.com/anh05022005/MPRoute` (riêng tư), nhánh `main`
 
 ---
 
@@ -99,5 +99,9 @@ Khuôn đã chạy qua hai lần (`XxxForm` → `XxxService` → `XxxController`
   `--data-raw`. Git Bash chuyển tham số sang bảng mã ANSI khi gọi `curl.exe`, làm hỏng dấu tiếng Việt
   ngay từ máy khách — dễ tưởng nhầm là ứng dụng sai encoding. Kiểm bằng `HEX(cột)` trong MySQL
 - Sau khi đăng nhập địa chỉ có đuôi `?continue` — hành vi mặc định của Spring Security 6, vô hại
-- `application.properties` đang chứa mật khẩu MySQL `gbao`. **Đẩy lên GitHub công khai là lộ** — xem mục Git bên dưới
-- Repo còn ở nhánh `master`, chưa đổi thành `main`, chưa có remote
+- `application.properties` chứa mật khẩu MySQL `gbao`. Hiện không sao vì kho GitHub để **riêng tư**.
+  **Nếu đổi kho sang công khai thì phải xóa dòng đó khỏi lịch sử trước** — nó nằm trong commit đầu `00d5613`,
+  chuyển sang riêng tư rồi công khai lại không tự xóa được
+- Máy này lưu sẵn thông tin đăng nhập GitHub của **hai tài khoản**. Remote cố ý ghi là
+  `https://anh05022005@github.com/...` — có `anh05022005@` ở giữa thì Git mới lấy đúng tài khoản.
+  Xóa phần đó đi là đẩy bằng tài khoản kia, báo lỗi 403
