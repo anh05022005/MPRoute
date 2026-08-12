@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<!--
+    Bo cuc dung chung cho moi trang (CN-00-06).
+
+    Cach dung o mot trang con:
+        <html th:replace="~{layout :: main('Ten trang', ~{::content})}">
+        ...
+        <div th:fragment="content"> noi dung rieng cua trang </div>
+
+    Khong dung thu vien layout-dialect, chi dung co san cua Thymeleaf 3:
+    truyen mot manh (fragment) vao lam tham so.
+-->
+<html lang="vi"
+      xmlns:th="http://www.thymeleaf.org"
+      xmlns:sec="http://www.thymeleaf.org/extras/spring-security"
+      th:fragment="main(pageTitle, content)">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title th:text="${pageTitle} + ' — MPRoute'">MPRoute</title>
+    <link rel="stylesheet" th:href="@{/css/bootstrap.min.css}">
+    <link rel="stylesheet" th:href="@{/css/style.css}">
+</head>
+<body>
+
+<!-- ============ Thanh tieu de ============ -->
+<header class="thanh-tieu-de d-flex justify-content-between align-items-center">
+    <span class="ten-he-thong">Minh Phú — Quản lý giao hàng</span>
+
+    <div class="d-flex align-items-center gap-3" sec:authorize="isAuthenticated()">
+        <span>
+            <span th:text="${#authentication.principal.fullName}">Người dùng</span>
+            <span class="text-white-50"
+                  th:text="'(' + ${#authentication.principal.role.displayName} + ')'">(Vai trò)</span>
+        </span>
+        <a th:href="@{/change-password}">Đổi mật khẩu</a>
+        <!-- Dang xuat phai la form POST: neu de link GET thi ke khac chi can du
+             nguoi dung bam vao mot duong dan la da dang xuat ho (tan cong CSRF) -->
+        <form th:action="@{/logout}" method="post" class="m-0">
+            <button type="submit" class="btn btn-sm btn-outline-light">Đăng xuất</button>
+        </form>
+    </div>
+</header>
+
+<!-- ============ Thanh menu, hien theo vai tro ============ -->
+<!-- Tai xe khong co menu, chi co mot man hinh duy nhat (docs/05-giao-dien.md) -->
+<nav class="thanh-menu" sec:authorize="hasAnyRole('ADMIN', 'DISPATCHER')">
+    <ul class="nav">
+
+        <li class="nav-item dropdown" sec:authorize="hasRole('ADMIN')">
+            <a class="nav-link dropdown-toggle" href="#" data-bs-toggle="dropdown">Danh mục</a>
+            <ul class="dropdown-menu">
+                <li><a class="dropdown-item" th:href="@{/admin/products}">Sản phẩm</a></li>
+                <li><a class="dropdown-item" th:href="@{/admin/vehicles}">Phương tiện</a></li>
+                <li><a class="dropdown-item" th:href="@{/admin/drivers}">Tài xế</a></li>
+                <li><a class="dropdown-item" th:href="@{/admin/customers}">Khách hàng</a></li>
+                <li><a class="dropdown-item" th:href="@{/admin/depot}">Kho</a></li>
+            </ul>
+        </li>
+        <li class="nav-item" sec:authorize="hasRole('ADMIN')">
+            <a class="nav-link" th:href="@{/admin/users}">Tài khoản</a>
+        </li>
+        <li class="nav-item" sec:authorize="hasRole('ADMIN')">
+            <a class="nav-link" th:href="@{/admin/settings}">Tham số</a>
+        </li>
+
+        <li class="nav-item" sec:authorize="hasAnyRole('ADMIN', 'DISPATCHER')">
+            <a class="nav-link" th:href="@{/orders}">Đơn hàng</a>
+        </li>
+        <li class="nav-item" sec:authorize="hasAnyRole('ADMIN', 'DISPATCHER')">
+            <a class="nav-link" th:href="@{/routing}">Phân tuyến</a>
+        </li>
+        <li class="nav-item" sec:authorize="hasAnyRole('ADMIN', 'DISPATCHER')">
+            <a class="nav-link" th:href="@{/tracking}">Theo dõi</a>
+        </li>
+        <li class="nav-item" sec:authorize="hasAnyRole('ADMIN', 'DISPATCHER')">
+            <a class="nav-link" th:href="@{/incidents}">Sự cố</a>
+        </li>
+        <li class="nav-item" sec:authorize="hasAnyRole('ADMIN', 'DISPATCHER')">
+            <a class="nav-link" th:href="@{/reports}">Báo cáo</a>
+        </li>
+    </ul>
+</nav>
+
+<!-- ============ Vung noi dung ============ -->
+<main class="container-fluid py-3">
+
+    <!-- Vung hien thong bao. Cac Controller dat flash attribute "thongBao" hoac "loi" -->
+    <div th:if="${thongBao}" class="alert alert-success py-2" th:text="${thongBao}"></div>
+    <div th:if="${loi}" class="alert alert-danger py-2" th:text="${loi}"></div>
+
+    <!-- Cho nay duoc thay bang manh noi dung ma trang con truyen vao -->
+    <div th:replace="${content}">Nội dung trang</div>
+</main>
+
+<script th:src="@{/js/bootstrap.bundle.min.js}"></script>
+</body>
+</html>

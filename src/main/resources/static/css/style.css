@@ -1,0 +1,162 @@
+/* ===================================================================
+   MPRoute - bang mau va bo cuc chung
+   Khai bao mot lan o day, moi trang deu dung lai. Xem docs/05-giao-dien.md
+   =================================================================== */
+
+:root {
+  /* Mau chinh - xanh duong */
+  --xanh-900: #0B2C4A;   /* thanh tieu de tren cung */
+  --xanh-700: #14568C;   /* thanh menu */
+  --xanh-500: #1E77BF;   /* tab dang chon, nut chinh */
+  --xanh-100: #DCEBF7;   /* nen nhat, dong duoc chon */
+  --xanh-50:  #F0F6FB;   /* nen khoi thong tin */
+
+  /* Trung tinh */
+  --chu-chinh: #1C2430;
+  --chu-phu:   #5A6674;
+  --chu-mo:    #8B97A5;
+  --vien:      #DDE3E9;
+  --nen-bang:  #F2F5F8;
+  --nen-soc:   #FAFBFC;  /* ke soc dong bang */
+
+  /* Trang thai */
+  --thanh-cong: #1B8A5A;
+  --canh-bao:   #B7791F;
+  --loi:        #C0392B;
+  --cho-xu-ly:  #5A6674;
+
+  /* Nen nhat cua trang thai */
+  --nen-thanh-cong: #E3F4EC;
+  --nen-canh-bao:   #FCF2E0;
+  --nen-loi:        #FBE9E7;
+  --nen-cho:        #EDF0F3;
+
+  /* Mau phan biet tuyen tren ban do - cung do dam, khac do sang,
+     de nguoi bi mu mau do-xanh la van phan biet duoc */
+  --tuyen-1: #1E77BF;
+  --tuyen-2: #C75B39;
+  --tuyen-3: #1B8A5A;
+  --tuyen-4: #7D5BA6;
+  --tuyen-5: #B7791F;
+}
+
+body {
+  color: var(--chu-chinh);
+  background-color: #FFFFFF;
+}
+
+/* ============ Ghi de Bootstrap ============ */
+
+.btn-primary {
+  background-color: var(--xanh-500);
+  border-color: var(--xanh-500);
+}
+.btn-primary:hover,
+.btn-primary:focus {
+  background-color: var(--xanh-700);
+  border-color: var(--xanh-700);
+}
+.table > thead {
+  background-color: var(--nen-bang);
+}
+.table-striped > tbody > tr:nth-of-type(odd) > * {
+  background-color: var(--nen-soc);
+}
+
+/* ============ Thanh tieu de tren cung ============ */
+
+.thanh-tieu-de {
+  background-color: var(--xanh-900);
+  color: #FFFFFF;
+  padding: 0.5rem 1rem;
+}
+.thanh-tieu-de a {
+  color: #FFFFFF;
+  text-decoration: none;
+}
+.thanh-tieu-de .ten-he-thong {
+  font-weight: 600;
+  font-size: 1.05rem;
+}
+
+/* ============ Thanh menu ============ */
+
+.thanh-menu {
+  background-color: var(--xanh-700);
+  padding: 0 1rem;
+}
+.thanh-menu .nav-link {
+  color: #DCEBF7;
+  padding: 0.5rem 0.9rem;
+  border-radius: 0;
+}
+.thanh-menu .nav-link:hover {
+  background-color: var(--xanh-500);
+  color: #FFFFFF;
+}
+/* Muc menu cua trang dang mo */
+.thanh-menu .nav-link.dang-chon {
+  background-color: var(--xanh-500);
+  color: #FFFFFF;
+  font-weight: 600;
+}
+
+/* ============ Trang dang nhap ============ */
+
+.trang-dang-nhap {
+  min-height: 100vh;
+  background-color: var(--xanh-50);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.khung-dang-nhap {
+  width: 100%;
+  max-width: 380px;
+  background-color: #FFFFFF;
+  border: 1px solid var(--vien);
+  border-radius: 4px;
+  padding: 1.75rem;
+}
+
+/* ============ Nhan trang thai ============ */
+
+.nhan {
+  font-size: 12px;
+  padding: 2px 8px;
+  border-radius: 4px;
+  white-space: nowrap;
+}
+.nhan-thanh-cong { background: var(--nen-thanh-cong); color: var(--thanh-cong); }
+/* Nhan mac dinh mau xanh duong: trang thai dang dien ra binh thuong
+   (DELIVERING, IN_PROGRESS, IN_USE, CONFIRMED) - docs/05-giao-dien.md */
+.nhan-mac-dinh   { background: var(--xanh-100);       color: var(--xanh-700); }
+.nhan-canh-bao   { background: var(--nen-canh-bao);   color: var(--canh-bao); }
+.nhan-loi        { background: var(--nen-loi);        color: var(--loi); }
+.nhan-cho        { background: var(--nen-cho);        color: var(--cho-xu-ly); }
+
+/* ============ Thanh cong cu tren danh sach ============ */
+
+.thanh-cong-cu {
+  border-bottom: 1px solid var(--vien);
+  padding-bottom: 0.75rem;
+  margin-bottom: 0.75rem;
+}
+
+/* Cot so can canh phai de de doc va de so sanh theo cot */
+.so {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+/* ============ Khoi thong tin ============ */
+
+.khoi-thong-tin {
+  background-color: var(--xanh-50);
+  border: 1px solid var(--vien);
+  border-radius: 4px;
+  padding: 1rem;
+}
+.chu-phu {
+  color: var(--chu-phu);
+}

@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<!--
+    SCR-01 - Trang dang nhap (CN-00-03).
+    Khong dung layout.html vi trang nay chua dang nhap nen khong co thanh menu.
+-->
+<html lang="vi" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Đăng nhập — MPRoute</title>
+    <link rel="stylesheet" th:href="@{/css/bootstrap.min.css}">
+    <link rel="stylesheet" th:href="@{/css/style.css}">
+</head>
+<body class="trang-dang-nhap">
+
+<div class="khung-dang-nhap">
+
+    <h1 class="h5 mb-1">Minh Phú</h1>
+    <p class="chu-phu small mb-4">Hệ thống quản lý và tối ưu tuyến đường giao hàng</p>
+
+    <!--
+        MSG-12. Co tinh khong noi ro sai ten dang nhap hay sai mat khau:
+        neu bao "khong co tai khoan nay" thi nguoi la go thu vai chuc ten
+        la biet duoc tai khoan nao co that trong he thong.
+    -->
+    <div th:if="${param.error}" class="alert alert-danger py-2 small">
+        Tên đăng nhập hoặc mật khẩu không đúng.
+    </div>
+
+    <!-- MSG-13. Khoa tam 15 phut sau 5 lan sai lien tiep -->
+    <div th:if="${param.locked}" class="alert alert-danger py-2 small">
+        Tài khoản đã bị khóa.
+        <span class="d-block chu-phu">Vui lòng thử lại sau 15 phút hoặc liên hệ quản trị viên.</span>
+    </div>
+
+    <div th:if="${param.logout}" class="alert alert-success py-2 small">
+        Bạn đã đăng xuất.
+    </div>
+
+    <!-- Spring Security nhan POST o dia chi nay, khong co Controller nao xu ly.
+         The an chua CSRF token do Thymeleaf tu chen vao khi thay th:action -->
+    <form th:action="@{/login}" method="post">
+        <div class="mb-3">
+            <label for="username" class="form-label">Tên đăng nhập</label>
+            <input type="text" id="username" name="username" class="form-control" required autofocus>
+        </div>
+
+        <div class="mb-3">
+            <label for="password" class="form-label">Mật khẩu</label>
+            <input type="password" id="password" name="password" class="form-control" required>
+        </div>
+
+        <button type="submit" class="btn btn-primary w-100">Đăng nhập</button>
+    </form>
+</div>
+
+</body>
+</html>

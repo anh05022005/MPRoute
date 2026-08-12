@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<!-- Trang chao sau khi dang nhap (CN-00-01) -->
+<html lang="vi"
+      xmlns:th="http://www.thymeleaf.org"
+      xmlns:sec="http://www.thymeleaf.org/extras/spring-security"
+      th:replace="~{layout :: main('Trang chủ', ~{::content})}">
+<body>
+
+<div th:fragment="content">
+
+    <h1 class="h4 mb-3">
+        Xin chào, <span th:text="${currentUser.fullName}">Người dùng</span>
+    </h1>
+
+    <div class="khoi-thong-tin mb-4" style="max-width: 520px;">
+        <table class="table table-sm mb-0">
+            <tbody>
+            <tr>
+                <th style="width: 40%;">Tên đăng nhập</th>
+                <td th:text="${currentUser.username}">username</td>
+            </tr>
+            <tr>
+                <th>Vai trò</th>
+                <td th:text="${currentUser.role.displayName}">Vai trò</td>
+            </tr>
+            </tbody>
+        </table>
+    </div>
+
+    <div sec:authorize="hasRole('ADMIN')">
+        <p class="chu-phu">Bạn quản lý danh mục, tài khoản và tham số hệ thống. Chọn chức năng trên thanh menu.</p>
+    </div>
+
+    <div sec:authorize="hasRole('DISPATCHER')">
+        <p class="chu-phu">Bạn tiếp nhận đơn hàng, phân tuyến và theo dõi giao hàng. Chọn chức năng trên thanh menu.</p>
+    </div>
+
+    <div sec:authorize="hasRole('DRIVER')">
+        <p class="chu-phu">Xem tuyến giao hàng hôm nay của bạn.</p>
+        <a class="btn btn-primary" th:href="@{/driver/my-route}">Tuyến của tôi</a>
+    </div>
+
+</div>
+
+</body>
+</html>

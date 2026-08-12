@@ -1,0 +1,23 @@
+<!DOCTYPE html>
+<!--
+    Trang bao khong du quyen (CN-00-04).
+    Dat trong thu muc error/ nen Spring Boot cung tu dung lai trang nay cho moi
+    phan hoi ma 403 khac, khong chi rieng truong hop SecurityConfig chuyen tiep vao.
+-->
+<html lang="vi"
+      xmlns:th="http://www.thymeleaf.org"
+      th:replace="~{layout :: main('Không đủ quyền', ~{::content})}">
+<body>
+
+<div th:fragment="content">
+
+    <div class="khoi-thong-tin" style="max-width: 520px;">
+        <h1 class="h4 mb-2">403 — Không đủ quyền</h1>
+        <p class="mb-3">Tài khoản của bạn không được phép truy cập chức năng này.</p>
+        <a class="btn btn-primary" th:href="@{/}">Về trang chủ</a>
+    </div>
+
+</div>
+
+</body>
+</html>
