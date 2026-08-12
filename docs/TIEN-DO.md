@@ -3,7 +3,7 @@
 > Trạng thái hiện tại của đồ án. **Giữ dưới 60 dòng.**
 > Cập nhật sau mỗi mốc hoàn thành.
 
-**Cập nhật lần cuối:** 08/08/2026
+**Cập nhật lần cuối:** 11/08/2026
 
 ---
 
@@ -11,17 +11,13 @@
 
 | | |
 |---|---|
-| Theo kế hoạch | Tuần 2 — nền tảng |
-| Thực tế | Tuần 2 — mới dựng project Spring Boot |
-
----
-
-## Bảng theo dõi 12 tuần
+| Theo kế hoạch | Tuần 3 — CRUD danh mục |
+| Thực tế | **Xong Nhóm 0 + sản phẩm + phương tiện.** Đúng lịch |
 
 ```
 [x] T1  Chot de tai, hoi Minh Phu 3 cau
-[ ] T2  Project chay, 16 bang sinh ra, dang nhap duoc
-[ ] T3  CRUD 7 danh muc xong
+[x] T2  Project chay, 16 bang sinh ra, dang nhap duoc
+[~] T3  CRUD 7 danh muc xong  (2/7: san pham, phuong tien)
 [ ] T4  Tao don hang, tu tinh kg/m3/tien
 [ ] T5  OSRM chay, ma tran co cache, ban do hien diem
 [ ] T6  NearestNeighbor chay duoc bang main(), test xanh
@@ -37,33 +33,41 @@
 
 ## Đã xong
 
-- Viết xong 9 file đặc tả trong `docs/`
-- Dựng project Spring Boot bằng Maven, chạy được
-- Hạ Spring Boot từ 4.1.0 xuống **3.5.16**, thêm đủ 10 dependency (web, data-jpa, security, thymeleaf, validation, mail, thymeleaf-extras-springsecurity6, lombok, mysql-connector-j, test)
-- Viết `application.properties` đầy đủ: chuỗi kết nối có encoding, `ddl-auto=update`, `show-sql=true`
-- **Đổi quy tắc code:** bỏ luật "chỉ `for` thuần, cấm Lombok". Nay viết code như lập trình viên Java bình thường — Lombok, Stream API, lambda, annotation đầy đủ dùng thoải mái ở mọi nơi. Chỉ còn cấm thư viện VRP (OR-Tools/jsprit/OptaPlanner), cấm `float`, và cấm gọi OSRM/DB trong vòng lặp thuật toán
-- **Đổi package** sang `com.minhphu.mproute`, lớp chính là `MpRouteApplication`. groupId/artifactId đổi thành `com.minhphu:mproute`
-- **Kết nối MySQL chạy được:** database `mproute` đã tạo (utf8mb4 / utf8mb4_unicode_ci), MySQL 8.0.44, `mvnw test` xanh
-- **Đổi toàn bộ định danh sang tiếng Anh:** tên bảng (số nhiều), tên cột, entity (số ít), giá trị enum, URL, tên lớp trong `service/optimization`. Comment vẫn tiếng Việt không dấu, chuỗi hiển thị vẫn tiếng Việt có dấu. Đã rà sạch trên 36 file docs
-- **★ CN-00-02 ĐẠT:** 18 enum + 16 entity + 16 repository → `SHOW TABLES` ra đủ **16 bảng**. Không còn cột `ENUM` native. Đủ index và khóa: `idx_orders_date_status`, `uk_route_sequence`, `idx_status_history_entity`, `idx_customers_phone`, `uk_coordinate_pair`, unique `route_stops.order_id` (CBR-02). `mvnw test` xanh
+- Spring Boot **3.5.16**, 10 dependency, package `com.minhphu.mproute`, kết nối MySQL 8.0.44
+- Toàn bộ định danh tiếng Anh; comment tiếng Việt không dấu; chuỗi hiển thị tiếng Việt có dấu
+- **★ CN-00-01** — `GET /` ra trang chào, `show-sql` in câu SQL
+- **★ CN-00-02** — 18 enum + 16 entity + 16 repository → đủ **16 bảng**, không còn cột `ENUM` native
+- **★ CN-00-03** — đăng nhập BCrypt, sai 5 lần khóa 15 phút (bộ đếm nằm ở cột DB nên khởi động lại không mất)
+- **★ CN-00-04** — phân quyền 3 vai trò, `DRIVER` gõ `/admin/products` → **HTTP 403 + trang 403 riêng**
+- **★ CN-00-05** — đổi mật khẩu, chặn đủ 4 nhánh sai
+- **★ CN-00-06** — `layout.html` dùng chung, menu đổi theo vai trò bằng `sec:authorize`
+- Bootstrap 5.3.3 **tải về `static/`**, không phụ thuộc mạng lúc bảo vệ
+- Sửa lệch múi giờ: MySQL chạy trong WSL nên đồng hồ là UTC, lệch 7 tiếng. Đã thêm
+  `forceConnectionTimeZoneToSession=true` — kiểm chứng `NOW()` từ 13:57 về đúng 20:57
+
+- **★ CN-01-01** — danh mục sản phẩm: tìm theo mã/tên, lọc trạng thái, phân trang 15 dòng, thêm, sửa,
+  ngừng dùng (không xóa cứng). Chặn được cả 4 nhánh sai: bỏ trống kg, kg = 0, m³ = 0, trùng mã.
+  Đã nhập sẵn **5 sản phẩm thật** của Minh Phú theo `docs/08`, kiểm khớp từng byte UTF-8
+- **★ CN-01-02** — danh mục phương tiện, cùng khuôn với sản phẩm. Chặn `maxWeight`/`maxVolume` ≤ 0,
+  trùng biển số. **BR01-04 chặn ở tầng service, không chỉ ẩn ô chọn:** gửi thẳng `status=IN_USE` lên
+  vẫn bị từ chối; sửa xe đang chạy thì đổi được tải trọng nhưng trạng thái giữ nguyên `IN_USE`.
+  Đã nhập sẵn **4 xe thật** theo `docs/08`
+- Tách `templates/fragments/pagination.html` dùng chung cho các màn hình danh mục — kiểm với 25 bản ghi:
+  15 dòng trang 1, 10 dòng trang 2, giữ nguyên điều kiện lọc khi sang trang
+
+Tài khoản mẫu (`DataSeeder`): `admin/admin123` · `dieuphoi/dieuphoi123` · `taixe01/taixe123`
 
 ---
 
-## Đang làm
+## Việc tiếp theo — tuần 3, 5 danh mục còn lại
 
-- (chưa có — vừa xong CN-00-02, chờ sang CN-00-03)
+Khuôn đã chạy qua hai lần (`XxxForm` → `XxxService` → `XxxController` → `xxxs.html` +
+`xxx-form.html` + fragment phân trang), các màn hình sau chép theo:
 
----
-
-## Việc tiếp theo
-
-1. `SecurityConfig` + đăng nhập, khóa 15 phút sau 5 lần sai (CN-00-03)
-2. Phân quyền ba vai trò, gõ URL trái quyền ra trang 403 (CN-00-04)
-3. Đổi mật khẩu (CN-00-05)
-4. Layout Thymeleaf dùng chung, menu đổi theo vai trò (CN-00-06)
-5. Trang chào ở `/` để đạt nốt CN-00-01
-
-Xong 5 việc này là hết Nhóm 0 — Nền tảng, đúng lịch tuần 2.
+1. CN-01-03 Tài xế (BR01-08: SĐT đúng 10 chữ số, bắt đầu bằng 0) · CN-01-07 Tài khoản
+2. CN-01-04 Khách hàng — nặng hơn vì có tọa độ · CN-01-06 Kho (BR01-10: chỉ một kho `active`)
+3. CN-01-08 Tham số hệ thống — 9 tham số, kiểm bằng cách đổi `AVERAGE_SPEED` rồi xem ETA có đổi
+4. CN-01-05 Tìm tọa độ bằng Nominatim — làm sau cùng vì cần gọi mạng ngoài
 
 ---
 
@@ -71,24 +75,29 @@ Xong 5 việc này là hết Nhóm 0 — Nền tảng, đúng lịch tuần 2.
 
 | Việc | Tình hình |
 |---|---|
-| **Cắt phạm vi — quyết trước tuần 8** | 86 chức năng bắt buộc / 12 tuần / một người. Tuần 8 phải xong ~20 chức năng, tuần 9 phải xong ~30. Ước lượng thật là 18–24 tuần. **Cắt chủ động ngay chứ đừng đợi tuần 9 mới cắt trong hoảng loạn.** |
-| **Mâu thuẫn về thứ tự cắt** | `docs/00-tong-quan.md` xếp UC06 (sự cố) vào diện cắt sớm, nhưng kịch bản demo lại xếp bước 13 (ba phương án xử lý sự cố) là một trong bốn điểm nhấn. Gợi ý dung hòa: giữ UC06 nhưng làm **phương án A và C trước**, phương án B (Cheapest Insertion) làm sau nếu còn thời gian. Cắt hẳn RPT-01, RPT-02 và toàn bộ mục ○ ngay từ bây giờ |
-| Thư viện xuất Excel | CN-08-05 cần Apache POI. Thêm vào `pom.xml` khi làm tới tuần 10, chưa cần bây giờ |
+| **Cắt phạm vi — quyết trước tuần 8** | 86 chức năng bắt buộc / 12 tuần / một người. Ước lượng thật là 18–24 tuần. **Cắt chủ động ngay chứ đừng đợi tuần 9 mới cắt trong hoảng loạn.** Cắt hẳn RPT-01, RPT-02 và toàn bộ mục ○ từ bây giờ |
+| **Mâu thuẫn về thứ tự cắt** | `docs/00` xếp UC06 (sự cố) vào diện cắt sớm, nhưng kịch bản demo lại lấy bước 13 làm điểm nhấn. Dung hòa: giữ UC06 nhưng làm **phương án A và C trước**, phương án B (Cheapest Insertion) làm sau nếu còn thời gian |
+| Điều phối xem danh mục | Ma trận phân quyền cho điều phối "chỉ xem" danh mục, nhưng `docs/05` xếp SCR-02…06 là màn hình quản trị. Hiện `/admin/**` chặn ở `hasRole("ADMIN")`. Quyết khi làm CN-01-01 |
+| Thư viện xuất Excel | CN-08-05 cần Apache POI. Thêm vào `pom.xml` khi làm tới tuần 10 |
 
 ---
 
 ## Đã biết trước, cố ý chưa sửa
 
-Ghi ở đây để không quên, và để khi nó lộ ra thì biết ngay là chuyện đã lường trước:
-
 | Vấn đề | Khi nào lộ ra | Vì sao chưa sửa |
 |---|---|---|
-| NN để sót đơn dù tổng sức chứa đủ | Tuần 8, lần đầu chạy trên dữ liệu mẫu | **Cố ý giữ.** Đây là điểm nhấn demo bước 5a và là câu trả lời vấn đáp mạnh nhất. Đã ghi kịch bản trong `docs/08` |
-| Trạng thái xe là cờ toàn cục, không theo ngày → không lập kế hoạch trước 2 ngày được | Chỉ lộ nếu thử chốt tuyến cho hai ngày liên tiếp | Sửa đúng thì phải đổi CBR-05 và tầng service. Không đáng đánh đổi thời gian trong 12 tuần. **Đã ghi vào mục hạn chế `docs/07` 4.7** |
-| Ghi chú "chỉ nhận buổi sáng trước 11h" mà thuật toán không ràng buộc khung giờ | Tuần 8 khi nhìn ETA thật | Giữ nguyên ghi chú vì nó phản ánh khảo sát thật. Cần **chạy thử và ghi lại ETA điểm cuối từng tuyến** để trả lời bằng số |
+| NN để sót đơn dù tổng sức chứa đủ | Tuần 8, lần đầu chạy trên dữ liệu mẫu | **Cố ý giữ.** Là điểm nhấn demo bước 5a và câu trả lời vấn đáp mạnh nhất. Kịch bản ở `docs/08` |
+| Trạng thái xe là cờ toàn cục, không theo ngày | Chỉ lộ nếu thử chốt tuyến cho hai ngày liên tiếp | Sửa đúng phải đổi CBR-05 và tầng service. Đã ghi vào hạn chế `docs/07` 4.7 |
+| Ghi chú "chỉ nhận buổi sáng trước 11h" mà thuật toán không ràng buộc khung giờ | Tuần 8 khi nhìn ETA thật | Giữ vì phản ánh khảo sát thật. Cần chạy thử và **ghi lại ETA điểm cuối từng tuyến** để trả lời bằng số |
 
 ---
 
 ## Nợ kỹ thuật
 
-- (chưa có)
+- Menu trỏ tới `/orders`, `/routing`… chưa có Controller → bấm vào ra 404. Hết tuần 3–5 là tự hết
+- Khi kiểm thử form bằng `curl` trong Git Bash: **phải percent-encode tiếng Việt sẵn** rồi dùng
+  `--data-raw`. Git Bash chuyển tham số sang bảng mã ANSI khi gọi `curl.exe`, làm hỏng dấu tiếng Việt
+  ngay từ máy khách — dễ tưởng nhầm là ứng dụng sai encoding. Kiểm bằng `HEX(cột)` trong MySQL
+- Sau khi đăng nhập địa chỉ có đuôi `?continue` — hành vi mặc định của Spring Security 6, vô hại
+- `application.properties` đang chứa mật khẩu MySQL `gbao`. **Đẩy lên GitHub công khai là lộ** — xem mục Git bên dưới
+- Repo còn ở nhánh `master`, chưa đổi thành `main`, chưa có remote

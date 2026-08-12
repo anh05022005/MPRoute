@@ -21,7 +21,7 @@ Chạy ứng dụng, MySQL tự sinh đủ 16 bảng theo `02-co-so-du-lieu.md`.
 - Mật khẩu trong DB là chuỗi băm BCrypt, không phải văn bản thuần
 
 ### ★ CN-00-04 Phân quyền
-Đăng nhập vai trò `DRIVER` rồi gõ thẳng URL `/quan-tri/san-pham` → trả về trang 403, **không phải trang trắng hay lỗi 500**.
+Đăng nhập vai trò `DRIVER` rồi gõ thẳng URL `/admin/products` → trả về trang 403, **không phải trang trắng hay lỗi 500**.
 
 ### ★ CN-00-05 Đổi mật khẩu
 Nhập sai mật khẩu cũ → báo lỗi. Đúng → đổi thành công, đăng nhập lại bằng mật khẩu mới được.
