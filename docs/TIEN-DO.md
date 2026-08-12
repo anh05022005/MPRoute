@@ -55,11 +55,14 @@
 - Tách `templates/fragments/pagination.html` dùng chung cho các màn hình danh mục — kiểm với 25 bản ghi:
   15 dòng trang 1, 10 dòng trang 2, giữ nguyên điều kiện lọc khi sang trang
 
+- Đưa code lên `github.com/anh05022005/MPRoute` (**riêng tư**), nhánh `main`, 11 commit chia theo mốc
+  chức năng. Từ nay commit theo **Conventional Commits** — khuôn và ví dụ ở `docs/10-quy-uoc-ky-thuat.md`
+
 Tài khoản mẫu (`DataSeeder`): `admin/admin123` · `dieuphoi/dieuphoi123` · `taixe01/taixe123`
 
 ---
 
-## Việc tiếp theo — tuần 3, 5 danh mục còn lại
+## Việc tiếp theo — tuần 3, 6 danh mục còn lại
 
 Khuôn đã chạy qua hai lần (`XxxForm` → `XxxService` → `XxxController` → `xxxs.html` +
 `xxx-form.html` + fragment phân trang), các màn hình sau chép theo:
@@ -77,7 +80,7 @@ Khuôn đã chạy qua hai lần (`XxxForm` → `XxxService` → `XxxController`
 |---|---|
 | **Cắt phạm vi — quyết trước tuần 8** | 86 chức năng bắt buộc / 12 tuần / một người. Ước lượng thật là 18–24 tuần. **Cắt chủ động ngay chứ đừng đợi tuần 9 mới cắt trong hoảng loạn.** Cắt hẳn RPT-01, RPT-02 và toàn bộ mục ○ từ bây giờ |
 | **Mâu thuẫn về thứ tự cắt** | `docs/00` xếp UC06 (sự cố) vào diện cắt sớm, nhưng kịch bản demo lại lấy bước 13 làm điểm nhấn. Dung hòa: giữ UC06 nhưng làm **phương án A và C trước**, phương án B (Cheapest Insertion) làm sau nếu còn thời gian |
-| Điều phối xem danh mục | Ma trận phân quyền cho điều phối "chỉ xem" danh mục, nhưng `docs/05` xếp SCR-02…06 là màn hình quản trị. Hiện `/admin/**` chặn ở `hasRole("ADMIN")`. Quyết khi làm CN-01-01 |
+| Điều phối xem danh mục | Ma trận phân quyền cho điều phối "chỉ xem" danh mục, nhưng `docs/05` xếp SCR-02…06 là màn hình quản trị. Hiện `/admin/**` chặn ở `hasRole("ADMIN")` — điều phối vào là 403. **Quyết dứt điểm khi làm xong 6 danh mục còn lại**, sửa một lần cho cả 8 màn hình |
 | Thư viện xuất Excel | CN-08-05 cần Apache POI. Thêm vào `pom.xml` khi làm tới tuần 10 |
 
 ---
@@ -100,7 +103,7 @@ Khuôn đã chạy qua hai lần (`XxxForm` → `XxxService` → `XxxController`
   ngay từ máy khách — dễ tưởng nhầm là ứng dụng sai encoding. Kiểm bằng `HEX(cột)` trong MySQL
 - Sau khi đăng nhập địa chỉ có đuôi `?continue` — hành vi mặc định của Spring Security 6, vô hại
 - `application.properties` chứa mật khẩu MySQL `gbao`. Hiện không sao vì kho GitHub để **riêng tư**.
-  **Nếu đổi kho sang công khai thì phải xóa dòng đó khỏi lịch sử trước** — nó nằm trong commit đầu `00d5613`,
+  **Nếu đổi kho sang công khai thì phải xóa dòng đó khỏi lịch sử trước** — nó nằm trong commit đầu `d48a491`,
   chuyển sang riêng tư rồi công khai lại không tự xóa được
 - Máy này lưu sẵn thông tin đăng nhập GitHub của **hai tài khoản**. Remote cố ý ghi là
   `https://anh05022005@github.com/...` — có `anh05022005@` ở giữa thì Git mới lấy đúng tài khoản.
