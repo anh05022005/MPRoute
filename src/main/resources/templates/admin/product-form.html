@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<!-- Them / sua san pham (CN-01-01) -->
+<html lang="vi"
+      xmlns:th="http://www.thymeleaf.org"
+      th:replace="~{layout :: main('Sản phẩm', ~{::content})}">
+<body>
+
+<div th:fragment="content">
+
+    <h1 class="h5 mb-3" th:text="${form.id == null} ? 'Thêm sản phẩm' : 'Sửa sản phẩm'">Thêm sản phẩm</h1>
+
+    <form th:action="@{/admin/products/save}" th:object="${form}" method="post" style="max-width: 640px;">
+
+        <!-- Sua ban ghi cu thi phai gui kem id, khong thi luu thanh ban ghi moi -->
+        <input type="hidden" th:field="*{id}">
+
+        <div class="row g-3">
+
+            <div class="col-md-4">
+                <label for="code" class="form-label">Mã sản phẩm <span class="text-danger">*</span></label>
+                <input type="text" id="code" class="form-control" th:field="*{code}"
+                       th:classappend="${#fields.hasErrors('code')} ? 'is-invalid'" placeholder="SP001">
+                <div class="invalid-feedback" th:errors="*{code}">Lỗi</div>
+            </div>
+
+            <div class="col-md-8">
+                <label for="name" class="form-label">Tên sản phẩm <span class="text-danger">*</span></label>
+                <input type="text" id="name" class="form-control" th:field="*{name}"
+                       th:classappend="${#fields.hasErrors('name')} ? 'is-invalid'">
+                <div class="invalid-feedback" th:errors="*{name}">Lỗi</div>
+            </div>
+
+            <div class="col-md-4">
+                <label for="unit" class="form-label">Đơn vị tính <span class="text-danger">*</span></label>
+                <input type="text" id="unit" class="form-control" th:field="*{unit}"
+                       th:classappend="${#fields.hasErrors('unit')} ? 'is-invalid'">
+                <div class="invalid-feedback" th:errors="*{unit}">Lỗi</div>
+            </div>
+
+            <div class="col-md-4">
+                <label for="weightPerBox" class="form-label">
+                    Khối lượng mỗi thùng (kg) <span class="text-danger">*</span>
+                </label>
+                <input type="number" id="weightPerBox" class="form-control" step="0.01" min="0"
+                       th:field="*{weightPerBox}"
+                       th:classappend="${#fields.hasErrors('weightPerBox')} ? 'is-invalid'">
+                <div class="invalid-feedback" th:errors="*{weightPerBox}">Lỗi</div>
+            </div>
+
+            <div class="col-md-4">
+                <label for="volumePerBox" class="form-label">
+                    Thể tích mỗi thùng (m³) <span class="text-danger">*</span>
+                </label>
+                <input type="number" id="volumePerBox" class="form-control" step="0.001" min="0"
+                       th:field="*{volumePerBox}"
+                       th:classappend="${#fields.hasErrors('volumePerBox')} ? 'is-invalid'">
+                <div class="invalid-feedback" th:errors="*{volumePerBox}">Lỗi</div>
+            </div>
+
+            <div class="col-md-4">
+                <label for="unitPrice" class="form-label">Đơn giá (đ) <span class="text-danger">*</span></label>
+                <input type="number" id="unitPrice" class="form-control" step="1" min="0"
+                       th:field="*{unitPrice}"
+                       th:classappend="${#fields.hasErrors('unitPrice')} ? 'is-invalid'">
+                <div class="invalid-feedback" th:errors="*{unitPrice}">Lỗi</div>
+            </div>
+
+            <div class="col-md-4">
+                <label for="status" class="form-label">Trạng thái</label>
+                <select id="status" class="form-select" th:field="*{status}">
+                    <option th:each="tt : ${cacTrangThai}"
+                            th:value="${tt}" th:text="${tt.displayName}">Trạng thái</option>
+                </select>
+            </div>
+
+            <div class="col-12">
+                <label for="note" class="form-label">Ghi chú</label>
+                <textarea id="note" class="form-control" rows="2" th:field="*{note}"
+                          th:classappend="${#fields.hasErrors('note')} ? 'is-invalid'"></textarea>
+                <div class="invalid-feedback" th:errors="*{note}">Lỗi</div>
+            </div>
+        </div>
+
+        <!--
+            Hai o khoi luong va the tich la DAU VAO CUA THUAT TOAN (BR01-01).
+            Ghi chu nay de ngay tren man hinh cho nguoi nhap lieu hieu vi sao bat buoc.
+        -->
+        <div class="khoi-thong-tin mt-3 small chu-phu">
+            Khối lượng và thể tích mỗi thùng là dữ liệu đầu vào để chia tuyến giao hàng.
+            Thiếu hoặc nhập bằng 0 thì hệ thống không xếp được đơn lên xe, nên hai ô này bắt buộc lớn hơn 0.
+        </div>
+
+        <div class="mt-3">
+            <button type="submit" class="btn btn-primary">Lưu</button>
+            <a th:href="@{/admin/products}" class="btn btn-outline-secondary">Hủy</a>
+        </div>
+    </form>
+
+</div>
+
+</body>
+</html>

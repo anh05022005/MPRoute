@@ -37,8 +37,9 @@ public class Product {
     @Column(name = "name", nullable = false, length = 200)
     private String name;
 
+    // Chuoi nay hien thang ra giao dien nen viet tieng Viet co dau (docs/08-du-lieu-mau.md)
     @Column(name = "unit", nullable = false, length = 20)
-    private String unit = "Thung";
+    private String unit = "Thùng";
 
     // kg moi thung — dau vao rang buoc khoi luong (CBR-03)
     @Column(name = "weight_per_box", nullable = false, columnDefinition = "DECIMAL(10,2)")
