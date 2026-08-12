@@ -12,12 +12,12 @@
 | | |
 |---|---|
 | Theo kế hoạch | Tuần 3 — CRUD danh mục |
-| Thực tế | **Xong Nhóm 0 + sản phẩm + phương tiện.** Đúng lịch |
+| Thực tế | **Xong Nhóm 0 + sản phẩm + phương tiện + tài xế.** Đúng lịch |
 
 ```
 [x] T1  Chot de tai, hoi Minh Phu 3 cau
 [x] T2  Project chay, 16 bang sinh ra, dang nhap duoc
-[~] T3  CRUD 7 danh muc xong  (2/7: san pham, phuong tien)
+[~] T3  CRUD 7 danh muc xong  (3/7: san pham, phuong tien, tai xe)
 [ ] T4  Tao don hang, tu tinh kg/m3/tien
 [ ] T5  OSRM chay, ma tran co cache, ban do hien diem
 [ ] T6  NearestNeighbor chay duoc bang main(), test xanh
@@ -52,6 +52,11 @@
   trùng biển số. **BR01-04 chặn ở tầng service, không chỉ ẩn ô chọn:** gửi thẳng `status=IN_USE` lên
   vẫn bị từ chối; sửa xe đang chạy thì đổi được tải trọng nhưng trạng thái giữ nguyên `IN_USE`.
   Đã nhập sẵn **4 xe thật** theo `docs/08`
+- **★ CN-01-03** — danh mục tài xế, cùng khuôn. Gán được xe mặc định và tài khoản đăng nhập.
+  **BR01-08 chặn đủ 4 kiểu SĐT sai**: 9 số, 11 số, đầu số 1, lẫn chữ cái. Một tài khoản chỉ gán cho
+  một tài xế và phải đúng vai trò `DRIVER` — gửi thẳng `userId` của tài xế khác hoặc của `admin`
+  lên vẫn bị từ chối ở tầng controller, không rơi vào lỗi trùng khóa của MySQL.
+  Kiểm `HEX(full_name)` khớp UTF-8; ô không bắt buộc để trống lưu `NULL` chứ không lưu chuỗi rỗng
 - Tách `templates/fragments/pagination.html` dùng chung cho các màn hình danh mục — kiểm với 25 bản ghi:
   15 dòng trang 1, 10 dòng trang 2, giữ nguyên điều kiện lọc khi sang trang
 
@@ -62,12 +67,12 @@ Tài khoản mẫu (`DataSeeder`): `admin/admin123` · `dieuphoi/dieuphoi123` ·
 
 ---
 
-## Việc tiếp theo — tuần 3, 6 danh mục còn lại
+## Việc tiếp theo — tuần 3, 5 danh mục còn lại
 
-Khuôn đã chạy qua hai lần (`XxxForm` → `XxxService` → `XxxController` → `xxxs.html` +
+Khuôn đã chạy qua ba lần (`XxxForm` → `XxxService` → `XxxController` → `xxxs.html` +
 `xxx-form.html` + fragment phân trang), các màn hình sau chép theo:
 
-1. CN-01-03 Tài xế (BR01-08: SĐT đúng 10 chữ số, bắt đầu bằng 0) · CN-01-07 Tài khoản
+1. CN-01-07 Tài khoản
 2. CN-01-04 Khách hàng — nặng hơn vì có tọa độ · CN-01-06 Kho (BR01-10: chỉ một kho `active`)
 3. CN-01-08 Tham số hệ thống — 9 tham số, kiểm bằng cách đổi `AVERAGE_SPEED` rồi xem ETA có đổi
 4. CN-01-05 Tìm tọa độ bằng Nominatim — làm sau cùng vì cần gọi mạng ngoài
@@ -80,7 +85,7 @@ Khuôn đã chạy qua hai lần (`XxxForm` → `XxxService` → `XxxController`
 |---|---|
 | **Cắt phạm vi — quyết trước tuần 8** | 86 chức năng bắt buộc / 12 tuần / một người. Ước lượng thật là 18–24 tuần. **Cắt chủ động ngay chứ đừng đợi tuần 9 mới cắt trong hoảng loạn.** Cắt hẳn RPT-01, RPT-02 và toàn bộ mục ○ từ bây giờ |
 | **Mâu thuẫn về thứ tự cắt** | `docs/00` xếp UC06 (sự cố) vào diện cắt sớm, nhưng kịch bản demo lại lấy bước 13 làm điểm nhấn. Dung hòa: giữ UC06 nhưng làm **phương án A và C trước**, phương án B (Cheapest Insertion) làm sau nếu còn thời gian |
-| Điều phối xem danh mục | Ma trận phân quyền cho điều phối "chỉ xem" danh mục, nhưng `docs/05` xếp SCR-02…06 là màn hình quản trị. Hiện `/admin/**` chặn ở `hasRole("ADMIN")` — điều phối vào là 403. **Quyết dứt điểm khi làm xong 6 danh mục còn lại**, sửa một lần cho cả 8 màn hình |
+| Điều phối xem danh mục | Ma trận phân quyền cho điều phối "chỉ xem" danh mục, nhưng `docs/05` xếp SCR-02…06 là màn hình quản trị. Hiện `/admin/**` chặn ở `hasRole("ADMIN")` — điều phối vào là 403. **Quyết dứt điểm khi làm xong 5 danh mục còn lại**, sửa một lần cho cả 8 màn hình |
 | Thư viện xuất Excel | CN-08-05 cần Apache POI. Thêm vào `pom.xml` khi làm tới tuần 10 |
 
 ---
@@ -98,6 +103,11 @@ Khuôn đã chạy qua hai lần (`XxxForm` → `XxxService` → `XxxController`
 ## Nợ kỹ thuật
 
 - Menu trỏ tới `/orders`, `/routing`… chưa có Controller → bấm vào ra 404. Hết tuần 3–5 là tự hết
+- Vai trò không đủ quyền gửi **POST** tới `/admin/**` bị từ chối đúng (dữ liệu không đổi) nhưng trả
+  **405 thay vì 403**, cả 3 màn hình danh mục đều vậy. Do `SecurityConfig` dùng
+  `accessDeniedPage("/403")` — cách này *forward* nên giữ nguyên method POST — mà `HomeController`
+  lại khai `@GetMapping("/403")`. Đổi sang `@RequestMapping("/403")` là hết. Gõ URL bằng trình duyệt
+  luôn là GET nên vẫn ra 403 đúng, demo không lộ
 - Khi kiểm thử form bằng `curl` trong Git Bash: **phải percent-encode tiếng Việt sẵn** rồi dùng
   `--data-raw`. Git Bash chuyển tham số sang bảng mã ANSI khi gọi `curl.exe`, làm hỏng dấu tiếng Việt
   ngay từ máy khách — dễ tưởng nhầm là ứng dụng sai encoding. Kiểm bằng `HEX(cột)` trong MySQL
