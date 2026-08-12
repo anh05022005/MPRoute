@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<!-- Them / sua phuong tien (CN-01-02) -->
+<html lang="vi"
+      xmlns:th="http://www.thymeleaf.org"
+      th:replace="~{layout :: main('Phương tiện', ~{::content})}">
+<body>
+
+<div th:fragment="content">
+
+    <h1 class="h5 mb-3" th:text="${form.id == null} ? 'Thêm phương tiện' : 'Sửa phương tiện'">Thêm phương tiện</h1>
+
+    <form th:action="@{/admin/vehicles/save}" th:object="${form}" method="post" style="max-width: 640px;">
+
+        <input type="hidden" th:field="*{id}">
+
+        <div class="row g-3">
+
+            <div class="col-md-5">
+                <label for="licensePlate" class="form-label">Biển số <span class="text-danger">*</span></label>
+                <input type="text" id="licensePlate" class="form-control" th:field="*{licensePlate}"
+                       th:classappend="${#fields.hasErrors('licensePlate')} ? 'is-invalid'"
+                       placeholder="29H-123.45">
+                <div class="invalid-feedback" th:errors="*{licensePlate}">Lỗi</div>
+            </div>
+
+            <div class="col-md-7">
+                <label for="vehicleType" class="form-label">Loại xe <span class="text-danger">*</span></label>
+                <input type="text" id="vehicleType" class="form-control" th:field="*{vehicleType}"
+                       th:classappend="${#fields.hasErrors('vehicleType')} ? 'is-invalid'"
+                       placeholder="Xe tải 1.5 tấn">
+                <div class="invalid-feedback" th:errors="*{vehicleType}">Lỗi</div>
+            </div>
+
+            <div class="col-md-4">
+                <label for="maxWeight" class="form-label">
+                    Tải trọng tối đa (kg) <span class="text-danger">*</span>
+                </label>
+                <input type="number" id="maxWeight" class="form-control" step="0.01" min="0"
+                       th:field="*{maxWeight}"
+                       th:classappend="${#fields.hasErrors('maxWeight')} ? 'is-invalid'">
+                <div class="invalid-feedback" th:errors="*{maxWeight}">Lỗi</div>
+            </div>
+
+            <div class="col-md-4">
+                <label for="maxVolume" class="form-label">
+                    Thể tích thùng xe (m³) <span class="text-danger">*</span>
+                </label>
+                <input type="number" id="maxVolume" class="form-control" step="0.001" min="0"
+                       th:field="*{maxVolume}"
+                       th:classappend="${#fields.hasErrors('maxVolume')} ? 'is-invalid'">
+                <div class="invalid-feedback" th:errors="*{maxVolume}">Lỗi</div>
+            </div>
+
+            <div class="col-md-4">
+                <label for="status" class="form-label">Trạng thái</label>
+
+                <!--
+                    BR01-04: o chon chi co San sang va Bao tri, KHONG co Dang chay.
+                    Xe dang chay tuyen thi hien dang chu, khong cho sua — sua duoc thi
+                    lan phan tuyen sau he thong lai xep them don cho xe dang ngoai duong.
+                -->
+                <div th:if="${form.status != null && form.status.name() == 'IN_USE'}">
+                    <input type="text" class="form-control" value="Đang chạy" disabled>
+                    <div class="form-text">Do hệ thống đặt khi chốt tuyến, không sửa được.</div>
+                </div>
+
+                <select th:unless="${form.status != null && form.status.name() == 'IN_USE'}"
+                        id="status" class="form-select" th:field="*{status}"
+                        th:classappend="${#fields.hasErrors('status')} ? 'is-invalid'">
+                    <option th:each="tt : ${cacTrangThaiChonDuoc}"
+                            th:value="${tt}" th:text="${tt.displayName}">Trạng thái</option>
+                </select>
+                <div class="invalid-feedback d-block" th:if="${#fields.hasErrors('status')}"
+                     th:errors="*{status}">Lỗi</div>
+            </div>
+
+            <div class="col-12">
+                <label for="note" class="form-label">Ghi chú</label>
+                <textarea id="note" class="form-control" rows="2" th:field="*{note}"
+                          th:classappend="${#fields.hasErrors('note')} ? 'is-invalid'"></textarea>
+                <div class="invalid-feedback" th:errors="*{note}">Lỗi</div>
+            </div>
+        </div>
+
+        <div class="khoi-thong-tin mt-3 small chu-phu">
+            Tải trọng và thể tích thùng xe là hai giới hạn mà hệ thống kiểm tra
+            <strong>đồng thời</strong> khi xếp đơn lên xe. Một xe chở hàng nhẹ mà cồng kềnh
+            sẽ đầy chỗ trước khi đầy tải, nên thiếu một trong hai con số là không chia tuyến được.
+        </div>
+
+        <div class="mt-3">
+            <button type="submit" class="btn btn-primary">Lưu</button>
+            <a th:href="@{/admin/vehicles}" class="btn btn-outline-secondary">Hủy</a>
+        </div>
+    </form>
+
+</div>
+
+</body>
+</html>

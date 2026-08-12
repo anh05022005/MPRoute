@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<!-- SCR-03 — Danh muc phuong tien (CN-01-02) -->
+<html lang="vi"
+      xmlns:th="http://www.thymeleaf.org"
+      th:replace="~{layout :: main('Phương tiện', ~{::content})}">
+<body>
+
+<div th:fragment="content">
+
+    <div class="thanh-cong-cu d-flex justify-content-between align-items-end flex-wrap gap-2">
+
+        <form th:action="@{/admin/vehicles}" method="get" class="d-flex align-items-end gap-2">
+            <div>
+                <label for="keyword" class="form-label mb-1 small">Tìm theo biển số hoặc loại xe</label>
+                <input type="text" id="keyword" name="keyword" class="form-control form-control-sm"
+                       style="width: 240px;" th:value="${keyword}" placeholder="Ví dụ: 29H hoặc xe tải 1.5">
+            </div>
+            <div>
+                <label for="status" class="form-label mb-1 small">Trạng thái</label>
+                <select id="status" name="status" class="form-select form-select-sm" style="width: 160px;">
+                    <option value="">Tất cả</option>
+                    <option th:each="tt : ${cacTrangThai}"
+                            th:value="${tt}"
+                            th:text="${tt.displayName}"
+                            th:selected="${tt == status}">Trạng thái</option>
+                </select>
+            </div>
+            <button type="submit" class="btn btn-sm btn-outline-secondary">Tìm</button>
+            <a th:href="@{/admin/vehicles}" class="btn btn-sm btn-outline-secondary">Bỏ lọc</a>
+        </form>
+
+        <a th:href="@{/admin/vehicles/create}" class="btn btn-sm btn-primary">+ Thêm phương tiện</a>
+    </div>
+
+    <table class="table table-bordered table-striped table-sm align-middle">
+        <thead>
+        <tr>
+            <th style="width: 130px;">Biển số</th>
+            <th>Loại xe</th>
+            <th style="width: 130px;" class="so">Tải trọng (kg)</th>
+            <th style="width: 130px;" class="so">Thể tích (m³)</th>
+            <th style="width: 120px;">Trạng thái</th>
+            <th>Ghi chú</th>
+            <th style="width: 170px;">Thao tác</th>
+        </tr>
+        </thead>
+        <tbody>
+
+        <tr th:if="${trang.empty}">
+            <td colspan="7" class="text-center chu-phu py-3">Không có phương tiện nào phù hợp.</td>
+        </tr>
+
+        <tr th:each="xe : ${trang.content}">
+            <td th:text="${xe.licensePlate}">29H-123.45</td>
+            <td th:text="${xe.vehicleType}">Xe tải 1.5 tấn</td>
+
+            <td class="so" th:text="${#numbers.formatDecimal(xe.maxWeight, 1, 'NONE', 1, 'POINT')}">1500.0</td>
+            <td class="so" th:text="${#numbers.formatDecimal(xe.maxVolume, 1, 'NONE', 3, 'POINT')}">12.000</td>
+
+            <td>
+                <span th:class="'nhan ' + (${xe.status.name() == 'AVAILABLE'} ? 'nhan-thanh-cong'
+                                        : (${xe.status.name() == 'IN_USE'}    ? 'nhan-mac-dinh'
+                                                                             : 'nhan-canh-bao'))"
+                      th:text="${xe.status.displayName}">Sẵn sàng</span>
+            </td>
+
+            <td class="chu-phu small" th:text="${xe.note}"></td>
+
+            <td>
+                <a class="btn btn-sm btn-outline-secondary py-0"
+                   th:href="@{/admin/vehicles/{id}/edit(id=${xe.id})}">Sửa</a>
+
+                <!--
+                    Xe dang chay tuyen thi khong doi trang thai duoc. O day chi lam mo nut,
+                    con viec chan that nam o VehicleService.toggleMaintenance (BR01-04, CBR-15).
+                -->
+                <span th:if="${xe.status.name() == 'IN_USE'}"
+                      class="btn btn-sm btn-outline-secondary py-0 disabled"
+                      title="Xe đang chạy tuyến">Đang chạy</span>
+
+                <form th:unless="${xe.status.name() == 'IN_USE'}"
+                      th:action="@{/admin/vehicles/{id}/toggle-status(id=${xe.id})}" method="post"
+                      class="d-inline"
+                      onsubmit="return confirm('Bạn có chắc chắn muốn thực hiện thao tác này?');">
+                    <button type="submit" class="btn btn-sm btn-outline-secondary py-0"
+                            th:text="${xe.status.name() == 'AVAILABLE'} ? 'Chuyển bảo trì' : 'Cho chạy lại'">
+                        Chuyển bảo trì</button>
+                </form>
+            </td>
+        </tr>
+        </tbody>
+    </table>
+
+    <div th:replace="~{fragments/pagination :: phan-trang(
+             trang       = ${trang},
+             duongDan    = '/admin/vehicles',
+             keyword     = ${keyword},
+             status      = ${status},
+             tenDoiTuong = 'phương tiện')}"></div>
+
+</div>
+
+</body>
+</html>
