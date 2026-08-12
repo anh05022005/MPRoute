@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<!-- Them / sua tai xe (CN-01-03) -->
+<html lang="vi"
+      xmlns:th="http://www.thymeleaf.org"
+      th:replace="~{layout :: main('Tài xế', ~{::content})}">
+<body>
+
+<div th:fragment="content">
+
+    <h1 class="h5 mb-3" th:text="${form.id == null} ? 'Thêm tài xế' : 'Sửa tài xế'">Thêm tài xế</h1>
+
+    <form th:action="@{/admin/drivers/save}" th:object="${form}" method="post" style="max-width: 640px;">
+
+        <input type="hidden" th:field="*{id}">
+
+        <div class="row g-3">
+
+            <div class="col-md-7">
+                <label for="fullName" class="form-label">Họ tên <span class="text-danger">*</span></label>
+                <input type="text" id="fullName" class="form-control" th:field="*{fullName}"
+                       th:classappend="${#fields.hasErrors('fullName')} ? 'is-invalid'"
+                       placeholder="Nguyễn Văn Hùng">
+                <div class="invalid-feedback" th:errors="*{fullName}">Lỗi</div>
+            </div>
+
+            <div class="col-md-5">
+                <label for="phone" class="form-label">
+                    Số điện thoại <span class="text-danger">*</span>
+                </label>
+                <!--
+                    De type="text" chu KHONG de type="number": so dien thoai bat dau bang so 0,
+                    o nhap kieu number se cat mat so 0 dau va cho nhap ca dau tru, dau cham.
+                    maxlength chi la ho tro nhap lieu, cho chan that nam o BR01-08 phia may chu.
+                -->
+                <input type="text" id="phone" class="form-control" th:field="*{phone}"
+                       th:classappend="${#fields.hasErrors('phone')} ? 'is-invalid'"
+                       maxlength="10" inputmode="numeric" placeholder="0987654321">
+                <div class="invalid-feedback" th:errors="*{phone}">Lỗi</div>
+            </div>
+
+            <div class="col-md-5">
+                <label for="licenseNumber" class="form-label">Số giấy phép lái xe</label>
+                <input type="text" id="licenseNumber" class="form-control" th:field="*{licenseNumber}"
+                       th:classappend="${#fields.hasErrors('licenseNumber')} ? 'is-invalid'">
+                <div class="invalid-feedback" th:errors="*{licenseNumber}">Lỗi</div>
+            </div>
+
+            <div class="col-md-7">
+                <label for="userId" class="form-label">Tài khoản đăng nhập</label>
+
+                <!--
+                    O chon chi liet ke tai khoan vai tro TAI XE va chua gan cho tai xe khac.
+                    Loc san o day cho de dung, nhung viec chan that van nam o DriverController
+                    (CBR-15) — an bot lua chon tren giao dien khong phai la chan.
+                -->
+                <select id="userId" class="form-select" th:field="*{userId}"
+                        th:classappend="${#fields.hasErrors('userId')} ? 'is-invalid'">
+                    <option value="">— Chưa gán tài khoản —</option>
+                    <option th:each="tk : ${cacTaiKhoan}"
+                            th:value="${tk.id}"
+                            th:text="${tk.username} + ' — ' + ${tk.fullName}">taixe1 — Nguyễn Văn Hùng</option>
+                </select>
+                <div class="invalid-feedback d-block" th:if="${#fields.hasErrors('userId')}"
+                     th:errors="*{userId}">Lỗi</div>
+                <div class="form-text">Chưa gán tài khoản thì tài xế không đăng nhập xem tuyến được.</div>
+            </div>
+
+            <div class="col-md-7">
+                <label for="defaultVehicleId" class="form-label">Xe mặc định</label>
+                <select id="defaultVehicleId" class="form-select" th:field="*{defaultVehicleId}"
+                        th:classappend="${#fields.hasErrors('defaultVehicleId')} ? 'is-invalid'">
+                    <option value="">— Chưa gán xe —</option>
+                    <option th:each="xe : ${cacXe}"
+                            th:value="${xe.id}"
+                            th:text="${xe.licensePlate} + ' — ' + ${xe.vehicleType}
+                                     + ' (' + ${xe.status.displayName} + ')'">29H-123.45 — Xe tải 1.5 tấn</option>
+                </select>
+                <div class="invalid-feedback d-block" th:if="${#fields.hasErrors('defaultVehicleId')}"
+                     th:errors="*{defaultVehicleId}">Lỗi</div>
+            </div>
+
+            <div class="col-md-5">
+                <label for="status" class="form-label">Trạng thái</label>
+                <select id="status" class="form-select" th:field="*{status}"
+                        th:classappend="${#fields.hasErrors('status')} ? 'is-invalid'">
+                    <option th:each="tt : ${cacTrangThai}"
+                            th:value="${tt}" th:text="${tt.displayName}">Trạng thái</option>
+                </select>
+                <div class="invalid-feedback d-block" th:if="${#fields.hasErrors('status')}"
+                     th:errors="*{status}">Lỗi</div>
+            </div>
+        </div>
+
+        <div class="khoi-thong-tin mt-3 small chu-phu">
+            Xe mặc định là xe tài xế <strong>thường lái</strong>, dùng để gợi ý sẵn khi chốt tuyến.
+            Điều phối viên vẫn đổi được sang xe khác, và chỉ xe đang ở trạng thái
+            <strong>Sẵn sàng</strong> mới được đưa vào phân tuyến.
+        </div>
+
+        <div class="mt-3">
+            <button type="submit" class="btn btn-primary">Lưu</button>
+            <a th:href="@{/admin/drivers}" class="btn btn-outline-secondary">Hủy</a>
+        </div>
+    </form>
+
+</div>
+
+</body>
+</html>
