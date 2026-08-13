@@ -27,12 +27,19 @@ public class DataSeeder implements CommandLineRunner {
 | Tên đăng nhập | Mật khẩu | Vai trò | Họ tên |
 |---|---|---|---|
 | `admin` | `admin123` | ADMIN | Nguyễn Thị Lan |
-| `dieuphoi1` | `dieuphoi123` | DISPATCHER | Trần Văn Minh |
-| `taixe1` | `taixe123` | DRIVER | Nguyễn Văn Hùng |
-| `taixe2` | `taixe123` | DRIVER | Lê Văn Nam |
-| `taixe3` | `taixe123` | DRIVER | Phạm Văn Tú |
+| `dieuphoi` | `dieuphoi123` | DISPATCHER | Trần Văn Minh |
+| `taixe01` | `taixe123` | DRIVER | Nguyễn Văn Hùng |
+| `taixe02` | `taixe123` | DRIVER | Lê Văn Nam |
+| `taixe03` | `taixe123` | DRIVER | Phạm Văn Tú |
 
 Mật khẩu phải băm BCrypt khi seed, không lưu văn bản thuần.
+
+Tài xế đánh số hai chữ số — `taixe01`, không phải dạng một chữ số — để khi sắp xếp theo tên đăng nhập
+thì thứ tự vẫn đúng nếu về sau có quá 9 tài xế: sắp theo chữ cái thì `taixe10` đứng trước `taixe9`.
+
+**Họ tên tài khoản phải trùng với họ tên trong danh mục tài xế.** Màn hình tài xế lấy tên từ
+tài khoản đăng nhập, còn màn hình phân tuyến lấy tên từ hồ sơ tài xế — lệch nhau thì lúc demo
+hai màn hình hiện hai tên khác nhau cho cùng một người.
 
 ---
 
@@ -75,9 +82,9 @@ Mật khẩu phải băm BCrypt khi seed, không lưu văn bản thuần.
 
 | Họ tên | Tài khoản | SĐT | Xe mặc định |
 |---|---|---|---|
-| Nguyễn Văn Hùng | taixe1 | 0987654321 | 29H-123.45 |
-| Lê Văn Nam | taixe2 | 0987654322 | 29C-678.90 |
-| Phạm Văn Tú | taixe3 | 0987654323 | 29F-555.66 |
+| Nguyễn Văn Hùng | taixe01 | 0987654321 | 29H-123.45 |
+| Lê Văn Nam | taixe02 | 0987654322 | 29C-678.90 |
+| Phạm Văn Tú | taixe03 | 0987654323 | 29F-555.66 |
 
 ---
 
@@ -169,12 +176,12 @@ Trả lời được như vậy chứng minh bạn hiểu thuật toán mình vi
 
 ### Hôm nay — trạng thái `DELIVERING`, dùng để demo màn hình tài xế và sự cố
 
-Tạo 1 tuyến đã chốt, gán cho `taixe1`, có 3 điểm giao trong đó:
+Tạo 1 tuyến đã chốt, gán cho `taixe01`, có 3 điểm giao trong đó:
 - Điểm 1: đã `DELIVERED`
 - Điểm 2: đang `DELIVERING` — **có `amount_to_collect > 0` để demo nhập tiền**
 - Điểm 3: `PENDING`
 
-Tạo thêm 1 tuyến cho `taixe2` cũng `IN_PROGRESS` với 2 điểm chưa giao, để demo được **Phương án B — chèn vào tuyến khác** khi xử lý sự cố.
+Tạo thêm 1 tuyến cho `taixe02` cũng `IN_PROGRESS` với 2 điểm chưa giao, để demo được **Phương án B — chèn vào tuyến khác** khi xử lý sự cố.
 
 ### Hôm qua và các ngày trước — trạng thái `COMPLETED`
 
@@ -227,7 +234,7 @@ Chuẩn bị theo đúng thứ tự này, tập ít nhất 3 lần. **In ra gi�
 |---|---|---|
 | 1 | Đăng nhập `admin`, mở danh mục sản phẩm | Chỉ vào cột kg và m³, giải thích vì sao cần cả hai |
 | 2 | Mở danh mục xe | Chỉ xe đang bảo trì, nói sẽ bị loại khỏi phân tuyến |
-| 3 | Đăng nhập `dieuphoi1`, mở danh sách đơn ngày mai | 8 đơn đã duyệt, tổng kg và m³ |
+| 3 | Đăng nhập `dieuphoi`, mở danh sách đơn ngày mai | 8 đơn đã duyệt, tổng kg và m³ |
 | 4 | Mở màn hình phân tuyến, chọn 2 xe, bấm chạy | **Hiện MSG-08 báo thiếu sức chứa** |
 | 5a | Thêm xe 29F, chạy lại | **Tổng đủ nhưng vẫn sót đơn Hồng Hà — giải thích hạn chế của thuật toán tham lam.** Điểm nhấn, xem mục trên |
 | 5b | Bỏ xe 29B khỏi bảo trì, chọn thêm, chạy lại | Ra 3 tuyến đủ 8 đơn, bản đồ vẽ đường |
@@ -235,7 +242,7 @@ Chuẩn bị theo đúng thứ tự này, tập ít nhất 3 lần. **In ra gi�
 | 7 | Đổi thuật toán sang chỉ NN, chạy lại | So sánh hai con số, chứng minh 2-opt có tác dụng |
 | 8 | Đổi lại NN+2-opt, kéo thả một đơn sang xe nhỏ | **Hiện cảnh báo đỏ vượt tải, nút chốt bị khóa** |
 | 9 | Khôi phục kết quả tự động, gán tài xế, chốt | Email gửi đi |
-| 10 | Mở tab mới, đăng nhập `taixe1` trên chế độ giả lập điện thoại | Giao diện mobile, một điểm nổi bật |
+| 10 | Mở tab mới, đăng nhập `taixe01` trên chế độ giả lập điện thoại | Giao diện mobile, một điểm nổi bật |
 | 11 | Bấm "Đã giao" ở điểm có tiền mặt | Hộp thoại nhập tiền |
 | 12 | Bấm "Báo sự cố", chọn xe hỏng, không thể tiếp tục | |
 | 13 | Quay lại tab điều phối, mở xử lý sự cố | **Ba phương án kèm km phát sinh — đây là điểm nhấn** |

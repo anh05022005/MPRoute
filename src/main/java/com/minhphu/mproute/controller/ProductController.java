@@ -18,13 +18,19 @@ import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 /**
  * SCR-02 — Danh muc san pham (CN-01-01).
  *
- * SecurityConfig da chan ca nhanh /admin/** cho vai tro ADMIN. Them @PreAuthorize
- * o day la lop chan thu hai: neu sau nay ai do sua duong dan trong SecurityConfig
- * thi van con mot lop giu (CBR-15).
+ * Phan quyen theo ma tran trong docs/01-nghiep-vu.md: quan tri vien toan quyen,
+ * dieu phoi vien CHI XEM.
+ *
+ * Cach dat: annotation tren lop cho ca hai vai tro, cac method sua du lieu dat lai
+ * @PreAuthorize rieng chi cho ADMIN. Luu y annotation tren METHOD **thay the** chu
+ * khong cong don voi annotation tren LOP — nen dong tren method la chot cuoi cung.
+ *
+ * SecurityConfig cung da chan /admin/** o muc duong dan. Giu ca hai lop la co y (CBR-15):
+ * sua nham mot ben thi ben con lai van giu.
  */
 @Controller
 @RequestMapping("/admin/products")
-@PreAuthorize("hasRole('ADMIN')")
+@PreAuthorize("hasAnyRole('ADMIN', 'DISPATCHER')")
 @RequiredArgsConstructor
 public class ProductController {
 
@@ -57,18 +63,21 @@ public class ProductController {
         return "admin/products";
     }
 
+    @PreAuthorize("hasRole('ADMIN')")
     @GetMapping("/create")
     public String createForm(Model model) {
         model.addAttribute("form", new ProductForm());
         return "admin/product-form";
     }
 
+    @PreAuthorize("hasRole('ADMIN')")
     @GetMapping("/{id}/edit")
     public String editForm(@PathVariable Long id, Model model) {
         model.addAttribute("form", ProductForm.from(productService.getById(id)));
         return "admin/product-form";
     }
 
+    @PreAuthorize("hasRole('ADMIN')")
     @PostMapping("/save")
     public String save(@Valid @ModelAttribute("form") ProductForm form,
                        BindingResult binding,
@@ -94,6 +103,7 @@ public class ProductController {
         return "redirect:/admin/products";
     }
 
+    @PreAuthorize("hasRole('ADMIN')")
     @PostMapping("/{id}/toggle-status")
     public String toggleStatus(@PathVariable Long id, RedirectAttributes redirectAttributes) {
         RecordStatus moi = productService.toggleStatus(id);

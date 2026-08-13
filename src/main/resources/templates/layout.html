@@ -47,7 +47,9 @@
 <nav class="thanh-menu" sec:authorize="hasAnyRole('ADMIN', 'DISPATCHER')">
     <ul class="nav">
 
-        <li class="nav-item dropdown" sec:authorize="hasRole('ADMIN')">
+        <!-- Dieu phoi vien XEM duoc danh muc nhung khong sua. Nut Them/Sua bi an trong
+             tung man hinh, va chan that o @PreAuthorize cua Controller (CBR-15) -->
+        <li class="nav-item dropdown" sec:authorize="hasAnyRole('ADMIN', 'DISPATCHER')">
             <a class="nav-link dropdown-toggle" href="#" data-bs-toggle="dropdown">Danh mục</a>
             <ul class="dropdown-menu">
                 <li><a class="dropdown-item" th:href="@{/admin/products}">Sản phẩm</a></li>

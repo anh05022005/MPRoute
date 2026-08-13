@@ -2,6 +2,7 @@
 <!-- SCR-05 — Danh muc tai xe (CN-01-03) -->
 <html lang="vi"
       xmlns:th="http://www.thymeleaf.org"
+      xmlns:sec="http://www.thymeleaf.org/extras/spring-security"
       th:replace="~{layout :: main('Tài xế', ~{::content})}">
 <body>
 
@@ -29,7 +30,7 @@
             <a th:href="@{/admin/drivers}" class="btn btn-sm btn-outline-secondary">Bỏ lọc</a>
         </form>
 
-        <a th:href="@{/admin/drivers/create}" class="btn btn-sm btn-primary">+ Thêm tài xế</a>
+        <a th:href="@{/admin/drivers/create}" sec:authorize="hasRole('ADMIN')" class="btn btn-sm btn-primary">+ Thêm tài xế</a>
     </div>
 
     <table class="table table-bordered table-striped table-sm align-middle">
@@ -78,7 +79,8 @@
             </td>
 
             <td>
-                <a class="btn btn-sm btn-outline-secondary py-0"
+                <span sec:authorize="!hasRole('ADMIN')" class="chu-phu small">Chỉ xem</span>
+                <a class="btn btn-sm btn-outline-secondary py-0" sec:authorize="hasRole('ADMIN')"
                    th:href="@{/admin/drivers/{id}/edit(id=${tx.id})}">Sửa</a>
 
                 <!--
@@ -86,7 +88,7 @@
                     thi bao cao cu mat thong tin ai chay tuyen nao. Chi ngung su dung.
                     Dung POST chu khong dung link GET de tranh CSRF.
                 -->
-                <form th:action="@{/admin/drivers/{id}/toggle-status(id=${tx.id})}" method="post"
+                <form th:action="@{/admin/drivers/{id}/toggle-status(id=${tx.id})}" method="post" sec:authorize="hasRole('ADMIN')"
                       class="d-inline"
                       onsubmit="return confirm('Bạn có chắc chắn muốn thực hiện thao tác này?');">
                     <button type="submit" class="btn btn-sm btn-outline-secondary py-0"

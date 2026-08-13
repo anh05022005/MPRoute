@@ -18,10 +18,12 @@ import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
 /**
  * SCR-03 — Danh muc phuong tien (CN-01-02).
+ *
+ * Quan tri vien toan quyen, dieu phoi vien chi xem — xem ghi chu o ProductController.
  */
 @Controller
 @RequestMapping("/admin/vehicles")
-@PreAuthorize("hasRole('ADMIN')")
+@PreAuthorize("hasAnyRole('ADMIN', 'DISPATCHER')")
 @RequiredArgsConstructor
 public class VehicleController {
 
@@ -59,18 +61,21 @@ public class VehicleController {
         return "admin/vehicles";
     }
 
+    @PreAuthorize("hasRole('ADMIN')")
     @GetMapping("/create")
     public String createForm(Model model) {
         model.addAttribute("form", new VehicleForm());
         return "admin/vehicle-form";
     }
 
+    @PreAuthorize("hasRole('ADMIN')")
     @GetMapping("/{id}/edit")
     public String editForm(@PathVariable Long id, Model model) {
         model.addAttribute("form", VehicleForm.from(vehicleService.getById(id)));
         return "admin/vehicle-form";
     }
 
+    @PreAuthorize("hasRole('ADMIN')")
     @PostMapping("/save")
     public String save(@Valid @ModelAttribute("form") VehicleForm form,
                        BindingResult binding,
@@ -102,6 +107,7 @@ public class VehicleController {
         return "redirect:/admin/vehicles";
     }
 
+    @PreAuthorize("hasRole('ADMIN')")
     @PostMapping("/{id}/toggle-status")
     public String toggleStatus(@PathVariable Long id, RedirectAttributes redirectAttributes) {
         try {

@@ -18,10 +18,12 @@ import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
 /**
  * SCR-05 — Danh muc tai xe (CN-01-03).
+ *
+ * Quan tri vien toan quyen, dieu phoi vien chi xem — xem ghi chu o ProductController.
  */
 @Controller
 @RequestMapping("/admin/drivers")
-@PreAuthorize("hasRole('ADMIN')")
+@PreAuthorize("hasAnyRole('ADMIN', 'DISPATCHER')")
 @RequiredArgsConstructor
 public class DriverController {
 
@@ -50,6 +52,7 @@ public class DriverController {
         return "admin/drivers";
     }
 
+    @PreAuthorize("hasRole('ADMIN')")
     @GetMapping("/create")
     public String createForm(Model model) {
         model.addAttribute("form", new DriverForm());
@@ -57,6 +60,7 @@ public class DriverController {
         return "admin/driver-form";
     }
 
+    @PreAuthorize("hasRole('ADMIN')")
     @GetMapping("/{id}/edit")
     public String editForm(@PathVariable Long id, Model model) {
         model.addAttribute("form", DriverForm.from(driverService.getById(id)));
@@ -64,6 +68,7 @@ public class DriverController {
         return "admin/driver-form";
     }
 
+    @PreAuthorize("hasRole('ADMIN')")
     @PostMapping("/save")
     public String save(@Valid @ModelAttribute("form") DriverForm form,
                        BindingResult binding,
@@ -100,6 +105,7 @@ public class DriverController {
         return "redirect:/admin/drivers";
     }
 
+    @PreAuthorize("hasRole('ADMIN')")
     @PostMapping("/{id}/toggle-status")
     public String toggleStatus(@PathVariable Long id, RedirectAttributes redirectAttributes) {
         RecordStatus moi = driverService.toggleStatus(id);

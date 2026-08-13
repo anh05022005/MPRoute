@@ -2,6 +2,7 @@
 <!-- SCR-02 — Danh muc san pham (CN-01-01) -->
 <html lang="vi"
       xmlns:th="http://www.thymeleaf.org"
+      xmlns:sec="http://www.thymeleaf.org/extras/spring-security"
       th:replace="~{layout :: main('Sản phẩm', ~{::content})}">
 <body>
 
@@ -32,7 +33,7 @@
         </form>
 
         <!-- Moi man hinh chi mot nut xanh dac (docs/05-giao-dien.md) -->
-        <a th:href="@{/admin/products/create}" class="btn btn-sm btn-primary">+ Thêm sản phẩm</a>
+        <a th:href="@{/admin/products/create}" sec:authorize="hasRole('ADMIN')" class="btn btn-sm btn-primary">+ Thêm sản phẩm</a>
     </div>
 
     <table class="table table-bordered table-striped table-sm align-middle">
@@ -72,7 +73,8 @@
             </td>
 
             <td>
-                <a class="btn btn-sm btn-outline-secondary py-0"
+                <span sec:authorize="!hasRole('ADMIN')" class="chu-phu small">Chỉ xem</span>
+                <a class="btn btn-sm btn-outline-secondary py-0" sec:authorize="hasRole('ADMIN')"
                    th:href="@{/admin/products/{id}/edit(id=${sp.id})}">Sửa</a>
 
                 <!--
@@ -81,7 +83,7 @@
                     Dung POST chu khong dung link GET: link GET doi trang thai la ai gui
                     duong dan cho minh bam vao cung doi duoc (CSRF).
                 -->
-                <form th:action="@{/admin/products/{id}/toggle-status(id=${sp.id})}" method="post"
+                <form th:action="@{/admin/products/{id}/toggle-status(id=${sp.id})}" method="post" sec:authorize="hasRole('ADMIN')"
                       class="d-inline"
                       onsubmit="return confirm('Bạn có chắc chắn muốn thực hiện thao tác này?');">
                     <button type="submit" class="btn btn-sm btn-outline-secondary py-0"

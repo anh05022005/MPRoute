@@ -47,9 +47,22 @@ public class SecurityConfig {
                         // Trang loi mac dinh cua Spring Boot, khong mo thi loi 500 bi lap vo han
                         .requestMatchers("/error").permitAll()
 
-                        // Ma tran phan quyen — docs/01-nghiep-vu.md
-                        // Danh muc, tai khoan, tham so he thong: chi quan tri vien
-                        .requestMatchers("/admin/**").hasRole("ADMIN")
+                        /*
+                         * Ma tran phan quyen — docs/01-nghiep-vu.md
+                         *
+                         * Quan ly tai khoan va cau hinh tham so: CHI quan tri vien.
+                         * Hai dong nay phai dat TRUOC dong /admin/** ben duoi — Spring Security
+                         * xet cac matcher theo dung thu tu khai bao va dung lai o cai khop dau tien,
+                         * dat sau thi khong bao gio toi luot.
+                         */
+                        .requestMatchers("/admin/users/**", "/admin/settings/**").hasRole("ADMIN")
+
+                        /*
+                         * Con lai la cac man hinh danh muc. Dieu phoi vien duoc vao nhung
+                         * CHI XEM: quyen sua nam o @PreAuthorize tren tung method cua Controller,
+                         * vi o day khong phan biet duoc GET danh sach voi GET man hinh them moi.
+                         */
+                        .requestMatchers("/admin/**").hasAnyRole("ADMIN", "DISPATCHER")
                         // Tai xe chi co mot man hinh duy nhat cua rieng minh
                         .requestMatchers("/driver/**").hasRole("DRIVER")
                         // Don hang, phan tuyen, theo doi, su co: dieu phoi lam, quan tri xem

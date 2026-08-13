@@ -8,6 +8,7 @@ import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.ResponseStatus;
 
 /**
@@ -34,8 +35,13 @@ public class HomeController {
      *
      * @ResponseStatus de ma tra ve dung la 403 chu khong phai 200 — tieu chi
      * nghiem thu ghi ro "tra ve trang 403", hoi dong co the mo tab Network de kiem.
+     *
+     * Dung @RequestMapping chu KHONG dung @GetMapping: accessDeniedPage() cua Spring
+     * Security *chuyen tiep* (forward) chu khong *chuyen huong* (redirect), nen request
+     * giu nguyen method ban dau. Neu chi nhan GET thi mot POST bi tu choi quyen se roi
+     * vao day duoi dang POST va Spring tra ve 405 Method Not Allowed thay vi 403.
      */
-    @GetMapping("/403")
+    @RequestMapping("/403")
     @ResponseStatus(HttpStatus.FORBIDDEN)
     public String accessDenied(@AuthenticationPrincipal CurrentUser currentUser) {
         if (currentUser != null) {

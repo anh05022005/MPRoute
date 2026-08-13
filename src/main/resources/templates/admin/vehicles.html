@@ -2,6 +2,7 @@
 <!-- SCR-03 — Danh muc phuong tien (CN-01-02) -->
 <html lang="vi"
       xmlns:th="http://www.thymeleaf.org"
+      xmlns:sec="http://www.thymeleaf.org/extras/spring-security"
       th:replace="~{layout :: main('Phương tiện', ~{::content})}">
 <body>
 
@@ -29,7 +30,7 @@
             <a th:href="@{/admin/vehicles}" class="btn btn-sm btn-outline-secondary">Bỏ lọc</a>
         </form>
 
-        <a th:href="@{/admin/vehicles/create}" class="btn btn-sm btn-primary">+ Thêm phương tiện</a>
+        <a th:href="@{/admin/vehicles/create}" sec:authorize="hasRole('ADMIN')" class="btn btn-sm btn-primary">+ Thêm phương tiện</a>
     </div>
 
     <table class="table table-bordered table-striped table-sm align-middle">
@@ -67,7 +68,8 @@
             <td class="chu-phu small" th:text="${xe.note}"></td>
 
             <td>
-                <a class="btn btn-sm btn-outline-secondary py-0"
+                <span sec:authorize="!hasRole('ADMIN')" class="chu-phu small">Chỉ xem</span>
+                <a class="btn btn-sm btn-outline-secondary py-0" sec:authorize="hasRole('ADMIN')"
                    th:href="@{/admin/vehicles/{id}/edit(id=${xe.id})}">Sửa</a>
 
                 <!--
@@ -78,7 +80,7 @@
                       class="btn btn-sm btn-outline-secondary py-0 disabled"
                       title="Xe đang chạy tuyến">Đang chạy</span>
 
-                <form th:unless="${xe.status.name() == 'IN_USE'}"
+                <form th:unless="${xe.status.name() == 'IN_USE'}" sec:authorize="hasRole('ADMIN')"
                       th:action="@{/admin/vehicles/{id}/toggle-status(id=${xe.id})}" method="post"
                       class="d-inline"
                       onsubmit="return confirm('Bạn có chắc chắn muốn thực hiện thao tác này?');">
