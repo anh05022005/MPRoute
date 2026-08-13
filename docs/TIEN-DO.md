@@ -71,9 +71,17 @@
 - Đưa code lên `github.com/anh05022005/MPRoute` (**riêng tư**), nhánh `main`, 11 commit chia theo mốc
   chức năng. Từ nay commit theo **Conventional Commits** — khuôn và ví dụ ở `docs/10-quy-uoc-ky-thuat.md`
 
-Tài khoản mẫu: `admin/admin123` · `dieuphoi/dieuphoi123` · `taixe01`, `taixe02`, `taixe03` cùng `taixe123`.
-Ba tài khoản đầu do `DataSeeder` tạo; `taixe02` và `taixe03` nhập tay qua màn hình CN-01-07 —
-**xóa CSDL làm lại là mất hai tài khoản này**, xem mục "Cần quyết định".
+- **Phân quyền danh mục theo đúng ma trận `docs/01`:** điều phối viên **xem được** sản phẩm, phương tiện,
+  tài xế nhưng mọi đường ghi đều trả 403; tài khoản và tham số vẫn chỉ quản trị viên. Kiểm 14 địa chỉ:
+  3 GET danh sách ra 200, 6 GET form sửa + 3 POST ghi + 2 màn hình quản trị ra 403.
+  Giao diện điều phối hiện chữ "Chỉ xem" thay cho nút, menu không có mục Tài khoản/Tham số
+- **Sửa 405 thành 403** khi vai trò không đủ quyền gửi POST tới `/admin/**`. Nguyên nhân:
+  `accessDeniedPage()` *chuyển tiếp* nên giữ nguyên method POST, mà `HomeController` khai `@GetMapping("/403")`.
+  Đổi sang `@RequestMapping("/403")`
+
+Tài khoản mẫu do `DataSeeder` tạo, khớp `docs/08`: `admin/admin123` · `dieuphoi/dieuphoi123` ·
+`taixe01`, `taixe02`, `taixe03` cùng `taixe123`. Ba tài xế chứ không phải một, vì kịch bản demo
+bước 12–14 (phương án B) cần hai tuyến chạy song song mới dựng được tình huống.
 
 ---
 
@@ -94,8 +102,6 @@ Khuôn đã chạy qua bốn lần (`XxxForm` → `XxxService` → `XxxControlle
 |---|---|
 | **Cắt phạm vi — quyết trước tuần 8** | 86 chức năng bắt buộc / 12 tuần / một người. Ước lượng thật là 18–24 tuần. **Cắt chủ động ngay chứ đừng đợi tuần 9 mới cắt trong hoảng loạn.** Cắt hẳn RPT-01, RPT-02 và toàn bộ mục ○ từ bây giờ |
 | **Mâu thuẫn về thứ tự cắt** | `docs/00` xếp UC06 (sự cố) vào diện cắt sớm, nhưng kịch bản demo lại lấy bước 13 làm điểm nhấn. Dung hòa: giữ UC06 nhưng làm **phương án A và C trước**, phương án B (Cheapest Insertion) làm sau nếu còn thời gian |
-| **`DataSeeder` lệch `docs/08`** | `docs/08` ghi 5 tài khoản `admin`/`dieuphoi1`/`taixe1..3`, code chỉ tạo 3 và đặt tên khác: `dieuphoi`, `taixe01`. Họ tên cũng lệch — `taixe01` là "Lê Văn Tài" trong khi hồ sơ tài xế gắn với nó là "Nguyễn Văn Hùng" theo `docs/08`. **Phải chọn một bên rồi sửa bên kia.** Đề xuất: giữ tên code (`taixe01` có số 0 để sắp xếp đúng khi có trên 9 tài xế), sửa `docs/08` và sửa họ tên `taixe01` thành Nguyễn Văn Hùng, đồng thời cho `DataSeeder` tạo đủ `taixe02`, `taixe03`. **Kịch bản demo bước 12–14 (phương án B) cần hai tài xế chạy song song**, thiếu là không dựng được tình huống |
-| Điều phối xem danh mục | Ma trận phân quyền cho điều phối "chỉ xem" danh mục, nhưng `docs/05` xếp SCR-02…06 là màn hình quản trị. Hiện `/admin/**` chặn ở `hasRole("ADMIN")` — điều phối vào là 403. **Quyết dứt điểm khi làm xong 5 danh mục còn lại**, sửa một lần cho cả 8 màn hình |
 | Thư viện xuất Excel | CN-08-05 cần Apache POI. Thêm vào `pom.xml` khi làm tới tuần 10 |
 
 ---
@@ -113,14 +119,12 @@ Khuôn đã chạy qua bốn lần (`XxxForm` → `XxxService` → `XxxControlle
 ## Nợ kỹ thuật
 
 - Menu trỏ tới `/orders`, `/routing`… chưa có Controller → bấm vào ra 404. Hết tuần 3–5 là tự hết
-- Vai trò không đủ quyền gửi **POST** tới `/admin/**` bị từ chối đúng (dữ liệu không đổi) nhưng trả
-  **405 thay vì 403**, cả 3 màn hình danh mục đều vậy. Do `SecurityConfig` dùng
-  `accessDeniedPage("/403")` — cách này *forward* nên giữ nguyên method POST — mà `HomeController`
-  lại khai `@GetMapping("/403")`. Đổi sang `@RequestMapping("/403")` là hết. Gõ URL bằng trình duyệt
-  luôn là GET nên vẫn ra 403 đúng, demo không lộ
 - Khi kiểm thử form bằng `curl` trong Git Bash: **phải percent-encode tiếng Việt sẵn** rồi dùng
   `--data-raw`. Git Bash chuyển tham số sang bảng mã ANSI khi gọi `curl.exe`, làm hỏng dấu tiếng Việt
-  ngay từ máy khách — dễ tưởng nhầm là ứng dụng sai encoding. Kiểm bằng `HEX(cột)` trong MySQL
+  ngay từ máy khách — dễ tưởng nhầm là ứng dụng sai encoding. Kiểm bằng `HEX(cột)` trong MySQL.
+  **Lệnh `docker exec ... mysql -e "…"` gọi từ PowerShell cũng hỏng y hệt**, mà kiểu khác: chữ bị mã hóa
+  hai lần (`Nguyễn` thành `Nguyá»…n`, hex `C3A1C2BB…` thay vì `E1BB85`). Muốn sửa dữ liệu tiếng Việt
+  bằng SQL trực tiếp thì dùng `UNHEX('…')` với chuỗi byte UTF-8 dựng sẵn, đừng gõ chữ có dấu vào lệnh
 - Sau khi đăng nhập địa chỉ có đuôi `?continue` — hành vi mặc định của Spring Security 6, vô hại
 - `application.properties` chứa mật khẩu MySQL `gbao`. Hiện không sao vì kho GitHub để **riêng tư**.
   **Nếu đổi kho sang công khai thì phải xóa dòng đó khỏi lịch sử trước** — nó nằm trong commit đầu `d48a491`,
