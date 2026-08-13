@@ -1,7 +1,6 @@
 # Tiến độ đồ án
 
-> Trạng thái hiện tại của đồ án. **Giữ dưới 60 dòng.**
-> Cập nhật sau mỗi mốc hoàn thành.
+> Trạng thái hiện tại của đồ án. **Giữ dưới 60 dòng.** Cập nhật sau mỗi mốc hoàn thành.
 
 **Cập nhật lần cuối:** 12/08/2026 · Kho: `github.com/anh05022005/MPRoute` (riêng tư), nhánh `main`
 
@@ -33,6 +32,7 @@
 
 ## Đã xong
 
+- 11 file đặc tả trong `docs/`, kể cả `10-quy-uoc-ky-thuat.md` (công nghệ, đặt tên, kiểm thử, bảo mật, Git)
 - Spring Boot **3.5.16**, 10 dependency, package `com.minhphu.mproute`, kết nối MySQL 8.0.44
 - Toàn bộ định danh tiếng Anh; comment tiếng Việt không dấu; chuỗi hiển thị tiếng Việt có dấu
 - **★ CN-00-01** — `GET /` ra trang chào, `show-sql` in câu SQL
