@@ -12,12 +12,12 @@
 | | |
 |---|---|
 | Theo kế hoạch | Tuần 3 — CRUD danh mục |
-| Thực tế | **Xong Nhóm 0 + sản phẩm + phương tiện + tài xế.** Đúng lịch |
+| Thực tế | **Xong Nhóm 0 + sản phẩm + phương tiện + tài xế + tài khoản.** Đúng lịch |
 
 ```
 [x] T1  Chot de tai, hoi Minh Phu 3 cau
 [x] T2  Project chay, 16 bang sinh ra, dang nhap duoc
-[~] T3  CRUD 7 danh muc xong  (3/7: san pham, phuong tien, tai xe)
+[~] T3  CRUD 7 danh muc xong  (4/7: san pham, phuong tien, tai xe, tai khoan)
 [ ] T4  Tao don hang, tu tinh kg/m3/tien
 [ ] T5  OSRM chay, ma tran co cache, ban do hien diem
 [ ] T6  NearestNeighbor chay duoc bang main(), test xanh
@@ -57,25 +57,34 @@
   một tài xế và phải đúng vai trò `DRIVER` — gửi thẳng `userId` của tài xế khác hoặc của `admin`
   lên vẫn bị từ chối ở tầng controller, không rơi vào lỗi trùng khóa của MySQL.
   Kiểm `HEX(full_name)` khớp UTF-8; ô không bắt buộc để trống lưu `NULL` chứ không lưu chuỗi rỗng
+- **★ CN-01-07** — danh mục tài khoản: thêm, sửa, gán vai trò, khóa/mở khóa, không có nút xóa cứng.
+  Chặn đủ **9 nhánh sai**: trống tên đăng nhập, tên có chữ hoa/dấu cách, tên dưới 3 ký tự, trùng tên,
+  thêm mới thiếu mật khẩu, mật khẩu dưới 6 ký tự, hai lần nhập không khớp, sai định dạng email, thiếu vai trò.
+  **Sửa mà để trống ô mật khẩu = giữ nguyên mật khẩu cũ** — kiểm chứng bằng cách đăng nhập lại sau khi sửa họ tên.
+  **Hai rào tự bảo vệ:** không tự khóa và không tự hạ vai trò của chính mình — cộng lại bảo đảm hệ thống
+  luôn còn ít nhất một quản trị viên `ACTIVE`, không bao giờ khóa hết đường vào phần quản trị.
+  Khóa vĩnh viễn (`status`) và khóa tạm 15 phút (`locked_until`) hiển thị tách bạch, mỗi cái một nút gỡ riêng
 - Tách `templates/fragments/pagination.html` dùng chung cho các màn hình danh mục — kiểm với 25 bản ghi:
-  15 dòng trang 1, 10 dòng trang 2, giữ nguyên điều kiện lọc khi sang trang
+  15 dòng trang 1, 10 dòng trang 2, giữ nguyên điều kiện lọc khi sang trang.
+  Thêm tham số `role` cho màn hình tài khoản; ba màn hình còn lại truyền `null`
 
 - Đưa code lên `github.com/anh05022005/MPRoute` (**riêng tư**), nhánh `main`, 11 commit chia theo mốc
   chức năng. Từ nay commit theo **Conventional Commits** — khuôn và ví dụ ở `docs/10-quy-uoc-ky-thuat.md`
 
-Tài khoản mẫu (`DataSeeder`): `admin/admin123` · `dieuphoi/dieuphoi123` · `taixe01/taixe123`
+Tài khoản mẫu: `admin/admin123` · `dieuphoi/dieuphoi123` · `taixe01`, `taixe02`, `taixe03` cùng `taixe123`.
+Ba tài khoản đầu do `DataSeeder` tạo; `taixe02` và `taixe03` nhập tay qua màn hình CN-01-07 —
+**xóa CSDL làm lại là mất hai tài khoản này**, xem mục "Cần quyết định".
 
 ---
 
-## Việc tiếp theo — tuần 3, 5 danh mục còn lại
+## Việc tiếp theo — tuần 3, 4 danh mục còn lại
 
-Khuôn đã chạy qua ba lần (`XxxForm` → `XxxService` → `XxxController` → `xxxs.html` +
+Khuôn đã chạy qua bốn lần (`XxxForm` → `XxxService` → `XxxController` → `xxxs.html` +
 `xxx-form.html` + fragment phân trang), các màn hình sau chép theo:
 
-1. CN-01-07 Tài khoản
-2. CN-01-04 Khách hàng — nặng hơn vì có tọa độ · CN-01-06 Kho (BR01-10: chỉ một kho `active`)
-3. CN-01-08 Tham số hệ thống — 9 tham số, kiểm bằng cách đổi `AVERAGE_SPEED` rồi xem ETA có đổi
-4. CN-01-05 Tìm tọa độ bằng Nominatim — làm sau cùng vì cần gọi mạng ngoài
+1. CN-01-04 Khách hàng — nặng hơn vì có tọa độ · CN-01-06 Kho (BR01-10: chỉ một kho `active`)
+2. CN-01-08 Tham số hệ thống — 9 tham số, kiểm bằng cách đổi `AVERAGE_SPEED` rồi xem ETA có đổi
+3. CN-01-05 Tìm tọa độ bằng Nominatim — làm sau cùng vì cần gọi mạng ngoài
 
 ---
 
@@ -85,6 +94,7 @@ Khuôn đã chạy qua ba lần (`XxxForm` → `XxxService` → `XxxController` 
 |---|---|
 | **Cắt phạm vi — quyết trước tuần 8** | 86 chức năng bắt buộc / 12 tuần / một người. Ước lượng thật là 18–24 tuần. **Cắt chủ động ngay chứ đừng đợi tuần 9 mới cắt trong hoảng loạn.** Cắt hẳn RPT-01, RPT-02 và toàn bộ mục ○ từ bây giờ |
 | **Mâu thuẫn về thứ tự cắt** | `docs/00` xếp UC06 (sự cố) vào diện cắt sớm, nhưng kịch bản demo lại lấy bước 13 làm điểm nhấn. Dung hòa: giữ UC06 nhưng làm **phương án A và C trước**, phương án B (Cheapest Insertion) làm sau nếu còn thời gian |
+| **`DataSeeder` lệch `docs/08`** | `docs/08` ghi 5 tài khoản `admin`/`dieuphoi1`/`taixe1..3`, code chỉ tạo 3 và đặt tên khác: `dieuphoi`, `taixe01`. Họ tên cũng lệch — `taixe01` là "Lê Văn Tài" trong khi hồ sơ tài xế gắn với nó là "Nguyễn Văn Hùng" theo `docs/08`. **Phải chọn một bên rồi sửa bên kia.** Đề xuất: giữ tên code (`taixe01` có số 0 để sắp xếp đúng khi có trên 9 tài xế), sửa `docs/08` và sửa họ tên `taixe01` thành Nguyễn Văn Hùng, đồng thời cho `DataSeeder` tạo đủ `taixe02`, `taixe03`. **Kịch bản demo bước 12–14 (phương án B) cần hai tài xế chạy song song**, thiếu là không dựng được tình huống |
 | Điều phối xem danh mục | Ma trận phân quyền cho điều phối "chỉ xem" danh mục, nhưng `docs/05` xếp SCR-02…06 là màn hình quản trị. Hiện `/admin/**` chặn ở `hasRole("ADMIN")` — điều phối vào là 403. **Quyết dứt điểm khi làm xong 5 danh mục còn lại**, sửa một lần cho cả 8 màn hình |
 | Thư viện xuất Excel | CN-08-05 cần Apache POI. Thêm vào `pom.xml` khi làm tới tuần 10 |
 
