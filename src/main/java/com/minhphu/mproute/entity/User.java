@@ -63,4 +63,20 @@ public class User {
     @CreationTimestamp
     @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt;
+
+    /**
+     * Dang bi khoa TAM 15 phut do dang nhap sai 5 lan (CN-00-03).
+     *
+     * Khac han voi status = LOCKED la khoa VINH VIEN do quan tri vien dat tay.
+     * Tach ra thanh ham rieng vi ca man hinh danh muc tai khoan lan
+     * CustomUserDetailsService deu can hoi cung mot cau hoi nay.
+     *
+     * @Transient de danh dau day khong phai mot cot trong bang. Thuc ra Hibernate
+     * doc du lieu qua thuoc tinh (vi @Id dat tren thuoc tinh) nen khong nhin toi
+     * ham nay, ghi vao cho ro rang khi doc lai.
+     */
+    @Transient
+    public boolean isTemporarilyLocked() {
+        return lockedUntil != null && lockedUntil.isAfter(LocalDateTime.now());
+    }
 }

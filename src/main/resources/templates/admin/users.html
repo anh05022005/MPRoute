@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<!-- SCR-08 — Danh muc tai khoan (CN-01-07) -->
+<html lang="vi"
+      xmlns:th="http://www.thymeleaf.org"
+      th:replace="~{layout :: main('Tài khoản', ~{::content})}">
+<body>
+
+<div th:fragment="content">
+
+    <div class="thanh-cong-cu d-flex justify-content-between align-items-end flex-wrap gap-2">
+
+        <form th:action="@{/admin/users}" method="get" class="d-flex align-items-end gap-2 flex-wrap">
+            <div>
+                <label for="keyword" class="form-label mb-1 small">Tìm theo tên đăng nhập hoặc họ tên</label>
+                <input type="text" id="keyword" name="keyword" class="form-control form-control-sm"
+                       style="width: 240px;" th:value="${keyword}" placeholder="Ví dụ: taixe hoặc Hùng">
+            </div>
+            <div>
+                <label for="role" class="form-label mb-1 small">Vai trò</label>
+                <select id="role" name="role" class="form-select form-select-sm" style="width: 150px;">
+                    <option value="">Tất cả</option>
+                    <option th:each="vt : ${cacVaiTro}"
+                            th:value="${vt}"
+                            th:text="${vt.displayName}"
+                            th:selected="${vt == role}">Vai trò</option>
+                </select>
+            </div>
+            <div>
+                <label for="status" class="form-label mb-1 small">Trạng thái</label>
+                <select id="status" name="status" class="form-select form-select-sm" style="width: 140px;">
+                    <option value="">Tất cả</option>
+                    <option th:each="tt : ${cacTrangThai}"
+                            th:value="${tt}"
+                            th:text="${tt.displayName}"
+                            th:selected="${tt == status}">Trạng thái</option>
+                </select>
+            </div>
+            <button type="submit" class="btn btn-sm btn-outline-secondary">Tìm</button>
+            <a th:href="@{/admin/users}" class="btn btn-sm btn-outline-secondary">Bỏ lọc</a>
+        </form>
+
+        <a th:href="@{/admin/users/create}" class="btn btn-sm btn-primary">+ Thêm tài khoản</a>
+    </div>
+
+    <table class="table table-bordered table-striped table-sm align-middle">
+        <thead>
+        <tr>
+            <th style="width: 150px;">Tên đăng nhập</th>
+            <th>Họ tên</th>
+            <th style="width: 200px;">Email</th>
+            <th style="width: 130px;">Vai trò</th>
+            <th style="width: 180px;">Trạng thái</th>
+            <th style="width: 200px;">Thao tác</th>
+        </tr>
+        </thead>
+        <tbody>
+
+        <tr th:if="${trang.empty}">
+            <td colspan="6" class="text-center chu-phu py-3">Không có tài khoản nào phù hợp.</td>
+        </tr>
+
+        <tr th:each="tk : ${trang.content}">
+            <td th:text="${tk.username}">admin</td>
+            <td th:text="${tk.fullName}">Nguyễn Văn Quản</td>
+
+            <!-- Email duoc phep NULL nen phai kiem truoc khi doc -->
+            <td>
+                <span th:if="${tk.email != null}" th:text="${tk.email}">a@b.com</span>
+                <span th:unless="${tk.email != null}" class="chu-phu small">—</span>
+            </td>
+
+            <td th:text="${tk.role.displayName}">Quản trị viên</td>
+
+            <!--
+                Mot tai khoan co the bi khoa theo HAI cach doc lap nhau:
+                  - status = LOCKED  : quan tri vien khoa vinh vien
+                  - locked_until     : he thong khoa tam 15 phut do sai mat khau 5 lan (CN-00-03)
+                Hien ca hai, vi nguoi dung goi dien bao "khong dang nhap duoc" thi quan tri vien
+                phai nhin ra ngay dang vuong cai nao moi biet bam nut gi.
+            -->
+            <td>
+                <span th:class="${tk.status.name() == 'ACTIVE'} ? 'nhan nhan-thanh-cong' : 'nhan nhan-loi'"
+                      th:text="${tk.status.displayName}">Hoạt động</span>
+
+                <span th:if="${tk.temporarilyLocked}" class="nhan nhan-cho d-block mt-1"
+                      th:text="'Khóa tạm đến ' + ${#temporals.format(tk.lockedUntil, 'HH:mm')}">
+                    Khóa tạm đến 20:35</span>
+            </td>
+
+            <td>
+                <a class="btn btn-sm btn-outline-secondary py-0"
+                   th:href="@{/admin/users/{id}/edit(id=${tk.id})}">Sửa</a>
+
+                <!--
+                    Khong co nut Xoa (CBR-17). Tai khoan da tao don, da chay tuyen ma xoa cung
+                    thi lich su trang thai mat thong tin ai lam viec gi. Nghi viec thi khoa.
+                    Dung POST chu khong dung link GET de con token CSRF.
+                -->
+                <form th:action="@{/admin/users/{id}/toggle-status(id=${tk.id})}" method="post"
+                      class="d-inline"
+                      onsubmit="return confirm('Bạn có chắc chắn muốn thực hiện thao tác này?');">
+                    <button type="submit" class="btn btn-sm btn-outline-secondary py-0"
+                            th:text="${tk.status.name() == 'ACTIVE'} ? 'Khóa' : 'Mở khóa'">Khóa</button>
+                </form>
+
+                <!-- Chi hien khi dang thuc su vuong khoa tam, khong bay ra o moi dong cho roi mat -->
+                <form th:if="${tk.temporarilyLocked}"
+                      th:action="@{/admin/users/{id}/clear-lock(id=${tk.id})}" method="post"
+                      class="d-inline">
+                    <button type="submit" class="btn btn-sm btn-outline-secondary py-0">Gỡ khóa tạm</button>
+                </form>
+            </td>
+        </tr>
+        </tbody>
+    </table>
+
+    <div th:replace="~{fragments/pagination :: phan-trang(
+             trang       = ${trang},
+             duongDan    = '/admin/users',
+             keyword     = ${keyword},
+             status      = ${status},
+             role        = ${role},
+             tenDoiTuong = 'tài khoản')}"></div>
+
+</div>
+
+</body>
+</html>

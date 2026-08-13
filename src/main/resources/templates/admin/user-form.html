@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<!-- Them / sua tai khoan (CN-01-07) -->
+<html lang="vi"
+      xmlns:th="http://www.thymeleaf.org"
+      th:replace="~{layout :: main('Tài khoản', ~{::content})}">
+<body>
+
+<div th:fragment="content">
+
+    <h1 class="h5 mb-3" th:text="${form.id == null} ? 'Thêm tài khoản' : 'Sửa tài khoản'">Thêm tài khoản</h1>
+
+    <form th:action="@{/admin/users/save}" th:object="${form}" method="post" style="max-width: 640px;">
+
+        <input type="hidden" th:field="*{id}">
+
+        <div class="row g-3">
+
+            <div class="col-md-5">
+                <label for="username" class="form-label">Tên đăng nhập <span class="text-danger">*</span></label>
+                <!--
+                    autocomplete="off" de trinh duyet khong tu dien tai khoan cua nguoi
+                    dang dang nhap vao form dang tao tai khoan cho nguoi khac.
+                -->
+                <input type="text" id="username" class="form-control" th:field="*{username}"
+                       th:classappend="${#fields.hasErrors('username')} ? 'is-invalid'"
+                       maxlength="50" autocomplete="off" placeholder="taixe02">
+                <div class="invalid-feedback" th:errors="*{username}">Lỗi</div>
+                <div class="form-text">Chữ thường không dấu, chữ số, dấu chấm và gạch dưới.</div>
+            </div>
+
+            <div class="col-md-7">
+                <label for="fullName" class="form-label">Họ tên <span class="text-danger">*</span></label>
+                <input type="text" id="fullName" class="form-control" th:field="*{fullName}"
+                       th:classappend="${#fields.hasErrors('fullName')} ? 'is-invalid'"
+                       placeholder="Lê Văn Nam">
+                <div class="invalid-feedback" th:errors="*{fullName}">Lỗi</div>
+            </div>
+
+            <div class="col-md-7">
+                <label for="email" class="form-label">Email</label>
+                <input type="email" id="email" class="form-control" th:field="*{email}"
+                       th:classappend="${#fields.hasErrors('email')} ? 'is-invalid'">
+                <div class="invalid-feedback" th:errors="*{email}">Lỗi</div>
+            </div>
+
+            <div class="col-md-5">
+                <label for="role" class="form-label">Vai trò <span class="text-danger">*</span></label>
+                <select id="role" class="form-select" th:field="*{role}"
+                        th:classappend="${#fields.hasErrors('role')} ? 'is-invalid'">
+                    <option value="">— Chọn vai trò —</option>
+                    <option th:each="vt : ${cacVaiTro}"
+                            th:value="${vt}" th:text="${vt.displayName}">Vai trò</option>
+                </select>
+                <div class="invalid-feedback d-block" th:if="${#fields.hasErrors('role')}"
+                     th:errors="*{role}">Lỗi</div>
+            </div>
+
+            <div class="col-md-5">
+                <label for="status" class="form-label">Trạng thái</label>
+                <select id="status" class="form-select" th:field="*{status}"
+                        th:classappend="${#fields.hasErrors('status')} ? 'is-invalid'">
+                    <option th:each="tt : ${cacTrangThai}"
+                            th:value="${tt}" th:text="${tt.displayName}">Trạng thái</option>
+                </select>
+                <div class="invalid-feedback d-block" th:if="${#fields.hasErrors('status')}"
+                     th:errors="*{status}">Lỗi</div>
+            </div>
+        </div>
+
+        <hr class="my-4">
+
+        <!--
+            Khoi mat khau. Khi SUA thi hai o nay de trong nghia la giu nguyen mat khau cu —
+            man hinh khong the hien mat khau hien tai vi trong CSDL chi luu chuoi bam
+            mot chieu BCrypt, khong doc nguoc ra duoc (CBR-16).
+        -->
+        <div th:if="${form.id == null}" class="mb-2 fw-semibold">Mật khẩu</div>
+        <div th:unless="${form.id == null}" class="mb-2">
+            <span class="fw-semibold">Đặt lại mật khẩu</span>
+            <span class="chu-phu small">— để trống nếu không muốn đổi mật khẩu hiện tại</span>
+        </div>
+
+        <div class="row g-3">
+            <div class="col-md-6">
+                <label for="password" class="form-label">
+                    Mật khẩu <span class="text-danger" th:if="${form.id == null}">*</span>
+                </label>
+                <input type="password" id="password" class="form-control" th:field="*{password}"
+                       th:classappend="${#fields.hasErrors('password')} ? 'is-invalid'"
+                       maxlength="72" autocomplete="new-password">
+                <div class="invalid-feedback" th:errors="*{password}">Lỗi</div>
+            </div>
+
+            <div class="col-md-6">
+                <label for="confirmPassword" class="form-label">Nhập lại mật khẩu</label>
+                <input type="password" id="confirmPassword" class="form-control" th:field="*{confirmPassword}"
+                       th:classappend="${#fields.hasErrors('confirmPassword')} ? 'is-invalid'"
+                       maxlength="72" autocomplete="new-password">
+                <div class="invalid-feedback" th:errors="*{confirmPassword}">Lỗi</div>
+            </div>
+        </div>
+
+        <div class="khoi-thong-tin mt-3 small chu-phu">
+            Mật khẩu được băm <strong>BCrypt</strong> trước khi lưu, cơ sở dữ liệu không giữ bản gốc.
+            Đặt lại mật khẩu sẽ gỡ luôn khóa tạm 15 phút nếu tài khoản đang bị khóa do nhập sai nhiều lần.
+        </div>
+
+        <div class="mt-3">
+            <button type="submit" class="btn btn-primary">Lưu</button>
+            <a th:href="@{/admin/users}" class="btn btn-outline-secondary">Hủy</a>
+        </div>
+    </form>
+
+</div>
+
+</body>
+</html>

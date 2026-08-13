@@ -8,16 +8,20 @@
                  duongDan = '/admin/vehicles',
                  keyword  = ${keyword},
                  status   = ${status},
+                 role     = null,
                  tenDoiTuong = 'xe')}"></div>
 
-    Hai o loc keyword va status duoc viet cung vao day thay vi nhan mot Map linh hoat,
-    vi ca 7 man hinh danh muc deu dung dung hai o loc nay. Viet cung thi de doc hon,
-    va khi can them o loc thu ba thi sua o mot cho.
+    Cac o loc duoc viet cung vao day thay vi nhan mot Map linh hoat, vi cac man hinh
+    danh muc dung chung mot bo o loc. Viet cung thi de doc hon va sua o mot cho.
+
+    Tham so "role" chi rieng man hinh danh muc tai khoan (CN-01-07) dung toi. Cac man hinh
+    khac truyen null — Thymeleaf bo qua tham so null nen dia chi khong bi dinh "?role=".
+    Bat buoc truyen du ca 6 tham so: goi thieu mot cai la Thymeleaf bao loi ngay.
 -->
 <html lang="vi" xmlns:th="http://www.thymeleaf.org">
 <body>
 
-<div th:fragment="phan-trang(trang, duongDan, keyword, status, tenDoiTuong)"
+<div th:fragment="phan-trang(trang, duongDan, keyword, status, role, tenDoiTuong)"
      class="d-flex justify-content-between align-items-center"
      th:if="${trang.totalPages > 1}">
 
@@ -30,20 +34,20 @@
 
         <li class="page-item" th:classappend="${trang.first} ? 'disabled'">
             <a class="page-link"
-               th:href="@{${duongDan}(page=${trang.number - 1}, keyword=${keyword}, status=${status})}">Trước</a>
+               th:href="@{${duongDan}(page=${trang.number - 1}, keyword=${keyword}, status=${status}, role=${role})}">Trước</a>
         </li>
 
         <!-- Mang trang danh so tu 0 nhung nguoi dung dem tu 1, nen hien i + 1 -->
         <li class="page-item" th:each="i : ${#numbers.sequence(0, trang.totalPages - 1)}"
             th:classappend="${i == trang.number} ? 'active'">
             <a class="page-link"
-               th:href="@{${duongDan}(page=${i}, keyword=${keyword}, status=${status})}"
+               th:href="@{${duongDan}(page=${i}, keyword=${keyword}, status=${status}, role=${role})}"
                th:text="${i + 1}">1</a>
         </li>
 
         <li class="page-item" th:classappend="${trang.last} ? 'disabled'">
             <a class="page-link"
-               th:href="@{${duongDan}(page=${trang.number + 1}, keyword=${keyword}, status=${status})}">Sau</a>
+               th:href="@{${duongDan}(page=${trang.number + 1}, keyword=${keyword}, status=${status}, role=${role})}">Sau</a>
         </li>
     </ul>
 </div>

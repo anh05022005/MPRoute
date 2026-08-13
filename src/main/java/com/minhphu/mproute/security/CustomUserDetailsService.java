@@ -10,8 +10,6 @@ import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.time.LocalDateTime;
-
 /**
  * Cau noi giua bang users va Spring Security.
  *
@@ -42,9 +40,6 @@ public class CustomUserDetailsService implements UserDetailsService {
      * Khoa tam het han thi khong can xoa locked_until, chi can so sanh voi gio hien tai.
      */
     private boolean isLocked(User user) {
-        if (user.getStatus() == UserStatus.LOCKED) {
-            return true;
-        }
-        return user.getLockedUntil() != null && user.getLockedUntil().isAfter(LocalDateTime.now());
+        return user.getStatus() == UserStatus.LOCKED || user.isTemporarilyLocked();
     }
 }
