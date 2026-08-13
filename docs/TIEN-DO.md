@@ -68,8 +68,10 @@
   15 dòng trang 1, 10 dòng trang 2, giữ nguyên điều kiện lọc khi sang trang.
   Thêm tham số `role` cho màn hình tài khoản; ba màn hình còn lại truyền `null`
 
-- Đưa code lên `github.com/anh05022005/MPRoute` (**riêng tư**), nhánh `main`, 11 commit chia theo mốc
-  chức năng. Từ nay commit theo **Conventional Commits** — khuôn và ví dụ ở `docs/10-quy-uoc-ky-thuat.md`
+- Đưa code lên `github.com/anh05022005/MPRoute` (**riêng tư**), nhánh `main`, 17 commit chia theo mốc
+  chức năng. Commit theo **Conventional Commits** — khuôn và ví dụ ở `docs/10-quy-uoc-ky-thuat.md`.
+  **Lịch sử đã được viết lại một lần** (13/08/2026) nên mã commit cũ không còn dùng được;
+  bản sao trước khi viết lại nằm ngoài kho ở `D:\JavaProject\MPRoute-BACKUP-20260813-2227.git`
 
 - **Phân quyền danh mục theo đúng ma trận `docs/01`:** điều phối viên **xem được** sản phẩm, phương tiện,
   tài xế nhưng mọi đường ghi đều trả 403; tài khoản và tham số vẫn chỉ quản trị viên. Kiểm 14 địa chỉ:
@@ -127,7 +129,7 @@ Khuôn đã chạy qua bốn lần (`XxxForm` → `XxxService` → `XxxControlle
   bằng SQL trực tiếp thì dùng `UNHEX('…')` với chuỗi byte UTF-8 dựng sẵn, đừng gõ chữ có dấu vào lệnh
 - Sau khi đăng nhập địa chỉ có đuôi `?continue` — hành vi mặc định của Spring Security 6, vô hại
 - `application.properties` chứa mật khẩu MySQL `gbao`. Hiện không sao vì kho GitHub để **riêng tư**.
-  **Nếu đổi kho sang công khai thì phải xóa dòng đó khỏi lịch sử trước** — nó nằm trong commit đầu `d48a491`,
+  **Nếu đổi kho sang công khai thì phải xóa dòng đó khỏi lịch sử trước** — nó nằm trong commit đầu `c55b2d3`,
   chuyển sang riêng tư rồi công khai lại không tự xóa được
 - Máy này lưu sẵn thông tin đăng nhập GitHub của **hai tài khoản**. Remote cố ý ghi là
   `https://anh05022005@github.com/...` — có `anh05022005@` ở giữa thì Git mới lấy đúng tài khoản.
