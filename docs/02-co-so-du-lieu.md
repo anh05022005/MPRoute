@@ -364,7 +364,7 @@ Giá trị khởi tạo:
 | `LOADING_TIME` | `15` | phút mỗi điểm |
 | `DEPARTURE_TIME` | `08:00` | |
 | `HAVERSINE_FACTOR` | `1.3` | |
-| `DEFAULT_ALGORITHM` | `NN_2OPT` | |
+| `DEFAULT_ALGORITHM` | `OR_TOOLS` | Bộ giải chính. Đổi sang `NN_2OPT` để chạy bản tự cài đặt |
 | `OSRM_URL` | `http://localhost:5000` | |
 | `OSRM_TIMEOUT` | `10` | giây |
 | `PAGE_SIZE` | `20` | Số dòng mỗi trang |
@@ -395,7 +395,7 @@ IncidentStatus        : PENDING, RESOLVED                 <- bang incidents
 SolutionType          : A_RESCUE_VEHICLE, B_INSERT_OTHER_ROUTE, C_POSTPONE, MANUAL
 EntityType            : ORDER, ROUTE                      <- bang status_history
 NotificationSendStatus: NOT_SENT, SENT, ERROR             <- bang notifications
-AlgorithmType         : NN, NN_2OPT, MANUAL
+AlgorithmType         : OR_TOOLS, NN, NN_2OPT, MANUAL
 DistanceSource        : OSRM, HAVERSINE
 ```
 
