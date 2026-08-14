@@ -11,12 +11,12 @@
 | | |
 |---|---|
 | Theo kế hoạch | Tuần 3 — CRUD danh mục |
-| Thực tế | **Xong Nhóm 0 + sản phẩm + phương tiện + tài xế + tài khoản + khách hàng.** Đúng lịch |
+| Thực tế | **Xong Nhóm 0 + 6/7 danh mục** (thiếu tham số hệ thống và tìm tọa độ Nominatim). Đúng lịch |
 
 ```
 [x] T1  Chot de tai, hoi Minh Phu 3 cau
 [x] T2  Project chay, 16 bang sinh ra, dang nhap duoc
-[~] T3  CRUD 7 danh muc xong  (5/7: san pham, phuong tien, tai xe, tai khoan, khach hang)
+[~] T3  CRUD 7 danh muc xong  (6/7: san pham, phuong tien, tai xe, tai khoan, khach hang, kho)
 [ ] T4  Tao don hang, tu tinh kg/m3/tien
 [ ] T5  OSRM chay, ma tran co cache, ban do hien diem
 [ ] T6  NearestNeighbor chay duoc bang main(), test xanh
@@ -85,6 +85,13 @@
   dùng chung số. Kiểm 30 phép, qua 30. Đã nhập sẵn **15 khách thật** theo `docs/08` — 3 khách có
   ghi chú giao hàng, 5 khách có email, tọa độ đều nằm trong 20.94–21.01 / 105.79–105.85,
   kiểm `HEX(name)` khớp UTF-8 từng byte
+- **★ CN-01-06** — danh mục kho. **BR01-10 là toàn bộ nội dung của màn hình này:** hệ thống luôn
+  giữ **đúng một** kho `active`, vì đó là điểm `c0` của bài toán — hai kho active thì không biết
+  lấy cái nào, không có cái nào thì không phân tuyến được. Cách bảo đảm: **không làm nút "tắt kho
+  chính"**, đổi kho là *bật* kho mới lên rồi một câu `UPDATE` tắt các kho khác, nên không bao giờ
+  đi qua trạng thái trung gian không còn kho nào. Bỏ tích kho active cuối cùng bị chặn ở
+  controller, và có thêm lưới an toàn ở service. Kiểm 24 phép, qua 24.
+  Đã nhập **Kho Minh Phú** theo `docs/08`, kiểm `HEX(address)` khớp UTF-8 từng byte
 - **★ Đổi định hướng thuật toán (14/08/2026): OR-Tools thành bộ giải chính**, bản tự cài đặt
   NN + 2-opt giữ nguyên nhưng đổi vai trò thành **mốc so sánh** ở chương thực nghiệm.
   Hai package tách bạch — `optimization/ortools/` và `optimization/heuristic/`, package sau
@@ -103,15 +110,14 @@ bước 12–14 (phương án B) cần hai tuyến chạy song song mới dựng
 
 ---
 
-## Việc tiếp theo — tuần 3, 3 danh mục còn lại
+## Việc tiếp theo — tuần 3, 2 danh mục còn lại
 
-Khuôn đã chạy qua năm lần (`XxxForm` → `XxxService` → `XxxController` → `xxxs.html` +
-`xxx-form.html` + fragment phân trang), các màn hình sau chép theo:
-
-1. CN-01-06 Kho — nhẹ, một bản ghi (BR01-10: chỉ một kho `active`)
-2. CN-01-08 Tham số hệ thống — 9 tham số, kiểm bằng cách đổi `AVERAGE_SPEED` rồi xem ETA có đổi
-3. CN-01-05 Tìm tọa độ bằng Nominatim — làm sau cùng vì cần gọi mạng ngoài. Gắn nút "Tìm tọa độ"
-   vào chính `customer-form.html` đã có, hai ô vĩ độ/kinh độ hiện đang nhập tay
+1. **CN-01-08 Tham số hệ thống** — 9 tham số trong `docs/02`. Tiêu chí nghiệm thu không phải là
+   "sửa được" mà là **đổi `AVERAGE_SPEED` rồi chạy lại phân tuyến thì ETA phải đổi theo** — tức là
+   chỉ kiểm chứng đầy đủ được ở tuần 8. Tuần này làm màn hình sửa, để lại phép kiểm đó
+2. **CN-01-05 Tìm tọa độ bằng Nominatim** — làm sau cùng vì cần gọi mạng ngoài. Gắn nút
+   "Tìm tọa độ" vào `customer-form.html` và `depot-form.html` đã có; hai ô vĩ độ/kinh độ ở cả hai
+   màn hình hiện đang nhập tay và **vẫn phải nhập tay được** khi Nominatim không trả kết quả (BR01-06)
 
 ---
 
