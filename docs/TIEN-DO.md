@@ -11,16 +11,16 @@
 | | |
 |---|---|
 | Theo kế hoạch | Tuần 3 — CRUD danh mục |
-| Thực tế | **Xong Nhóm 0 + sản phẩm + phương tiện + tài xế + tài khoản.** Đúng lịch |
+| Thực tế | **Xong Nhóm 0 + sản phẩm + phương tiện + tài xế + tài khoản + khách hàng.** Đúng lịch |
 
 ```
 [x] T1  Chot de tai, hoi Minh Phu 3 cau
 [x] T2  Project chay, 16 bang sinh ra, dang nhap duoc
-[~] T3  CRUD 7 danh muc xong  (4/7: san pham, phuong tien, tai xe, tai khoan)
+[~] T3  CRUD 7 danh muc xong  (5/7: san pham, phuong tien, tai xe, tai khoan, khach hang)
 [ ] T4  Tao don hang, tu tinh kg/m3/tien
 [ ] T5  OSRM chay, ma tran co cache, ban do hien diem
 [ ] T6  NearestNeighbor chay duoc bang main(), test xanh
-[ ] T7  2-opt chay duoc, co so sanh NN vs NN+2opt
+[ ] T7  2-opt chay duoc, OR-Tools cam vao, bang so sanh 4 dong
 [ ] T8  Man hinh phan tuyen hoan chinh, ve tuyen len ban do
 [ ] T9  Man hinh tai xe, tra cuu, su co
 [ ] T10 RPT-03 xong, benchmark Augerat xong, chuong 4 viet xong
@@ -33,7 +33,7 @@
 ## Đã xong
 
 - 11 file đặc tả trong `docs/`, kể cả `10-quy-uoc-ky-thuat.md` (công nghệ, đặt tên, kiểm thử, bảo mật, Git)
-- Spring Boot **3.5.16**, 10 dependency, package `com.minhphu.mproute`, kết nối MySQL 8.0.44
+- Spring Boot **3.5.16**, 11 dependency, package `com.minhphu.mproute`, kết nối MySQL 8.0.44
 - Toàn bộ định danh tiếng Anh; comment tiếng Việt không dấu; chuỗi hiển thị tiếng Việt có dấu
 - **★ CN-00-01** — `GET /` ra trang chào, `show-sql` in câu SQL
 - **★ CN-00-02** — 18 enum + 16 entity + 16 repository → đủ **16 bảng**, không còn cột `ENUM` native
@@ -77,6 +77,22 @@
   tài xế nhưng mọi đường ghi đều trả 403; tài khoản và tham số vẫn chỉ quản trị viên. Kiểm 14 địa chỉ:
   3 GET danh sách ra 200, 6 GET form sửa + 3 POST ghi + 2 màn hình quản trị ra 403.
   Giao diện điều phối hiện chữ "Chỉ xem" thay cho nút, menu không có mục Tài khoản/Tham số
+- **★ CN-01-04** — danh mục khách hàng, cùng khuôn. Chặn đủ **12 nhánh sai**: trống tên/SĐT/địa chỉ,
+  SĐT 9 số, 11 số, đầu số 1, lẫn chữ cái, trống vĩ độ, trống kinh độ, email sai định dạng, và
+  **vĩ độ vượt 90** — nhánh cuối bắt đúng lỗi nhập đổi chỗ vĩ độ/kinh độ, vì kinh độ Hà Nội là
+  105.8 nên đặt nhầm vào ô vĩ độ là bị chặn ngay. Trùng số điện thoại chỉ **cảnh báo, vẫn lưu**:
+  cột `phone` không đặt unique (`docs/02` chỉ đánh index), thực tế có hai cửa hàng cùng chủ
+  dùng chung số. Kiểm 30 phép, qua 30. Đã nhập sẵn **15 khách thật** theo `docs/08` — 3 khách có
+  ghi chú giao hàng, 5 khách có email, tọa độ đều nằm trong 20.94–21.01 / 105.79–105.85,
+  kiểm `HEX(name)` khớp UTF-8 từng byte
+- **★ Đổi định hướng thuật toán (14/08/2026): OR-Tools thành bộ giải chính**, bản tự cài đặt
+  NN + 2-opt giữ nguyên nhưng đổi vai trò thành **mốc so sánh** ở chương thực nghiệm.
+  Hai package tách bạch — `optimization/ortools/` và `optimization/heuristic/`, package sau
+  **cấm import OR-Tools**, có hook chặn. Lý do và phần được/mất ghi ở `docs/09` mục **A3**.
+  Đã kiểm chứng trước khi đổi kế hoạch: `OrToolsSmokeTest` giải bài CVRP 4 điểm 2 xe ra
+  **đúng đáp số tính tay 8000 m** trong 1,5 s trên Windows 11 + JDK 23. Chương 4 nay có
+  **ba mốc** A/B/C thay vì hai. Đã sửa 15 file: `docs/03,06,07,09,10`, `CLAUDE.md`,
+  4 rule/agent, 3 skill, 2 hook
 - **Sửa 405 thành 403** khi vai trò không đủ quyền gửi POST tới `/admin/**`. Nguyên nhân:
   `accessDeniedPage()` *chuyển tiếp* nên giữ nguyên method POST, mà `HomeController` khai `@GetMapping("/403")`.
   Đổi sang `@RequestMapping("/403")`
@@ -87,14 +103,15 @@ bước 12–14 (phương án B) cần hai tuyến chạy song song mới dựng
 
 ---
 
-## Việc tiếp theo — tuần 3, 4 danh mục còn lại
+## Việc tiếp theo — tuần 3, 3 danh mục còn lại
 
-Khuôn đã chạy qua bốn lần (`XxxForm` → `XxxService` → `XxxController` → `xxxs.html` +
+Khuôn đã chạy qua năm lần (`XxxForm` → `XxxService` → `XxxController` → `xxxs.html` +
 `xxx-form.html` + fragment phân trang), các màn hình sau chép theo:
 
-1. CN-01-04 Khách hàng — nặng hơn vì có tọa độ · CN-01-06 Kho (BR01-10: chỉ một kho `active`)
+1. CN-01-06 Kho — nhẹ, một bản ghi (BR01-10: chỉ một kho `active`)
 2. CN-01-08 Tham số hệ thống — 9 tham số, kiểm bằng cách đổi `AVERAGE_SPEED` rồi xem ETA có đổi
-3. CN-01-05 Tìm tọa độ bằng Nominatim — làm sau cùng vì cần gọi mạng ngoài
+3. CN-01-05 Tìm tọa độ bằng Nominatim — làm sau cùng vì cần gọi mạng ngoài. Gắn nút "Tìm tọa độ"
+   vào chính `customer-form.html` đã có, hai ô vĩ độ/kinh độ hiện đang nhập tay
 
 ---
 
