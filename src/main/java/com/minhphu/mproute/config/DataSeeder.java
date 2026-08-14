@@ -4,6 +4,7 @@ import com.minhphu.mproute.entity.User;
 import com.minhphu.mproute.entity.enums.Role;
 import com.minhphu.mproute.entity.enums.UserStatus;
 import com.minhphu.mproute.repository.UserRepository;
+import com.minhphu.mproute.service.SystemParameterService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.CommandLineRunner;
@@ -31,9 +32,14 @@ public class DataSeeder implements CommandLineRunner {
 
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
+    private final SystemParameterService systemParameterService;
 
     @Override
     public void run(String... args) {
+        // Chin tham so he thong theo docs/02 muc 16. Thieu chung thi tu tuan 8
+        // man hinh phan tuyen khong co toc do, gio xuat phat hay he so quy doi de chay
+        systemParameterService.seedDefaults();
+
         seedUser("admin", "admin123", "Nguyễn Thị Lan", Role.ADMIN);
         seedUser("dieuphoi", "dieuphoi123", "Trần Văn Minh", Role.DISPATCHER);
         // Ho ten ba tai xe phai TRUNG voi ho so trong danh muc tai xe (CN-01-03),

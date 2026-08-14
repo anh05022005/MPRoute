@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<!-- SCR-09 — Tham so he thong (CN-01-08) -->
+<html lang="vi"
+      xmlns:th="http://www.thymeleaf.org"
+      th:replace="~{layout :: main('Tham số hệ thống', ~{::content})}">
+<body>
+
+<div th:fragment="content">
+
+    <h1 class="h5 mb-1">Tham số hệ thống</h1>
+    <div class="small chu-phu mb-3">
+        Năm tham số đầu ảnh hưởng thẳng tới kết quả phân tuyến và giờ đến dự kiến.
+    </div>
+
+    <form th:action="@{/admin/settings/save}" th:object="${form}" method="post" style="max-width: 900px;">
+
+        <table class="table table-bordered table-sm align-middle">
+            <thead>
+            <tr>
+                <th style="width: 210px;">Mã tham số</th>
+                <th style="width: 260px;">Giá trị</th>
+                <th>Ý nghĩa</th>
+            </tr>
+            </thead>
+            <tbody>
+
+            <tr th:each="dong, tt : *{items}">
+
+                <td>
+                    <!--
+                        Ma tham so KHONG cho sua: no la khoa ma code tra cuu theo.
+                        Gui len dang an de biet dong nao ung voi tham so nao; server
+                        van chi ghi nhung ma da co san trong bang, ma la thi bo qua.
+                    -->
+                    <input type="hidden" th:field="*{items[__${tt.index}__].code}">
+                    <code th:text="${dong.code}">AVERAGE_SPEED</code>
+                </td>
+
+                <td>
+                    <!-- Rieng thuat toan la o chon, khong cho go tay -->
+                    <select th:if="${dong.code == 'DEFAULT_ALGORITHM'}"
+                            class="form-select form-select-sm"
+                            th:field="*{items[__${tt.index}__].value}"
+                            th:classappend="${#fields.hasErrors('items[__${tt.index}__].value')} ? 'is-invalid'">
+                        <option th:each="tt2 : ${cacThuatToan}"
+                                th:value="${tt2.name()}"
+                                th:text="${tt2.displayName}">OR-Tools</option>
+                    </select>
+
+                    <input th:unless="${dong.code == 'DEFAULT_ALGORITHM'}"
+                           type="text" class="form-control form-control-sm"
+                           th:field="*{items[__${tt.index}__].value}"
+                           th:classappend="${#fields.hasErrors('items[__${tt.index}__].value')} ? 'is-invalid'">
+
+                    <div class="invalid-feedback d-block"
+                         th:if="${#fields.hasErrors('items[__${tt.index}__].value')}"
+                         th:errors="*{items[__${tt.index}__].value}">Lỗi</div>
+                </td>
+
+                <td class="small chu-phu" th:text="${dong.description}">Mô tả</td>
+            </tr>
+            </tbody>
+        </table>
+
+        <div class="khoi-thong-tin mt-3 small chu-phu">
+            Cách kiểm chứng tham số thật sự được dùng chứ không bị viết cứng trong code
+            (tiêu chí nghiệm thu của CN-01-08): đổi <code>AVERAGE_SPEED</code> từ 30 xuống 15,
+            chạy lại phân tuyến, <strong>giờ đến dự kiến của mọi điểm phải giãn ra gấp đôi</strong>.
+            Phép kiểm này làm được từ tuần 8, khi màn hình phân tuyến đã có.
+        </div>
+
+        <div class="mt-3">
+            <button type="submit" class="btn btn-primary">Lưu</button>
+            <a th:href="@{/admin/settings}" class="btn btn-outline-secondary">Hủy</a>
+        </div>
+    </form>
+
+</div>
+
+</body>
+</html>
