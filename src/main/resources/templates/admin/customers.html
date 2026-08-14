@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<!-- SCR-06 — Danh muc khach hang (CN-01-04) -->
+<html lang="vi"
+      xmlns:th="http://www.thymeleaf.org"
+      xmlns:sec="http://www.thymeleaf.org/extras/spring-security"
+      th:replace="~{layout :: main('Khách hàng', ~{::content})}">
+<body>
+
+<div th:fragment="content">
+
+    <div class="thanh-cong-cu d-flex justify-content-between align-items-end flex-wrap gap-2">
+
+        <form th:action="@{/admin/customers}" method="get" class="d-flex align-items-end gap-2">
+            <div>
+                <label for="keyword" class="form-label mb-1 small">Tìm theo tên cửa hàng, người liên hệ hoặc số điện thoại</label>
+                <input type="text" id="keyword" name="keyword" class="form-control form-control-sm"
+                       style="width: 300px;" th:value="${keyword}" placeholder="Ví dụ: Tạp hóa Lan hoặc 0912">
+            </div>
+            <div>
+                <label for="status" class="form-label mb-1 small">Trạng thái</label>
+                <select id="status" name="status" class="form-select form-select-sm" style="width: 160px;">
+                    <option value="">Tất cả</option>
+                    <option th:each="tt : ${cacTrangThai}"
+                            th:value="${tt}"
+                            th:text="${tt.displayName}"
+                            th:selected="${tt == status}">Trạng thái</option>
+                </select>
+            </div>
+            <button type="submit" class="btn btn-sm btn-outline-secondary">Tìm</button>
+            <a th:href="@{/admin/customers}" class="btn btn-sm btn-outline-secondary">Bỏ lọc</a>
+        </form>
+
+        <a th:href="@{/admin/customers/create}" sec:authorize="hasRole('ADMIN')"
+           class="btn btn-sm btn-primary">+ Thêm khách hàng</a>
+    </div>
+
+    <table class="table table-bordered table-striped table-sm align-middle">
+        <thead>
+        <tr>
+            <th>Tên cửa hàng</th>
+            <th style="width: 140px;">Người liên hệ</th>
+            <th style="width: 120px;">Điện thoại</th>
+            <th>Địa chỉ</th>
+            <th style="width: 150px;">Tọa độ</th>
+            <th style="width: 140px;">Thanh toán</th>
+            <th style="width: 120px;">Trạng thái</th>
+            <th style="width: 150px;">Thao tác</th>
+        </tr>
+        </thead>
+        <tbody>
+
+        <tr th:if="${trang.empty}">
+            <td colspan="8" class="text-center chu-phu py-3">Không có khách hàng nào phù hợp.</td>
+        </tr>
+
+        <tr th:each="kh : ${trang.content}">
+            <td>
+                <span th:text="${kh.name}">Tạp hóa Bà Lan</span>
+                <!--
+                    Ghi chu giao hang (BR01-07) hien ngay duoi ten vi day la thong tin
+                    dieu phoi vien can thay truoc khi chot tuyen: "chi nhan buoi sang"
+                    anh huong thang toi thu tu giao.
+                -->
+                <div th:if="${kh.deliveryNote != null}" class="small chu-phu"
+                     th:text="${kh.deliveryNote}">Chỉ nhận buổi sáng</div>
+            </td>
+
+            <td>
+                <span th:if="${kh.contactPerson != null}" th:text="${kh.contactPerson}">Bà Lan</span>
+                <span th:unless="${kh.contactPerson != null}" class="chu-phu small">—</span>
+            </td>
+
+            <td th:text="${kh.phone}">0912345678</td>
+            <td class="small" th:text="${kh.address}">Số 12 ngõ 5 Phan Trọng Tuệ, Thanh Trì</td>
+
+            <!--
+                Toa do la du lieu bat buoc (BR01-05, CBR-07). Hien ra ngay tren danh sach
+                de soat bang mat: khach o Ha Noi thi vi do khoang 20.9-21.1,
+                kinh do khoang 105.7-105.9. Lech xa la nhap sai.
+            -->
+            <td class="so small" th:text="${kh.latitude} + ', ' + ${kh.longitude}">21.0000, 105.8000</td>
+
+            <td class="small" th:text="${kh.paymentMethod.displayName}">Tiền mặt</td>
+
+            <td>
+                <span th:class="${kh.status.name() == 'ACTIVE'} ? 'nhan nhan-thanh-cong' : 'nhan nhan-cho'"
+                      th:text="${kh.status.displayName}">Đang sử dụng</span>
+            </td>
+
+            <td>
+                <span sec:authorize="!hasRole('ADMIN')" class="chu-phu small">Chỉ xem</span>
+                <a class="btn btn-sm btn-outline-secondary py-0" sec:authorize="hasRole('ADMIN')"
+                   th:href="@{/admin/customers/{id}/edit(id=${kh.id})}">Sửa</a>
+
+                <!--
+                    Khong co nut Xoa (CBR-17, BR01-09). Khach da tung dat don ma xoa cung
+                    thi don cu mat thong tin giao cho ai. Chi ngung su dung.
+                    Dung POST chu khong dung link GET de tranh CSRF.
+                -->
+                <form th:action="@{/admin/customers/{id}/toggle-status(id=${kh.id})}" method="post"
+                      sec:authorize="hasRole('ADMIN')" class="d-inline"
+                      onsubmit="return confirm('Bạn có chắc chắn muốn thực hiện thao tác này?');">
+                    <button type="submit" class="btn btn-sm btn-outline-secondary py-0"
+                            th:text="${kh.status.name() == 'ACTIVE'} ? 'Ngừng dùng' : 'Dùng lại'">Ngừng dùng</button>
+                </form>
+            </td>
+        </tr>
+        </tbody>
+    </table>
+
+    <div th:replace="~{fragments/pagination :: phan-trang(
+             trang       = ${trang},
+             duongDan    = '/admin/customers',
+             keyword     = ${keyword},
+             status      = ${status},
+             role        = null,
+             tenDoiTuong = 'khách hàng')}"></div>
+
+</div>
+
+</body>
+</html>
