@@ -11,12 +11,12 @@
 | | |
 |---|---|
 | Theo kế hoạch | Tuần 3 — CRUD danh mục |
-| Thực tế | **Xong Nhóm 0 + toàn bộ 7 danh mục CRUD.** Chỉ còn CN-01-05 tìm tọa độ. Đúng lịch |
+| Thực tế | **Xong Nhóm 0 và trọn Nhóm 1.** Sẵn sàng sang tuần 4 — đơn hàng |
 
 ```
 [x] T1  Chot de tai, hoi Minh Phu 3 cau
 [x] T2  Project chay, 16 bang sinh ra, dang nhap duoc
-[x] T3  CRUD 7 danh muc xong  (con CN-01-05 tim toa do Nominatim, can mang ngoai)
+[x] T3  CRUD 7 danh muc xong + tim toa do Nominatim
 [ ] T4  Tao don hang, tu tinh kg/m3/tien
 [ ] T5  OSRM chay, ma tran co cache, ban do hien diem
 [ ] T6  NearestNeighbor chay duoc bang main(), test xanh
@@ -92,6 +92,13 @@
   đi qua trạng thái trung gian không còn kho nào. Bỏ tích kho active cuối cùng bị chặn ở
   controller, và có thêm lưới an toàn ở service. Kiểm 24 phép, qua 24.
   Đã nhập **Kho Minh Phú** theo `docs/08`, kiểm `HEX(address)` khớp UTF-8 từng byte
+- **★ CN-01-05** — tìm tọa độ bằng Nominatim, dùng chung cho form khách hàng và form kho.
+  **Gọi qua máy chủ chứ không gọi thẳng từ trình duyệt**, vì ba lý do: chính sách Nominatim bắt
+  khai `User-Agent` nhận dạng được (JavaScript không đặt được), giới hạn 1 request/giây chỉ chặn
+  thật được ở máy chủ, và khỏi phụ thuộc CORS. Ba cách đặt tọa độ đều ghi vào cùng hai ô:
+  chọn từ danh sách Nominatim, bấm/kéo ghim trên bản đồ (BR01-06), hoặc gõ tay.
+  **Lỗi mạng nuốt có chủ đích** — Nominatim chết không được làm hỏng cả màn hình thêm khách.
+  Leaflet 1.9.4 tải về `static/`, không phụ thuộc mạng lúc bảo vệ. Kiểm 27 phép, qua 27
 - **★ CN-01-08** — tham số hệ thống: 9 tham số theo `docs/02`, `DataSeeder` tạo sẵn khi khởi động,
   sửa cả 9 trên **một form lưu một lần** (chúng hay được chỉnh cùng nhau). Cột `value` là VARCHAR
   nên **CSDL không bảo vệ được kiểu dữ liệu** — toàn bộ việc kiểm dồn vào `kiemGiaTri()`, tách theo
@@ -119,16 +126,20 @@ bước 12–14 (phương án B) cần hai tuyến chạy song song mới dựng
 
 ---
 
-## Việc tiếp theo
+## Việc tiếp theo — tuần 4, đơn hàng (Nhóm 2)
 
-1. **CN-01-05 Tìm tọa độ bằng Nominatim** — việc cuối của nhóm danh mục. Gắn nút "Tìm tọa độ" vào
-   `customer-form.html` và `depot-form.html` đã có; hai ô vĩ độ/kinh độ ở cả hai màn hình hiện nhập
-   tay và **vẫn phải nhập tay được** khi Nominatim không trả kết quả (BR01-06). Cần mạng ngoài
-2. **Sang tuần 4 — đơn hàng (Nhóm 2).** Đây là mốc hợp lý để `/clear` trước khi bắt đầu
+Nhóm 1 xong hết. Mốc hợp lý để `/clear` trước khi bắt đầu nhóm mới.
 
-**Còn nợ một phép kiểm:** tiêu chí nghiệm thu thật của CN-01-08 không phải "sửa được" mà là
-*đổi `AVERAGE_SPEED` rồi chạy lại phân tuyến thì ETA phải đổi theo*. Màn hình phân tuyến đến
-tuần 8 mới có, nên **phải quay lại làm phép kiểm này ở tuần 8** — đừng coi CN-01-08 là xong hẳn.
+1. CN-02-01 danh sách đơn · CN-02-02 tạo đơn — nặng hơn danh mục nhiều vì có dòng chi tiết
+2. Hệ thống **tự tính** `total_weight` / `total_volume`, không cho sửa tay (BR02-04)
+3. Mã đơn tự sinh `MP` + `yyMMdd` + 4 chữ số (BR02-01), và `amount_to_collect` theo BR02-14
+
+## Hai việc còn nợ, phải quay lại làm
+
+| Việc | Khi nào làm được | Vì sao chưa làm |
+|---|---|---|
+| **Nghiệm thu thật CN-01-08** | Tuần 8 | Tiêu chí không phải "sửa được" mà là *đổi `AVERAGE_SPEED` rồi chạy lại phân tuyến thì ETA phải đổi theo*. Màn hình phân tuyến tuần 8 mới có |
+| **Thử tay phần bản đồ CN-01-05** | Bất cứ lúc nào | Đã kiểm tự động phía máy chủ (27 phép) nhưng **chưa ai bấm thử thật**: bấm vào bản đồ để ghim, kéo ghim, chọn dòng trong danh sách nhiều kết quả. Phần JavaScript này chỉ chạy trong trình duyệt |
 
 ---
 
@@ -161,6 +172,10 @@ tuần 8 mới có, nên **phải quay lại làm phép kiểm này ở tuần 8
   **Lệnh `docker exec ... mysql -e "…"` gọi từ PowerShell cũng hỏng y hệt**, mà kiểu khác: chữ bị mã hóa
   hai lần (`Nguyễn` thành `Nguyá»…n`, hex `C3A1C2BB…` thay vì `E1BB85`). Muốn sửa dữ liệu tiếng Việt
   bằng SQL trực tiếp thì dùng `UNHEX('…')` với chuỗi byte UTF-8 dựng sẵn, đừng gõ chữ có dấu vào lệnh
+- **Ảnh nền bản đồ vẫn cần mạng.** Thư viện Leaflet đã tải về `static/` nên không phụ thuộc mạng,
+  nhưng các ô ảnh bản đồ lấy từ `tile.openstreetmap.org`. Bảo vệ mà không có mạng thì khung bản đồ
+  hiện xám — ghim, tọa độ và nút lưu **vẫn hoạt động bình thường**, chỉ mất phần nhìn.
+  Nếu ngày bảo vệ không chắc có mạng thì nên chuẩn bị ảnh chụp màn hình sẵn
 - Sau khi đăng nhập địa chỉ có đuôi `?continue` — hành vi mặc định của Spring Security 6, vô hại
 - `application.properties` chứa mật khẩu MySQL `gbao`. Hiện không sao vì kho GitHub để **riêng tư**.
   **Nếu đổi kho sang công khai thì phải xóa dòng đó khỏi lịch sử trước** — nó nằm trong commit đầu `c55b2d3`,
