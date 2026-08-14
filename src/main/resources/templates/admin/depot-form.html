@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<!-- Them / sua kho (CN-01-06) -->
+<html lang="vi"
+      xmlns:th="http://www.thymeleaf.org"
+      th:replace="~{layout :: main('Kho', ~{::content})}">
+<body>
+
+<div th:fragment="content">
+
+    <h1 class="h5 mb-3" th:text="${form.id == null} ? 'Thêm kho' : 'Sửa kho'">Thêm kho</h1>
+
+    <form th:action="@{/admin/depot/save}" th:object="${form}" method="post" style="max-width: 680px;">
+
+        <input type="hidden" th:field="*{id}">
+
+        <div class="row g-3">
+
+            <div class="col-md-5">
+                <label for="name" class="form-label">Tên kho <span class="text-danger">*</span></label>
+                <input type="text" id="name" class="form-control" th:field="*{name}"
+                       th:classappend="${#fields.hasErrors('name')} ? 'is-invalid'"
+                       placeholder="Kho Minh Phú">
+                <div class="invalid-feedback" th:errors="*{name}">Lỗi</div>
+            </div>
+
+            <div class="col-md-7">
+                <label for="address" class="form-label">Địa chỉ <span class="text-danger">*</span></label>
+                <input type="text" id="address" class="form-control" th:field="*{address}"
+                       th:classappend="${#fields.hasErrors('address')} ? 'is-invalid'"
+                       placeholder="Đường Phan Trọng Tuệ, Thanh Trì, Hà Nội">
+                <div class="invalid-feedback" th:errors="*{address}">Lỗi</div>
+            </div>
+
+            <div class="col-md-4">
+                <label for="latitude" class="form-label">Vĩ độ <span class="text-danger">*</span></label>
+                <input type="number" step="any" id="latitude" class="form-control" th:field="*{latitude}"
+                       th:classappend="${#fields.hasErrors('latitude')} ? 'is-invalid'"
+                       placeholder="20.9497">
+                <div class="invalid-feedback" th:errors="*{latitude}">Lỗi</div>
+            </div>
+
+            <div class="col-md-4">
+                <label for="longitude" class="form-label">Kinh độ <span class="text-danger">*</span></label>
+                <input type="number" step="any" id="longitude" class="form-control" th:field="*{longitude}"
+                       th:classappend="${#fields.hasErrors('longitude')} ? 'is-invalid'"
+                       placeholder="105.8172">
+                <div class="invalid-feedback" th:errors="*{longitude}">Lỗi</div>
+            </div>
+
+            <div class="col-md-4">
+                <label class="form-label d-block">Trạng thái</label>
+                <div class="form-check mt-2">
+                    <input type="checkbox" id="active" class="form-check-input" th:field="*{active}"
+                           th:classappend="${#fields.hasErrors('active')} ? 'is-invalid'">
+                    <label class="form-check-label" for="active">Đặt làm kho chính</label>
+                </div>
+                <div class="invalid-feedback d-block" th:if="${#fields.hasErrors('active')}"
+                     th:errors="*{active}">Lỗi</div>
+            </div>
+        </div>
+
+        <div class="khoi-thong-tin mt-3 small chu-phu">
+            Tọa độ kho là điểm <strong>c<sub>0</sub></strong> của bài toán phân tuyến — mọi tuyến đều
+            xuất phát từ đây và <strong>kết thúc ở đây</strong>. Nhập sai tọa độ kho thì sai
+            <em>toàn bộ</em> ma trận khoảng cách chứ không phải sai một điểm, nên kiểm kỹ trước khi lưu.
+            Kho ở Thanh Trì có vĩ độ khoảng <strong>20.95</strong> và kinh độ khoảng <strong>105.82</strong>.
+            <br>
+            Tích "Đặt làm kho chính" thì các kho khác tự chuyển sang ngừng dùng (BR01-10).
+        </div>
+
+        <div class="mt-3">
+            <button type="submit" class="btn btn-primary">Lưu</button>
+            <a th:href="@{/admin/depot}" class="btn btn-outline-secondary">Hủy</a>
+        </div>
+    </form>
+
+</div>
+
+</body>
+</html>

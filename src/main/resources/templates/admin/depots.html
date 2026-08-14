@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<!-- SCR-07 — Danh muc kho (CN-01-06) -->
+<html lang="vi"
+      xmlns:th="http://www.thymeleaf.org"
+      xmlns:sec="http://www.thymeleaf.org/extras/spring-security"
+      th:replace="~{layout :: main('Kho', ~{::content})}">
+<body>
+
+<div th:fragment="content">
+
+    <div class="thanh-cong-cu d-flex justify-content-between align-items-end flex-wrap gap-2">
+        <div>
+            <h1 class="h5 mb-1">Kho hàng</h1>
+            <div class="small chu-phu">
+                Mọi tuyến giao hàng đều xuất phát và kết thúc tại <strong>kho chính</strong>.
+            </div>
+        </div>
+        <a th:href="@{/admin/depot/create}" sec:authorize="hasRole('ADMIN')"
+           class="btn btn-sm btn-primary">+ Thêm kho</a>
+    </div>
+
+    <table class="table table-bordered table-striped table-sm align-middle">
+        <thead>
+        <tr>
+            <th>Tên kho</th>
+            <th>Địa chỉ</th>
+            <th style="width: 170px;">Tọa độ</th>
+            <th style="width: 130px;">Trạng thái</th>
+            <th style="width: 190px;">Thao tác</th>
+        </tr>
+        </thead>
+        <tbody>
+
+        <tr th:if="${#lists.isEmpty(danhSach)}">
+            <td colspan="5" class="text-center chu-phu py-3">
+                Chưa có kho nào. Phải thêm một kho thì mới phân tuyến được.
+            </td>
+        </tr>
+
+        <tr th:each="kho : ${danhSach}">
+            <td th:text="${kho.name}">Kho Minh Phú</td>
+            <td class="small" th:text="${kho.address}">Đường Phan Trọng Tuệ, Thanh Trì, Hà Nội</td>
+            <td class="so small" th:text="${kho.latitude} + ', ' + ${kho.longitude}">20.9497, 105.8172</td>
+
+            <td>
+                <span th:if="${kho.active}" class="nhan nhan-thanh-cong">Kho chính</span>
+                <span th:unless="${kho.active}" class="nhan nhan-cho">Ngừng dùng</span>
+            </td>
+
+            <td>
+                <span sec:authorize="!hasRole('ADMIN')" class="chu-phu small">Chỉ xem</span>
+                <a class="btn btn-sm btn-outline-secondary py-0" sec:authorize="hasRole('ADMIN')"
+                   th:href="@{/admin/depot/{id}/edit(id=${kho.id})}">Sửa</a>
+
+                <!--
+                    BR01-10: chi mot kho active. Khong lam nut "tat kho chinh" —
+                    doi kho la BAT kho moi len, kho cu tu tat. Nho vay he thong
+                    khong bao gio di qua trang thai khong con kho nao active.
+                    Dung POST chu khong dung link GET de tranh CSRF.
+                -->
+                <form th:if="${!kho.active}" sec:authorize="hasRole('ADMIN')"
+                      th:action="@{/admin/depot/{id}/set-active(id=${kho.id})}" method="post"
+                      class="d-inline"
+                      onsubmit="return confirm('Đặt kho này làm kho chính? Kho đang dùng sẽ tự chuyển sang ngừng dùng.');">
+                    <button type="submit" class="btn btn-sm btn-outline-secondary py-0">Đặt làm kho chính</button>
+                </form>
+            </td>
+        </tr>
+        </tbody>
+    </table>
+
+    <div class="khoi-thong-tin mt-3 small chu-phu">
+        Hệ thống luôn giữ <strong>đúng một kho chính</strong> (BR01-10) — đây là điểm
+        <strong>c<sub>0</sub></strong> của bài toán phân tuyến. Đặt một kho khác làm kho chính thì
+        kho hiện tại tự chuyển sang ngừng dùng, nên không có lúc nào hệ thống ở trạng thái
+        không có kho.
+    </div>
+
+</div>
+
+</body>
+</html>
