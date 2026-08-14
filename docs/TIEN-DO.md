@@ -11,12 +11,12 @@
 | | |
 |---|---|
 | Theo kế hoạch | Tuần 3 — CRUD danh mục |
-| Thực tế | **Xong Nhóm 0 + 6/7 danh mục** (thiếu tham số hệ thống và tìm tọa độ Nominatim). Đúng lịch |
+| Thực tế | **Xong Nhóm 0 + toàn bộ 7 danh mục CRUD.** Chỉ còn CN-01-05 tìm tọa độ. Đúng lịch |
 
 ```
 [x] T1  Chot de tai, hoi Minh Phu 3 cau
 [x] T2  Project chay, 16 bang sinh ra, dang nhap duoc
-[~] T3  CRUD 7 danh muc xong  (6/7: san pham, phuong tien, tai xe, tai khoan, khach hang, kho)
+[x] T3  CRUD 7 danh muc xong  (con CN-01-05 tim toa do Nominatim, can mang ngoai)
 [ ] T4  Tao don hang, tu tinh kg/m3/tien
 [ ] T5  OSRM chay, ma tran co cache, ban do hien diem
 [ ] T6  NearestNeighbor chay duoc bang main(), test xanh
@@ -92,6 +92,15 @@
   đi qua trạng thái trung gian không còn kho nào. Bỏ tích kho active cuối cùng bị chặn ở
   controller, và có thêm lưới an toàn ở service. Kiểm 24 phép, qua 24.
   Đã nhập **Kho Minh Phú** theo `docs/08`, kiểm `HEX(address)` khớp UTF-8 từng byte
+- **★ CN-01-08** — tham số hệ thống: 9 tham số theo `docs/02`, `DataSeeder` tạo sẵn khi khởi động,
+  sửa cả 9 trên **một form lưu một lần** (chúng hay được chỉnh cùng nhau). Cột `value` là VARCHAR
+  nên **CSDL không bảo vệ được kiểu dữ liệu** — toàn bộ việc kiểm dồn vào `kiemGiaTri()`, tách theo
+  từng mã. Chặn **14 nhánh sai**, trong đó có hai nhánh đáng nói: chặn cả **chặn trên** (`AVERAGE_SPEED`
+  = 5000 không làm chương trình chết, chỉ làm mọi ETA sai mà không báo gì), và mã tham số lạ gửi lên
+  **bị bỏ qua chứ không tự tạo bản ghi mới**. Kiểm 33 phép, qua 33
+- **Thêm `OR_TOOLS` vào enum `AlgorithmType`** và đổi `DEFAULT_ALGORITHM` từ `NN_2OPT` sang
+  `OR_TOOLS` — hệ quả trực tiếp của việc đổi bộ giải. Tham số này nay có ích thật: đổi nó là
+  đổi bộ giải, đúng thứ cần cho bảng so sánh chương 4
 - **★ Đổi định hướng thuật toán (14/08/2026): OR-Tools thành bộ giải chính**, bản tự cài đặt
   NN + 2-opt giữ nguyên nhưng đổi vai trò thành **mốc so sánh** ở chương thực nghiệm.
   Hai package tách bạch — `optimization/ortools/` và `optimization/heuristic/`, package sau
@@ -110,14 +119,16 @@ bước 12–14 (phương án B) cần hai tuyến chạy song song mới dựng
 
 ---
 
-## Việc tiếp theo — tuần 3, 2 danh mục còn lại
+## Việc tiếp theo
 
-1. **CN-01-08 Tham số hệ thống** — 9 tham số trong `docs/02`. Tiêu chí nghiệm thu không phải là
-   "sửa được" mà là **đổi `AVERAGE_SPEED` rồi chạy lại phân tuyến thì ETA phải đổi theo** — tức là
-   chỉ kiểm chứng đầy đủ được ở tuần 8. Tuần này làm màn hình sửa, để lại phép kiểm đó
-2. **CN-01-05 Tìm tọa độ bằng Nominatim** — làm sau cùng vì cần gọi mạng ngoài. Gắn nút
-   "Tìm tọa độ" vào `customer-form.html` và `depot-form.html` đã có; hai ô vĩ độ/kinh độ ở cả hai
-   màn hình hiện đang nhập tay và **vẫn phải nhập tay được** khi Nominatim không trả kết quả (BR01-06)
+1. **CN-01-05 Tìm tọa độ bằng Nominatim** — việc cuối của nhóm danh mục. Gắn nút "Tìm tọa độ" vào
+   `customer-form.html` và `depot-form.html` đã có; hai ô vĩ độ/kinh độ ở cả hai màn hình hiện nhập
+   tay và **vẫn phải nhập tay được** khi Nominatim không trả kết quả (BR01-06). Cần mạng ngoài
+2. **Sang tuần 4 — đơn hàng (Nhóm 2).** Đây là mốc hợp lý để `/clear` trước khi bắt đầu
+
+**Còn nợ một phép kiểm:** tiêu chí nghiệm thu thật của CN-01-08 không phải "sửa được" mà là
+*đổi `AVERAGE_SPEED` rồi chạy lại phân tuyến thì ETA phải đổi theo*. Màn hình phân tuyến đến
+tuần 8 mới có, nên **phải quay lại làm phép kiểm này ở tuần 8** — đừng coi CN-01-08 là xong hẳn.
 
 ---
 
