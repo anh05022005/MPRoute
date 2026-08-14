@@ -152,16 +152,20 @@ Máy dưới 8GB RAM thì cắt riêng vùng Hà Nội bằng `osmium extract` t
 |---|---|
 | 1 | Chạy tay 2-opt trên giấy. Vẽ tuyến 5 điểm, thử đảo một đoạn, tự tính độ lệch |
 | 2 | Viết `TwoOptImprover` |
-| 3 | Viết `NN2OptSolver` kết hợp hai giai đoạn |
-| 4 | Viết `MetricsService`: mốc A, mốc B, mức giảm, hiệu suất xe |
-| 5 | Viết hàm tính ETA |
-| 6 | Unit test: 2-opt không làm tăng quãng đường, không đổi tập điểm |
-| 7 | Chạy thử với 30 điểm, so sánh NN và NN+2-opt, ghi lại con số |
+| 3 | Viết `NN2OptSolver` kết hợp hai giai đoạn, viết hàm tính ETA |
+| 4 | Viết `OrToolsSolver` cắm vào cùng interface `RoutingAlgorithm` — xem `03-thuat-toan.md` mục 5 |
+| 5 | Viết `MetricsService`: mốc A, mốc B, **mốc C = OR-Tools**, mức giảm, hiệu suất xe |
+| 6 | Unit test: 2-opt không tăng quãng đường, không đổi tập điểm; 4 test cho `OrToolsSolver` |
+| 7 | Chạy thử với 30 điểm, in bảng 4 dòng (A / B / NN+2-opt / OR-Tools), ghi lại con số |
 
-Cuối tuần 7 phải trả lời được ba câu:
+**Thứ tự ngày 2→4 không được đảo.** Viết bản tự cài đặt trước rồi mới cắm OR-Tools vào. Làm
+ngược lại thì lúc bản tự viết ra số lạ sẽ không phân biệt được là thuật toán yếu hay code sai.
+
+Cuối tuần 7 phải trả lời được bốn câu:
 1. Nearest Neighbor hoạt động thế nào? (giải thích từng bước)
 2. 2-opt hoạt động thế nào? Công thức độ lệch từ đâu ra?
 3. Vì sao 2-opt không phá vỡ ràng buộc sức chứa?
+4. OR-Tools được cấu hình những gì, và vì sao? (hai Dimension, `addDisjunction`, giới hạn thời gian)
 
 ---
 
@@ -252,7 +256,7 @@ Chi tiết cách chạy thực nghiệm ở `07-thuc-nghiem.md`.
 [ ] T4  Tao don hang, tu tinh kg/m3/tien
 [ ] T5  OSRM chay, ma tran co cache, ban do hien diem
 [ ] T6  NearestNeighbor chay duoc bang main(), test xanh
-[ ] T7  2-opt chay duoc, co so sanh NN vs NN+2opt
+[ ] T7  2-opt chay duoc, OR-Tools cam vao, bang so sanh 4 dong
 [ ] T8  Man hinh phan tuyen hoan chinh, ve tuyen len ban do
 [ ] T9  Man hinh tai xe, tra cuu, su co
 [ ] T10 RPT-03 xong, benchmark Augerat xong, chuong 4 viet xong

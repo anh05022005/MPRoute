@@ -23,7 +23,7 @@ Cả ba đều **không phải quy tắc phong cách** — chúng là đúng/sai
 
 | Cấm | Vì sao |
 |---|---|
-| **Thư viện VRP**: OR-Tools, jsprit, OptaPlanner, Choco, JGraphT cho phần định tuyến | Tự cài đặt thuật toán là phần đóng góp học thuật của đồ án. Dùng thư viện là mất điểm phần lõi |
+| **Import OR-Tools vào `optimization/heuristic/`** | Package đó là bản tự cài đặt dùng làm mốc so sánh ở chương thực nghiệm — lẫn thư viện vào là mất ý nghĩa so sánh. Bộ giải OR-Tools nằm riêng ở `optimization/ortools/` |
 | **`float`** ở bất kỳ đâu | Tiền dùng `BigDecimal`, tọa độ và khoảng cách dùng `double`. `float` sai số quá lớn cho cả hai |
 | **Gọi OSRM / Repository trong vòng lặp thuật toán** | 2-opt gọi hàm khoảng cách hàng nghìn lần, mỗi lần một HTTP request là treo chương trình. Ma trận phải nạp sẵn vào bộ nhớ, thuật toán chỉ tra `matrix[i][j]` |
 
@@ -77,7 +77,12 @@ giải thích từng bước được, thì nên viết lại đoạn đó rõ h
 
 **Có dùng:** Lombok (giảm getter/setter thủ công).
 
-**Không dùng:** React/Vue, OR-Tools, jsprit, OptaPlanner, Redis, Kafka, Docker Compose cho
+**Có dùng:** OR-Tools `9.15.6755` làm bộ giải CVRP chính (`com.google.ortools:ortools-java`).
+Kéo theo thư viện native của cả 5 nền tảng, khoảng 113 MB trong `~/.m2` — chỉ bản
+`ortools-win32-x86-64` được nạp lúc chạy. Không loại bớt các nền tảng kia vì không đáng
+đánh đổi lấy rủi ro build gãy khó hiểu khi đổi máy.
+
+**Không dùng:** React/Vue, jsprit, OptaPlanner, Redis, Kafka, Docker Compose cho
 ứng dụng (chỉ dùng Docker cho OSRM).
 
 Lưu ý kỹ thuật: JDK trên máy phát triển là 23, mà từ JDK 21 `javac` không còn tự chạy
@@ -167,7 +172,7 @@ Ngoại lệ: giữ nguyên tiếng Anh cho các từ đã thành thuật ngữ 
 vốn là trái tim đồ án. Mục tiêu là có đủ test để trả lời câu hỏi "em kiểm thử thế nào" và để
 chắc chắn thuật toán đúng.
 
-**10 test bắt buộc**, đặt trong `src/test/java/.../optimization/`:
+**14 test bắt buộc**, đặt trong `src/test/java/.../optimization/`. Mười test cho bản tự cài đặt:
 
 | Test | Kiểm cái gì |
 |---|---|
@@ -181,6 +186,15 @@ chắc chắn thuật toán đúng.
 | `test2OptGiuNguyenTapDiem` | Số điểm và tổng kg/m³ không đổi |
 | `testEtaDiemDauTien` | Khớp với kết quả tính tay |
 | `testCheapestInsertionChonViTriDung` | Ví dụ nhỏ tính tay được |
+
+Bốn test cho bộ giải chính:
+
+| Test | Kiểm cái gì |
+|---|---|
+| `orToolsGiaiDungBaiCvrpNhoTinhTayDuoc` | Bài 4 điểm 2 xe, ra đúng 8000 m tính tay. **Đã viết, đã xanh** |
+| `testOrToolsKhongVuotCaHaiRangBuoc` | Dữ liệu vừa nặng vừa cồng kềnh, kiểm cả hai Dimension |
+| `testOrToolsBoDiemKhiThieuSucChua` | `addDisjunction` chạy đúng, trả `unassignedPoints` chứ không `null` |
+| `testHaiBoGiaiCungTapDiem` | Hai bộ giải trên cùng dữ liệu phải phủ đúng tập điểm như nhau |
 
 Cách viết:
 

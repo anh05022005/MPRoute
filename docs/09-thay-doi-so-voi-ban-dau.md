@@ -22,7 +22,7 @@ quy tắc phong cách** mà là đúng/sai:
 
 | Cấm | Vì sao |
 |---|---|
-| Thư viện VRP (OR-Tools, jsprit, OptaPlanner, Choco, JGraphT) | Tự cài đặt thuật toán là phần đóng góp học thuật. Dùng thư viện là mất điểm phần lõi |
+| Import OR-Tools vào `optimization/heuristic/` | Package đó là bản tự cài đặt dùng làm mốc so sánh. Lẫn thư viện vào là mất ý nghĩa so sánh. Xem A3 |
 | `float` ở bất kỳ đâu | Tiền dùng `BigDecimal`, tọa độ và khoảng cách dùng `double` |
 | Gọi OSRM / Repository trong vòng lặp thuật toán | 2-opt gọi hàm khoảng cách hàng nghìn lần, mỗi lần một HTTP request là treo chương trình |
 
@@ -42,6 +42,45 @@ Lý do: đây là quy ước của một dự án phần mềm thật. Bảng `o
 
 Đợt đổi tên này để lại đúng **một chỗ sót**, phát hiện khi làm CN-00-04: `docs/04` vẫn ghi tiêu chí
 nghiệm thu là gõ URL `/quan-tri/san-pham`. Đã sửa thành `/admin/products`.
+
+---
+
+### A3. Dùng OR-Tools làm bộ giải chính, giữ bản tự cài đặt làm mốc so sánh
+
+**Đây là thay đổi lớn nhất về mặt định hướng của đồ án. Chuẩn bị kỹ câu trả lời cho mục này.**
+
+Đặc tả ban đầu cấm tuyệt đối mọi thư viện VRP, với lý do "tự cài đặt là phần đóng góp học thuật".
+Nay đổi thành: **hai bộ giải cùng tồn tại**, cắm vào cùng một interface `RoutingAlgorithm`.
+
+| | Trước | Nay |
+|---|---|---|
+| Hệ thống chạy bằng | NN + 2-opt tự viết | **OR-Tools** |
+| NN + 2-opt tự viết | Là sản phẩm | Là **mốc so sánh** ở chương 4 |
+| Số mốc so sánh | 2 (A, B) | 3 (A, B, **C = OR-Tools**) |
+
+**Vì sao đổi.** Con số quyết định nằm ngay trong `07-thuc-nghiem.md`: NN+2-opt cách lời giải
+tốt nhất khoảng 10–25%, OR-Tools khoảng 0–5%. Chênh nhau khoảng 15 điểm phần trăm. Sản phẩm
+bàn giao cho Minh Phú không có lý do gì để chạy bằng bản kém hơn khi bản tốt hơn chỉ là một
+dependency.
+
+**Cái gì mất đi.** Không còn nói được câu "em tự cài đặt hoàn toàn". Đây là mất mát thật,
+đã cân nhắc và chấp nhận.
+
+**Cái gì được thêm.** Chương thực nghiệm mạnh lên chứ không yếu đi, vì trước đây bản tự viết
+không có gì để so ngoài chính nó. Nay có ba con số: hơn cách làm thủ công bao nhiêu, còn kém
+lời giải tốt bao nhiêu, và vì sao kém. Câu trả lời "vì 2-opt chỉ sắp lại thứ tự bên trong một
+tuyến, không sửa được cách chia đơn cho xe" chỉ chứng minh được khi có mốc C.
+
+**Rào giữ cho việc so sánh còn ý nghĩa.** Package `optimization/heuristic/` cấm import
+OR-Tools, có hook `.claude/hooks/kiem-tra-quy-tac.js` chặn. Nếu thư viện lẫn vào đó thì hai
+cột số không còn độc lập, và cả chương 4 mất giá trị.
+
+**Đã kiểm chứng trước khi quyết.** `OrToolsSmokeTest` chạy trên chính máy phát triển
+(Windows 11, JDK 23) — nạp được thư viện native, giải bài CVRP 4 điểm 2 xe ra đúng đáp số
+tính tay 8000 m trong 1,5 giây. Không đổi kế hoạch dựa trên giả định là thư viện sẽ chạy được.
+
+**Thứ tự làm không đổi:** tuần 6–7 vẫn viết NN rồi 2-opt trước, tuần 7 mới cắm OR-Tools vào.
+Làm ngược lại thì lúc bản tự viết ra số lạ sẽ không biết là thuật toán yếu hay code sai.
 
 ---
 
@@ -150,7 +189,8 @@ Ghi ra để thấy rõ phạm vi thay đổi là có giới hạn:
 
 - **Phạm vi chức năng**: vẫn **86 chức năng bắt buộc** + 11 tùy chọn. Chỉ thêm đúng một mục CN-03-14
 - **Kế hoạch 12 tuần**: nguyên vẹn
-- **Thuật toán**: vẫn Nearest Neighbor + 2-opt + Cheapest Insertion, tự cài đặt hoàn toàn
+- **Thuật toán tự cài đặt**: vẫn Nearest Neighbor + 2-opt + Cheapest Insertion, viết tay đầy đủ,
+  không cắt bớt dòng nào — chỉ đổi vai trò từ sản phẩm sang mốc so sánh (xem A3)
 - **18 quy tắc CBR và 95 quy tắc BR**: nguyên vẹn về nội dung
 - **16 bảng dữ liệu**: nguyên vẹn về cấu trúc
 - **Bảng màu, bố cục màn hình, quy ước hiển thị số liệu**: nguyên vẹn

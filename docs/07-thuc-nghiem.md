@@ -240,7 +240,15 @@ Mỗi hạn chế nêu ra chính là một ý cho mục "Hướng phát triển"
 
 ### 1. "Em tự viết thuật toán hay gọi thư viện?"
 
-> Em tự cài đặt hoàn toàn. Nearest Neighbor và 2-opt đều chỉ dùng vòng lặp và phép so sánh khoảng cách, tổng khoảng 200 dòng code. Em không dùng OR-Tools hay jsprit. Em có so sánh kết quả với lời giải tối ưu đã công bố của bộ dữ liệu Augerat để đánh giá chất lượng lời giải của mình.
+> Em làm cả hai, và đó là chủ ý. Em tự cài đặt Nearest Neighbor và 2-opt bằng vòng lặp thuần, khoảng 200 dòng, không dùng thư viện nào — nằm ở package `optimization/heuristic`. Sau đó em cắm thêm OR-Tools của Google vào cùng một interface, nằm ở package `optimization/ortools`.
+>
+> Bản tự cài đặt để em đo và hiểu: nó tốt hơn cách Minh Phú đang làm bao nhiêu, và nó còn cách lời giải tốt bao nhiêu. Bản OR-Tools là cận trên để so, và là cái hệ thống thực sự chạy khi giao cho doanh nghiệp — vì tuyến nó cho ngắn hơn khoảng [điền số] %.
+>
+> Em đánh giá cả hai trên bộ dữ liệu chuẩn Augerat có lời giải tối ưu đã công bố. Kết quả là bản tự viết gap trung bình [X] %, OR-Tools gap [Y] %.
+
+**Nếu bị hỏi vặn "vậy phần của em là gì?":**
+
+> Là mô hình hóa và đo lường. Em phải tự dựng ma trận khoảng cách và đối xứng hóa nó, tự đặt hai ràng buộc sức chứa cùng lúc, tự tính ETA, tự dựng ba mốc so sánh và giải thích được vì sao mốc A dễ gây hiểu nhầm. Riêng phần thuật toán, em viết được bản của mình rồi đo ra nó thua ở đâu và vì sao thua — 2-opt chỉ sắp lại thứ tự bên trong một tuyến nên không sửa được cách chia đơn cho xe, còn OR-Tools chuyển điểm qua lại giữa các tuyến được. Em coi việc biết giới hạn giải pháp của mình là một kết quả chứ không phải một thiếu sót.
 
 ### 2. "Tại sao đảo đoạn trong 2-opt không làm xe chở quá tải?"
 
@@ -248,6 +256,8 @@ Mỗi hạn chế nêu ra chính là một ý cho mục "Hướng phát triển"
 
 ### 3. "Con số giảm phần trăm của em lấy ở đâu ra? Mốc so sánh có công bằng không?"
 
-> Em dùng hai mốc. Mốc A mô phỏng quy trình hiện tại của doanh nghiệp là mỗi đơn một chuyến khứ hồi, cho mức giảm X%. Nhưng em nhận thấy phần lớn mức giảm đó đến từ việc gom đơn chứ không phải từ thuật toán, nên em dùng thêm mốc B: giữ nguyên cách chia xe, chỉ đổi thứ tự giao. Mốc B cho mức giảm Y%, đây mới là đóng góp riêng của phần sắp thứ tự. Ngoài ra em còn đánh giá trên bộ dữ liệu chuẩn Augerat với gap trung bình Z%.
+> Em dùng ba mốc. Mốc A mô phỏng quy trình hiện tại của doanh nghiệp là mỗi đơn một chuyến khứ hồi, cho mức giảm X%. Nhưng em nhận thấy phần lớn mức giảm đó đến từ việc gom đơn chứ không phải từ thuật toán, nên em dùng thêm mốc B: giữ nguyên cách chia xe, chỉ đổi thứ tự giao. Mốc B cho mức giảm Y%, đây mới là đóng góp riêng của phần sắp thứ tự. Mốc C là OR-Tools chạy trên đúng ma trận đó, cho cận trên của chất lượng. Ngoài ra em còn đánh giá trên bộ dữ liệu chuẩn Augerat với gap trung bình Z%.
+>
+> Mốc C là mốc khó bẻ nhất, vì nó là mốc **bất lợi** cho em: nó cho thấy giải pháp của em còn kém bao nhiêu, chứ không phải hơn bao nhiêu.
 
 Học thuộc ba câu này. Chúng chiếm phần lớn điểm vấn đáp.
