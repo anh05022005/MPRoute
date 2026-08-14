@@ -96,6 +96,18 @@
             <scope>runtime</scope>
         </dependency>
 
+        <!--
+            Google OR-Tools: bo giai bai toan dinh tuyen phuong tien (CVRP).
+            Dung lam bo giai chinh cua he thong. Thuat toan tu cai dat trong
+            service/optimization/ van giu lai lam moc so sanh o chuong thuc nghiem.
+            Keo theo file thu vien native (.dll tren Windows) nen jar rat nang.
+        -->
+        <dependency>
+            <groupId>com.google.ortools</groupId>
+            <artifactId>ortools-java</artifactId>
+            <version>9.15.6755</version>
+        </dependency>
+
         <!-- ============ Kiem thu ============ -->
 
         <!-- Da bao gom JUnit 5, AssertJ, Mockito -->
