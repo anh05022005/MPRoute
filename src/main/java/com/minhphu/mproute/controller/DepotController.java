@@ -33,10 +33,17 @@ public class DepotController {
         return "admin/depots";
     }
 
+    /*
+     * Bao layout.html nap Leaflet cho man hinh nay (CN-01-05). Dat o ca ba cho tra ve
+     * form: quen mot cho thi luc do ban do khong hien, ma o nhap toa do van trong.
+     */
+    private static final String CO_BAN_DO = "canBanDo";
+
     @PreAuthorize("hasRole('ADMIN')")
     @GetMapping("/create")
     public String createForm(Model model) {
         model.addAttribute("form", new DepotForm());
+        model.addAttribute(CO_BAN_DO, true);
         return "admin/depot-form";
     }
 
@@ -44,6 +51,7 @@ public class DepotController {
     @GetMapping("/{id}/edit")
     public String editForm(@PathVariable Long id, Model model) {
         model.addAttribute("form", DepotForm.from(depotService.getById(id)));
+        model.addAttribute(CO_BAN_DO, true);
         return "admin/depot-form";
     }
 
@@ -51,6 +59,7 @@ public class DepotController {
     @PostMapping("/save")
     public String save(@Valid @ModelAttribute("form") DepotForm form,
                        BindingResult binding,
+                       Model model,
                        RedirectAttributes redirectAttributes) {
 
         /*
@@ -68,6 +77,7 @@ public class DepotController {
         }
 
         if (binding.hasErrors()) {
+            model.addAttribute(CO_BAN_DO, true);
             return "admin/depot-form";
         }
 

@@ -20,6 +20,13 @@
     <title th:text="${pageTitle} + ' — MPRoute'">MPRoute</title>
     <link rel="stylesheet" th:href="@{/css/bootstrap.min.css}">
     <link rel="stylesheet" th:href="@{/css/style.css}">
+
+    <!--
+        Leaflet chi nap o nhung man hinh co ban do (form khach hang, form kho).
+        Controller nao can thi dat model.addAttribute("canBanDo", true).
+        Khong nap toan cuc vi 162 KB do la thua o 12 man hinh con lai.
+    -->
+    <link th:if="${canBanDo}" rel="stylesheet" th:href="@{/css/leaflet.css}">
 </head>
 <body>
 
@@ -96,5 +103,9 @@
 </main>
 
 <script th:src="@{/js/bootstrap.bundle.min.js}"></script>
+
+<!-- Thu tu quan trong: leaflet.js phai chay xong truoc thi chon-toa-do.js moi thay bien L -->
+<script th:if="${canBanDo}" th:src="@{/js/leaflet.js}"></script>
+<script th:if="${canBanDo}" th:src="@{/js/chon-toa-do.js}"></script>
 </body>
 </html>

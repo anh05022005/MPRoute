@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<!--
+    Manh chon toa do dung chung cho form khach hang va form kho (CN-01-05).
+
+    Cach dung o trang con:
+        <div th:replace="~{fragments/map-picker :: chon-toa-do}"></div>
+    va Controller phai dat model.addAttribute("canBanDo", true) de layout nap Leaflet.
+
+    Manh nay tim ba o nhap theo id: address, latitude, longitude.
+    Ca hai form deu dat dung ba id do.
+-->
+<html lang="vi" xmlns:th="http://www.thymeleaf.org">
+<body>
+
+<div th:fragment="chon-toa-do">
+
+    <div class="d-flex align-items-center gap-2 mb-2">
+        <!--
+            type="button" la BAT BUOC. De mac dinh thi trong <form> no thanh nut submit,
+            bam "Tim toa do" se gui luon ca form di.
+        -->
+        <button type="button" id="nut-tim-toa-do" class="btn btn-sm btn-outline-secondary">
+            Tìm tọa độ từ địa chỉ
+        </button>
+        <span id="trang-thai-tim" class="small chu-phu"></span>
+    </div>
+
+    <!-- Nominatim tra nhieu ket qua thi hien danh sach de chon (BR01-06) -->
+    <div id="ket-qua-tim" class="list-group mb-2 d-none" style="max-height: 190px; overflow-y: auto;"></div>
+
+    <div id="ban-do" style="height: 320px; border: 1px solid var(--vien); border-radius: 4px;"></div>
+
+    <div class="form-text">
+        Không tìm được thì <strong>bấm thẳng vào bản đồ</strong> để ghim, hoặc kéo ghim để chỉnh —
+        tọa độ tự điền vào hai ô ở trên. Vẫn gõ tay vào hai ô đó được.
+    </div>
+
+</div>
+
+</body>
+</html>
