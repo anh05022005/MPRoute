@@ -33,6 +33,7 @@ public class GeocodingService {
 
     private final RestClient restClient;
     private final String diaChiMayChu;
+    private final String khungHaNoi;
 
     // Thoi diem goi Nominatim gan nhat, tinh bang nanoTime de khong bi anh huong
     // khi dong ho he thong bi chinh
@@ -40,9 +41,11 @@ public class GeocodingService {
 
     public GeocodingService(
             @Value("${mproute.nominatim.url:https://nominatim.openstreetmap.org}") String diaChiMayChu,
-            @Value("${mproute.nominatim.user-agent:MPRoute-DoAnTotNghiep/1.0}") String userAgent) {
+            @Value("${mproute.nominatim.user-agent:MPRoute-DoAnTotNghiep/1.0}") String userAgent,
+            @Value("${mproute.nominatim.viewbox:105.28,21.39,106.05,20.53}") String khungHaNoi) {
 
         this.diaChiMayChu = diaChiMayChu;
+        this.khungHaNoi = khungHaNoi;
         this.restClient = RestClient.builder()
                 .baseUrl(diaChiMayChu)
                 // Chinh sach su dung cua Nominatim bat buoc co dong nay
@@ -75,28 +78,24 @@ public class GeocodingService {
                             // Gioi han trong Viet Nam: khach hang cua Minh Phu deu o Ha Noi,
                             // bo loc nay cat han cac dia danh trung ten o nuoc ngoai
                             .queryParam("countrycodes", "vn")
+                            /*
+                             * Chi lay ket qua nam trong khung bao quanh Ha Noi.
+                             *
+                             * Khong co hai tham so nay thi Nominatim doan bua sang tinh khac:
+                             * "15 Kim Giang, Thanh Xuan" tra ve dung MOT ket qua la duong
+                             * Nguyen Kim o DA NANG, cach 800 km. Mot ket qua sai duy nhat
+                             * nguy hiem hon khong co ket qua nao, vi nguoi dung de bam nham.
+                             *
+                             * Da do: khung nay khong lam mat ket qua dung nao — "24 Lang Ha"
+                             * va "Phan Trong Tue" van ra du 5 ket qua o Ha Noi.
+                             */
+                            .queryParam("viewbox", khungHaNoi)
+                            .queryParam("bounded", 1)
                             .build())
                     .retrieve()
                     .body(NominatimItem[].class);
 
-            if (phanHoi == null) {
-                return List.of();
-            }
-
-            List<GeocodingResult> ketQua = new ArrayList<>();
-            for (NominatimItem item : phanHoi) {
-                if (item.lat() == null || item.lon() == null) {
-                    continue;
-                }
-                try {
-                    ketQua.add(new GeocodingResult(
-                            item.displayName(),
-                            Double.parseDouble(item.lat()),
-                            Double.parseDouble(item.lon())));
-                } catch (NumberFormatException loi) {
-                    log.warn("Nominatim tra toa do khong doc duoc: {} / {}", item.lat(), item.lon());
-                }
-            }
+            List<GeocodingResult> ketQua = doiSangKetQua(phanHoi);
             log.info("Tim toa do \"{}\" — {} ket qua", tuKhoa, ketQua.size());
             return ketQua;
 
@@ -109,6 +108,33 @@ public class GeocodingService {
             log.warn("Goi Nominatim that bai ({}): {}", diaChiMayChu, loi.getMessage());
             return List.of();
         }
+    }
+
+    /**
+     * Doi phan hoi tho cua Nominatim sang kieu dung trong ung dung.
+     *
+     * Bo qua dong nao thieu toa do hoac toa do khong doc duoc thanh so, thay vi
+     * lam hong ca danh sach — mot dong hong khong duoc keo theo bon dong con lai.
+     */
+    private List<GeocodingResult> doiSangKetQua(NominatimItem[] phanHoi) {
+        if (phanHoi == null) {
+            return List.of();
+        }
+        List<GeocodingResult> ketQua = new ArrayList<>();
+        for (NominatimItem item : phanHoi) {
+            if (item.lat() == null || item.lon() == null) {
+                continue;
+            }
+            try {
+                ketQua.add(new GeocodingResult(
+                        item.displayName(),
+                        Double.parseDouble(item.lat()),
+                        Double.parseDouble(item.lon())));
+            } catch (NumberFormatException loi) {
+                log.warn("Nominatim tra toa do khong doc duoc: {} / {}", item.lat(), item.lon());
+            }
+        }
+        return ketQua;
     }
 
     /**
