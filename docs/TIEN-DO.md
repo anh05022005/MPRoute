@@ -172,6 +172,17 @@ Nhóm 1 xong hết. Mốc hợp lý để `/clear` trước khi bắt đầu nh�
   **Lệnh `docker exec ... mysql -e "…"` gọi từ PowerShell cũng hỏng y hệt**, mà kiểu khác: chữ bị mã hóa
   hai lần (`Nguyễn` thành `Nguyá»…n`, hex `C3A1C2BB…` thay vì `E1BB85`). Muốn sửa dữ liệu tiếng Việt
   bằng SQL trực tiếp thì dùng `UNHEX('…')` với chuỗi byte UTF-8 dựng sẵn, đừng gõ chữ có dấu vào lệnh
+- **OpenStreetMap ở Hà Nội hầu như không có dữ liệu số nhà.** Nút "Tìm tọa độ" chỉ đưa về đúng
+  *con đường*, không ra số nhà — `91 Chùa Bộc, Đống Đa` trả về đúng một kết quả là *"Cầu vượt Tây Sơn"*.
+  Đây là giới hạn dữ liệu OSM, không sửa được từ phía đồ án; thêm `, Hà Nội` vào chuỗi tìm **không**
+  cải thiện (đã đo). Vì vậy quy trình đúng là: tìm để nhảy tới đúng phố → **bấm tay lên bản đồ**
+  đúng vị trí cửa hàng. Chính là điều BR01-06 đã lường trước.
+  **Đã từng có hai lỗi ở đây, cả hai đã sửa:**
+  (1) code cũ tự chọn luôn khi Nominatim trả về đúng 1 kết quả, nên nó im lặng nhảy tới chỗ sai —
+  nay luôn hiện danh sách kèm tọa độ để soát mắt, bản đồ không tự di chuyển;
+  (2) không giới hạn vùng nên Nominatim đoán bừa sang tỉnh khác — `15 Kim Giang, Thanh Xuân` trả về
+  một đường ở **Đà Nẵng** cách 800 km. Nay thêm `viewbox` + `bounded=1` bó về khung Hà Nội, địa chỉ
+  đó ra **0 kết quả** (đúng hơn hẳn một kết quả sai), còn `24 Láng Hạ` vẫn ra đủ 5 kết quả đúng
 - **Ảnh nền bản đồ vẫn cần mạng.** Thư viện Leaflet đã tải về `static/` nên không phụ thuộc mạng,
   nhưng các ô ảnh bản đồ lấy từ `tile.openstreetmap.org`. Bảo vệ mà không có mạng thì khung bản đồ
   hiện xám — ghim, tọa độ và nút lưu **vẫn hoạt động bình thường**, chỉ mất phần nhìn.
