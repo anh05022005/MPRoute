@@ -108,14 +108,27 @@
             var nut = document.createElement('button');
             nut.type = 'button'; // lai la nut trong form, phai chan submit
             nut.className = 'list-group-item list-group-item-action py-1 small';
+
             // textContent chu khong phai innerHTML: chuoi nay do Nominatim tra ve,
             // khong duoc dung no de dung the HTML
-            nut.textContent = ketQua.displayName;
+            var dongTen = document.createElement('div');
+            dongTen.textContent = ketQua.displayName;
+
+            // Hien ca toa do de soat bang mat truoc khi chon: khach noi thanh Ha Noi
+            // phai vao khoang 20.9-21.1 va 105.7-105.9, lech xa la Nominatim doan sai
+            var dongToaDo = document.createElement('div');
+            dongToaDo.className = 'chu-phu';
+            dongToaDo.textContent = lamTron7(ketQua.latitude) + ', ' + lamTron7(ketQua.longitude);
+
+            nut.appendChild(dongTen);
+            nut.appendChild(dongToaDo);
+
             nut.addEventListener('click', function () {
                 datGhim(ketQua.latitude, ketQua.longitude, true);
                 ghiToaDoVaoForm(ketQua.latitude, ketQua.longitude);
                 anDanhSachKetQua();
-                oTrangThai.textContent = 'Đã chọn. Kéo ghim để chỉnh lại nếu chưa đúng.';
+                oTrangThai.textContent =
+                    'Đã đặt ghim. Chưa đúng chỗ thì kéo ghim, hoặc bấm chỗ khác trên bản đồ.';
             });
             khungKetQua.appendChild(nut);
         });
@@ -150,15 +163,21 @@
                         'Không tìm thấy địa chỉ này. Bấm vào bản đồ để ghim tay.';
                     return;
                 }
-                if (cacKetQua.length === 1) {
-                    // Chi mot ket qua thi chon luon, khong bat bam them mot lan nua
-                    datGhim(cacKetQua[0].latitude, cacKetQua[0].longitude, true);
-                    ghiToaDoVaoForm(cacKetQua[0].latitude, cacKetQua[0].longitude);
-                    oTrangThai.textContent = 'Đã tìm thấy. Kéo ghim để chỉnh lại nếu chưa đúng.';
-                    return;
-                }
-                oTrangThai.textContent =
-                    'Tìm thấy ' + cacKetQua.length + ' địa điểm, chọn một dòng:';
+
+                /*
+                 * LUON hien danh sach, ke ca khi chi co MOT ket qua, va khong tu di
+                 * chuyen ban do truoc khi nguoi dung bam chon.
+                 *
+                 * Truoc day co doan "mot ket qua thi chon luon cho do phai bam", da bo.
+                 * Ly do: Nominatim o Viet Nam thuong chi doc duoc den muc TEN DUONG chu
+                 * khong ra so nha, nen "ket qua duy nhat" rat hay la mot dia diem khac han.
+                 * Vi du that: "91 Chua Boc, Dong Da" tra ve dung mot ket qua la
+                 * "Cau vuot Tay Son". Tu nhay toi do khien nguoi dung tuong man hinh hong,
+                 * va nguy hiem hon la ho co the luu nham toa do do ma khong biet.
+                 */
+                oTrangThai.textContent = (cacKetQua.length === 1)
+                    ? 'Tìm thấy 1 địa điểm — xem có đúng không rồi bấm vào dòng dưới:'
+                    : 'Tìm thấy ' + cacKetQua.length + ' địa điểm, chọn một dòng:';
                 hienDanhSachKetQua(cacKetQua);
             })
             .catch(function (loi) {
