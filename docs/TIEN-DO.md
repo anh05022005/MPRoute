@@ -2,7 +2,7 @@
 
 > Trạng thái hiện tại của đồ án. **Giữ dưới 60 dòng.** Cập nhật sau mỗi mốc hoàn thành.
 
-**Cập nhật lần cuối:** 12/08/2026 · Kho: `github.com/anh05022005/MPRoute` (riêng tư), nhánh `main`
+**Cập nhật lần cuối:** 15/08/2026 · Kho: `github.com/anh05022005/MPRoute` (riêng tư), nhánh `main`
 
 ---
 
@@ -10,14 +10,14 @@
 
 | | |
 |---|---|
-| Theo kế hoạch | Tuần 3 — CRUD danh mục |
-| Thực tế | **Xong Nhóm 0 và trọn Nhóm 1.** Sẵn sàng sang tuần 4 — đơn hàng |
+| Theo kế hoạch | Tuần 4 — đơn hàng |
+| Thực tế | Xong Nhóm 0, trọn Nhóm 1. **Nhóm 2 xong CN-02-01 → CN-02-09**, chỉ còn CN-02-10 |
 
 ```
 [x] T1  Chot de tai, hoi Minh Phu 3 cau
 [x] T2  Project chay, 16 bang sinh ra, dang nhap duoc
 [x] T3  CRUD 7 danh muc xong + tim toa do Nominatim
-[ ] T4  Tao don hang, tu tinh kg/m3/tien
+[~] T4  Tao don hang, tu tinh kg/m3/tien — xong het tru CN-02-10
 [ ] T5  OSRM chay, ma tran co cache, ban do hien diem
 [ ] T6  NearestNeighbor chay duoc bang main(), test xanh
 [ ] T7  2-opt chay duoc, OR-Tools cam vao, bang so sanh 4 dong
@@ -116,6 +116,45 @@
   **đúng đáp số tính tay 8000 m** trong 1,5 s trên Windows 11 + JDK 23. Chương 4 nay có
   **ba mốc** A/B/C thay vì hai. Đã sửa 15 file: `docs/03,06,07,09,10`, `CLAUDE.md`,
   4 rule/agent, 3 skill, 2 hook
+- **★ CN-02-01 → CN-02-06** — danh sách và tạo đơn hàng. **Phân quyền ngược với danh mục:**
+  đơn hàng là việc của điều phối viên, quản trị viên chỉ xem — kiểm 10 địa chỉ, `admin` gửi
+  `POST /orders/save` ra **403**, `taixe01` gõ `/orders` ra **403**.
+  Kiểm tay bằng `curl`, tính tay đối chiếu từng số: 3 thùng bông tẩy trang + 2 thùng nước lau sàn
+  = **67.6 kg / 0.317 m³ / 2.200.000đ**, khớp cả ba con số trên màn hình và trong CSDL.
+  - **CN-02-04** — tạo 3 đơn cùng ngày giao ra `MP2608160001`, `0002`, `0003` liên tiếp, không trùng.
+    Sáu chữ số giữa lấy theo **ngày giao** chứ không phải ngày tạo, để điều phối viên đọc mã qua
+    điện thoại là biết ngày phải giao. Trùng mã thì tăng số thứ tự tiếp — vòng lặp này cần thật
+    vì sửa đơn sang ngày giao khác sẽ làm số đếm lệch khỏi số thứ tự lớn nhất đã phát
+  - **CN-02-05** — chặn đơn không xe nào chở nổi: điều kiện đúng là **tồn tại một xe thỏa cả hai
+    ràng buộc cùng lúc**, không phải "có xe nào đó đủ tải" và "có xe nào đó đủ khối". Thử 1000 thùng
+    nước lau sàn → chặn kèm số liệu `24800.00 kg / 31.000 m³ so với 1500.00 kg / 12.000 m³ của xe 29H-123.45`
+  - **BR02-14** — kiểm bằng 3 đơn thật: `CASH` phải thu đủ 2.200.000đ, `CREDIT` và `PREPAID` đều 0đ
+  - **BR02-08** — sửa địa chỉ giao cho riêng đơn mà giữ nguyên tọa độ cũ **bị chặn**. Đây là kiểu sai
+    nguy hiểm nhất vì không ai nhìn ra: màn hình hiện địa chỉ mới, thuật toán vẫn giao về chỗ cũ
+  - Chặn đủ **5 nhánh sai** phía máy chủ: thiếu dòng chi tiết, ngày giao quá khứ, vượt sức chứa,
+    ghi đè địa chỉ thiếu tọa độ, chọn sản phẩm mà số thùng ≤ 0
+  - **Mở `/admin/geocode` cho cả điều phối viên.** Trước đó chỉ quản trị viên, nhưng BR02-08 bắt
+    điều phối viên xác định lại tọa độ khi ghi đè địa chỉ. Vẫn đóng với tài xế và khách
+  - Khối tóm tắt đọc lại cho khách (CN-02-06) dựng ở **tầng service** chứ không ghép chuỗi trong
+    file `.html` — có vòng lặp và định dạng tiền, để trong template thành biểu thức không sửa nổi
+- **★ CN-02-07, CN-02-08, CN-02-09** — duyệt, sửa, hủy đơn. Ba nút nằm trên trang chi tiết đơn.
+  - **Cả ba chuyển trạng thái đều ghi `status_history` (CBR-14).** Chạy thật một đơn qua đủ ba chặng
+    `Chờ duyệt → Đã duyệt → Đã hủy`, bảng lịch sử ra đúng 3 dòng kèm người thực hiện và lý do hủy
+  - **BR02-11** chặn ở máy chủ, không chỉ ẩn nút: đơn đã hủy thì `GET /orders/2/edit`,
+    `POST /orders/save` với `id=2`, và `POST /orders/2/cancel` **đều bị chặn**, dữ liệu đơn không đổi
+    một chữ nào. Câu báo phân biệt theo trạng thái — đơn đã hủy báo "đơn này đã hủy", chỉ đơn từ
+    `ROUTED` trở đi mới báo đúng MSG-07 "đơn đã phân tuyến", báo nhầm thì người dùng đi tìm một
+    tuyến không có thật
+  - **Sửa đơn giữ nguyên mã đơn** kể cả khi đổi ngày giao — khách đã được đọc mã qua điện thoại.
+    Đây chính là lý do `sinhMaDon()` phải có vòng lặp kiểm trùng: sau một lần đổi ngày giao, số đếm
+    đơn trong ngày không còn khớp với số thứ tự lớn nhất đã phát cho ngày đó
+  - **Sửa đơn dùng `items.clear()` chứ không `setItems(danh sách mới)`** — `orphanRemoval` bám vào
+    đúng thể hiện danh sách Hibernate đang theo dõi, thay bằng danh sách khác thì dòng cũ không bị
+    xóa và đơn cộng dồn cả hàng cũ lẫn hàng mới. Kiểm chứng: sửa đơn 2 dòng thành 1 dòng, tổng ra
+    đúng 30.0 kg / 0.425 m³ / 2.400.000đ, khối tóm tắt chỉ còn một dòng hàng
+  - **BR02-16** kiểm luôn trong lần sửa đó: đổi `CASH` sang `CREDIT` thì phải thu về **0đ** ngay
+  - Chặn thêm **3 nhánh sai**: duyệt lại đơn đã duyệt, hủy không nhập lý do, lý do quá 500 ký tự
+  - Phân quyền: `admin` gõ `/orders/1/edit` và POST duyệt/hủy đều ra **403**, tài xế cũng **403**
 - **Sửa 405 thành 403** khi vai trò không đủ quyền gửi POST tới `/admin/**`. Nguyên nhân:
   `accessDeniedPage()` *chuyển tiếp* nên giữ nguyên method POST, mà `HomeController` khai `@GetMapping("/403")`.
   Đổi sang `@RequestMapping("/403")`
@@ -126,20 +165,22 @@ bước 12–14 (phương án B) cần hai tuyến chạy song song mới dựng
 
 ---
 
-## Việc tiếp theo — tuần 4, đơn hàng (Nhóm 2)
+## Việc tiếp theo
 
-Nhóm 1 xong hết. Mốc hợp lý để `/clear` trước khi bắt đầu nhóm mới.
+1. **CN-02-10 thêm khách ngay trong màn tạo đơn** — vướng ma trận phân quyền,
+   xem mục "Cần quyết định" bên dưới. Quyết xong mới làm
+2. Xong CN-02-10 là hết Nhóm 2 → sang **tuần 5: OSRM + Leaflet + ma trận khoảng cách**,
+   rồi tới tuần 6–7 là trái tim đồ án
+3. Còn nợ một phép nghiệm thu của BR02-11: đơn `ROUTED` mới ra đúng chữ MSG-07.
+   **Tuần 8 có màn hình phân tuyến mới thử được** — hiện chỉ thử được nhánh đơn đã hủy
 
-1. CN-02-01 danh sách đơn · CN-02-02 tạo đơn — nặng hơn danh mục nhiều vì có dòng chi tiết
-2. Hệ thống **tự tính** `total_weight` / `total_volume`, không cho sửa tay (BR02-04)
-3. Mã đơn tự sinh `MP` + `yyMMdd` + 4 chữ số (BR02-01), và `amount_to_collect` theo BR02-14
-
-## Hai việc còn nợ, phải quay lại làm
+## Ba việc còn nợ, phải quay lại làm
 
 | Việc | Khi nào làm được | Vì sao chưa làm |
 |---|---|---|
 | **Nghiệm thu thật CN-01-08** | Tuần 8 | Tiêu chí không phải "sửa được" mà là *đổi `AVERAGE_SPEED` rồi chạy lại phân tuyến thì ETA phải đổi theo*. Màn hình phân tuyến tuần 8 mới có |
 | **Thử tay phần bản đồ CN-01-05** | Bất cứ lúc nào | Đã kiểm tự động phía máy chủ (27 phép) nhưng **chưa ai bấm thử thật**: bấm vào bản đồ để ghim, kéo ghim, chọn dòng trong danh sách nhiều kết quả. Phần JavaScript này chỉ chạy trong trình duyệt |
+| **Thử tay `don-hang.js` (CN-02-03)** | Bất cứ lúc nào | Cùng lý do: tổng kg/m³/tiền cập nhật ngay khi gõ, thêm/xóa dòng, chọn khách tự điền địa chỉ — toàn bộ chỉ chạy trong trình duyệt. Phía máy chủ đã kiểm xong, cú pháp JavaScript đã kiểm bằng `node --check`, nhưng **chưa ai gõ thử thật**. Thử luôn khối nhập lý do hủy (dùng `collapse` của Bootstrap) |
 
 ---
 
@@ -149,6 +190,7 @@ Nhóm 1 xong hết. Mốc hợp lý để `/clear` trước khi bắt đầu nh�
 |---|---|
 | **Cắt phạm vi — quyết trước tuần 8** | 86 chức năng bắt buộc / 12 tuần / một người. Ước lượng thật là 18–24 tuần. **Cắt chủ động ngay chứ đừng đợi tuần 9 mới cắt trong hoảng loạn.** Cắt hẳn RPT-01, RPT-02 và toàn bộ mục ○ từ bây giờ |
 | **Mâu thuẫn về thứ tự cắt** | `docs/00` xếp UC06 (sự cố) vào diện cắt sớm, nhưng kịch bản demo lại lấy bước 13 làm điểm nhấn. Dung hòa: giữ UC06 nhưng làm **phương án A và C trước**, phương án B (Cheapest Insertion) làm sau nếu còn thời gian |
+| **CN-02-10 mâu thuẫn với ma trận phân quyền** | `docs/04` bảo điều phối viên thêm khách ngay trong màn tạo đơn, nhưng `docs/01` xếp danh mục là "chỉ xem" với vai trò này. Ba hướng: (a) mở riêng đường thêm khách cho điều phối viên và ghi rõ ngoại lệ vào `docs/09`; (b) cắt CN-02-10, điều phối viên nhờ quản trị viên thêm trước; (c) đổi ma trận. **Nghiêng về (a)** — thực tế khách gọi đặt hàng lần đầu thì không thể bắt họ chờ |
 | Thư viện xuất Excel | CN-08-05 cần Apache POI. Thêm vào `pom.xml` khi làm tới tuần 10 |
 
 ---
@@ -165,7 +207,11 @@ Nhóm 1 xong hết. Mốc hợp lý để `/clear` trước khi bắt đầu nh�
 
 ## Nợ kỹ thuật
 
-- Menu trỏ tới `/orders`, `/routing`… chưa có Controller → bấm vào ra 404. Hết tuần 3–5 là tự hết
+- Menu trỏ tới `/routing`, `/tracking`, `/incidents`, `/reports` chưa có Controller → bấm vào ra 404.
+  `/orders` đã có. Hết tuần 5–10 là tự hết
+- Trong CSDL đang có **4 đơn thử** do lần kiểm thử `curl` tạo ra: `MP2608160001` (Đã duyệt),
+  `MP2608160002`, `MP2608160003`, `MP2608170001` (cả ba Đã hủy). Giữ lại để bấm thử giao diện;
+  xóa lúc seed lại dữ liệu ở tuần 11
 - Khi kiểm thử form bằng `curl` trong Git Bash: **phải percent-encode tiếng Việt sẵn** rồi dùng
   `--data-raw`. Git Bash chuyển tham số sang bảng mã ANSI khi gọi `curl.exe`, làm hỏng dấu tiếng Việt
   ngay từ máy khách — dễ tưởng nhầm là ứng dụng sai encoding. Kiểm bằng `HEX(cột)` trong MySQL.
