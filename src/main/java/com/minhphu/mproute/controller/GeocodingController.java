@@ -16,12 +16,14 @@ import java.util.List;
  * @RestController chu khong phai @Controller: cho nay tra du lieu cho JavaScript,
  * khong tra ten view.
  *
- * Chi quan tri vien, vi chi ho moi sua duoc form khach hang va form kho.
- * Khong mo cho dieu phoi vien: mo rong hon muc can thiet la bien may chu cua
- * do an thanh mot cai cong goi Nominatim mien phi cho nguoi khac dung (CBR-15).
+ * Mo cho quan tri vien VA dieu phoi vien, khong mo rong hon: hai vai tro nay deu co
+ * man hinh phai xac dinh toa do — quan tri vien o form khach hang va form kho,
+ * dieu phoi vien o form tao don khi ghi de dia chi giao cho rieng mot don (BR02-08).
+ * Van dong voi tai xe va nguoi chua dang nhap, vi mo rong hon muc can thiet la bien
+ * may chu cua do an thanh mot cai cong goi Nominatim mien phi cho nguoi khac dung (CBR-15).
  */
 @RestController
-@PreAuthorize("hasRole('ADMIN')")
+@PreAuthorize("hasAnyRole('ADMIN', 'DISPATCHER')")
 @RequiredArgsConstructor
 public class GeocodingController {
 

@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<!-- SCR-07 — Danh sach don hang (CN-02-01) -->
+<html lang="vi"
+      xmlns:th="http://www.thymeleaf.org"
+      xmlns:sec="http://www.thymeleaf.org/extras/spring-security"
+      th:replace="~{layout :: main('Đơn hàng', ~{::content})}">
+<body>
+
+<div th:fragment="content">
+
+    <div class="thanh-cong-cu d-flex justify-content-between align-items-end flex-wrap gap-2">
+
+        <form th:action="@{/orders}" method="get" class="d-flex align-items-end gap-2 flex-wrap">
+            <div>
+                <label for="deliveryDate" class="form-label mb-1 small">Ngày giao</label>
+                <input type="date" id="deliveryDate" name="deliveryDate"
+                       class="form-control form-control-sm" style="width: 160px;"
+                       th:value="${deliveryDate}">
+            </div>
+            <div>
+                <label for="status" class="form-label mb-1 small">Trạng thái</label>
+                <select id="status" name="status" class="form-select form-select-sm" style="width: 170px;">
+                    <option value="">Tất cả</option>
+                    <option th:each="tt : ${cacTrangThaiDon}"
+                            th:value="${tt}"
+                            th:text="${tt.displayName}"
+                            th:selected="${tt == status}">Trạng thái</option>
+                </select>
+            </div>
+            <div>
+                <label for="customerId" class="form-label mb-1 small">Khách hàng</label>
+                <select id="customerId" name="customerId" class="form-select form-select-sm" style="width: 240px;">
+                    <option value="">Tất cả</option>
+                    <option th:each="kh : ${cacKhachHang}"
+                            th:value="${kh.id}"
+                            th:text="${kh.name}"
+                            th:selected="${kh.id == customerId}">Khách hàng</option>
+                </select>
+            </div>
+            <button type="submit" class="btn btn-sm btn-outline-secondary">Lọc</button>
+            <a th:href="@{/orders}" class="btn btn-sm btn-outline-secondary">Bỏ lọc</a>
+        </form>
+
+        <!-- Don hang la viec cua dieu phoi vien, quan tri vien chi xem (docs/01 ma tran phan quyen) -->
+        <a th:href="@{/orders/create}" sec:authorize="hasRole('DISPATCHER')"
+           class="btn btn-sm btn-primary">+ Tạo đơn hàng</a>
+    </div>
+
+    <table class="table table-bordered table-striped table-sm align-middle">
+        <thead>
+        <tr>
+            <th style="width: 130px;">Mã đơn</th>
+            <th style="width: 100px;">Ngày giao</th>
+            <th>Khách hàng</th>
+            <th style="width: 90px;">Khối lượng</th>
+            <th style="width: 90px;">Thể tích</th>
+            <th style="width: 110px;">Tiền hàng</th>
+            <th style="width: 110px;">Phải thu</th>
+            <th style="width: 130px;">Trạng thái</th>
+            <th style="width: 70px;">Thao tác</th>
+        </tr>
+        </thead>
+        <tbody>
+
+        <tr th:if="${trang.empty}">
+            <td colspan="9" class="text-center chu-phu py-3">Không có đơn hàng nào phù hợp.</td>
+        </tr>
+
+        <tr th:each="don : ${trang.content}">
+            <td>
+                <a th:href="@{/orders/{id}(id=${don.id})}" th:text="${don.code}">MP2608040042</a>
+            </td>
+            <td th:text="${#temporals.format(don.deliveryDate, 'dd/MM/yyyy')}">04/08/2026</td>
+
+            <td>
+                <span th:text="${don.customer.name}">Tạp hóa Bà Lan</span>
+                <div class="small chu-phu" th:text="${don.deliveryAddress}">Số 12 ngõ 5 Phan Trọng Tuệ</div>
+            </td>
+
+            <!-- Hai con so nay la DAU VAO cua thuat toan, hien ngay tren danh sach
+                 de dieu phoi vien uoc luong duoc bao nhieu xe cho mot ngay -->
+            <td class="so" th:text="${#numbers.formatDecimal(don.totalWeight, 1, 'NONE', 1, 'POINT')} + ' kg'">120.0 kg</td>
+            <td class="so" th:text="${#numbers.formatDecimal(don.totalVolume, 1, 'NONE', 3, 'POINT')} + ' m³'">1.700 m³</td>
+
+            <td class="so" th:text="${#numbers.formatInteger(don.totalAmount, 1, 'POINT')} + 'đ'">3.720.000đ</td>
+
+            <!-- BR02-14: chi don tien mat moi phai thu, in dam khi lon hon 0 (docs/05) -->
+            <td class="so">
+                <strong th:if="${don.amountToCollect.signum() > 0}"
+                        th:text="${#numbers.formatInteger(don.amountToCollect, 1, 'POINT')} + 'đ'">3.720.000đ</strong>
+                <span th:unless="${don.amountToCollect.signum() > 0}" class="chu-phu"
+                      th:text="'0đ · ' + ${don.paymentMethod.displayName}">0đ · Công nợ</span>
+            </td>
+
+            <td>
+                <span th:class="${don.status.name() == 'CANCELLED'} ? 'nhan nhan-loi'
+                               : (${don.status.name() == 'PENDING_APPROVAL'} ? 'nhan nhan-cho'
+                               : (${don.status.name() == 'DELIVERED'} ? 'nhan nhan-thanh-cong' : 'nhan nhan-mac-dinh'))"
+                      th:text="${don.status.displayName}">Chờ duyệt</span>
+            </td>
+
+            <td>
+                <a class="btn btn-sm btn-outline-secondary py-0"
+                   th:href="@{/orders/{id}(id=${don.id})}">Xem</a>
+            </td>
+        </tr>
+        </tbody>
+    </table>
+
+    <div th:replace="~{fragments/pagination :: phan-trang-don(
+             trang        = ${trang},
+             deliveryDate = ${deliveryDate},
+             status       = ${status},
+             customerId   = ${customerId})}"></div>
+
+</div>
+
+</body>
+</html>

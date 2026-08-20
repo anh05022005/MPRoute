@@ -107,5 +107,9 @@
 <!-- Thu tu quan trong: leaflet.js phai chay xong truoc thi chon-toa-do.js moi thay bien L -->
 <script th:if="${canBanDo}" th:src="@{/js/leaflet.js}"></script>
 <script th:if="${canBanDo}" th:src="@{/js/chon-toa-do.js}"></script>
+
+<!-- Man hinh don hang: tinh tong kg/m3/tien ngay khi go (CN-02-03) va nut sao chep
+     khoi tom tat (CN-02-06). Controller nao can thi dat model.addAttribute("canJsDonHang", true) -->
+<script th:if="${canJsDonHang}" th:src="@{/js/don-hang.js}"></script>
 </body>
 </html>

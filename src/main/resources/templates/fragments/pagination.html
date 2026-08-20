@@ -52,5 +52,51 @@
     </ul>
 </div>
 
+<!--
+    Ban rieng cho man hinh don hang (CN-02-01). Bo o loc cua don khac han danh muc:
+    loc theo ngay giao va khach hang chu khong phai tu khoa. Viet mot manh rieng
+    thay vi nhoi them tham so vao manh tren — sang trang ma rot mat dieu kien loc
+    la loi nguoi dung khong nhin ra ngay.
+
+    Cach dung:
+        <div th:replace="~{fragments/pagination :: phan-trang-don(
+                 trang        = ${trang},
+                 deliveryDate = ${deliveryDate},
+                 status       = ${status},
+                 customerId   = ${customerId})}"></div>
+-->
+<div th:fragment="phan-trang-don(trang, deliveryDate, status, customerId)"
+     class="d-flex justify-content-between align-items-center"
+     th:if="${trang.totalPages > 1}">
+
+    <span class="chu-phu small">
+        Trang <span th:text="${trang.number + 1}">1</span>/<span th:text="${trang.totalPages}">1</span>
+        — tổng <span th:text="${trang.totalElements}">0</span> đơn hàng
+    </span>
+
+    <ul class="pagination pagination-sm mb-0">
+
+        <li class="page-item" th:classappend="${trang.first} ? 'disabled'">
+            <a class="page-link"
+               th:href="@{/orders(page=${trang.number - 1}, deliveryDate=${deliveryDate},
+                                  status=${status}, customerId=${customerId})}">Trước</a>
+        </li>
+
+        <li class="page-item" th:each="i : ${#numbers.sequence(0, trang.totalPages - 1)}"
+            th:classappend="${i == trang.number} ? 'active'">
+            <a class="page-link"
+               th:href="@{/orders(page=${i}, deliveryDate=${deliveryDate},
+                                  status=${status}, customerId=${customerId})}"
+               th:text="${i + 1}">1</a>
+        </li>
+
+        <li class="page-item" th:classappend="${trang.last} ? 'disabled'">
+            <a class="page-link"
+               th:href="@{/orders(page=${trang.number + 1}, deliveryDate=${deliveryDate},
+                                  status=${status}, customerId=${customerId})}">Sau</a>
+        </li>
+    </ul>
+</div>
+
 </body>
 </html>
