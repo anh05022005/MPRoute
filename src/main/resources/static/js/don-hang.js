@@ -212,9 +212,190 @@
 
         danhLaiChiSo();
         tinhLaiTatCa();
+
+        gan_HopThoaiThemKhach(oKhach, oGhiChuKhach);
     }
 
-    // ==================== Phan 2: nut sao chep o trang chi tiet ====================
+    // ==================== Phan 2: hop thoai them khach nhanh (CN-02-10) ====================
+
+    /*
+     * Them khach ngay tren man hinh tao don, khong tai lai trang: don dang go do,
+     * tai lai la mat het cac dong chi tiet vua nhap.
+     *
+     * Phan tim toa do o day viet rieng chu khong dung lai chon-toa-do.js, vi file do
+     * gan cung vao ba o co id address / latitude / longitude cua chinh trang. Sua no
+     * thanh dung chung duoc thi phai sua ca man hinh khach hang va man hinh kho dang
+     * chay tot — khong dang doi lay may chuc dong.
+     * Hop thoai nay CO Y khong co ban do ghim tay: chi tim theo dia chi hoac go tay
+     * toa do. Muon ghim tay thi vao man hinh Khach hang.
+     */
+    function gan_HopThoaiThemKhach(oKhach, oGhiChuKhach) {
+        var hopThoai = document.getElementById('hop-thoai-them-khach');
+        if (!hopThoai) {
+            return;
+        }
+
+        var formKhach = document.getElementById('form-them-khach');
+        var khungLoi = document.getElementById('loi-them-khach');
+        var nutTim = document.getElementById('kh-nut-tim-toa-do');
+        var oTrangThai = document.getElementById('kh-trang-thai-tim');
+        var khungKetQua = document.getElementById('kh-ket-qua-tim');
+        var oDiaChi = document.getElementById('kh-address');
+        var oViDo = document.getElementById('kh-latitude');
+        var oKinhDo = document.getElementById('kh-longitude');
+
+        function hienLoi(cacCau) {
+            khungLoi.innerHTML = '';
+            cacCau.forEach(function (cau) {
+                var dong = document.createElement('div');
+                dong.textContent = cau;   // textContent chu khong innerHTML
+                khungLoi.appendChild(dong);
+            });
+            khungLoi.classList.remove('d-none');
+        }
+
+        function anLoi() {
+            khungLoi.innerHTML = '';
+            khungLoi.classList.add('d-none');
+        }
+
+        function anKetQuaTim() {
+            khungKetQua.innerHTML = '';
+            khungKetQua.classList.add('d-none');
+        }
+
+        // ---- Tim toa do theo dia chi (BR01-05, BR01-06) ----
+        nutTim.addEventListener('click', function () {
+            var diaChi = (oDiaChi.value || '').trim();
+            if (diaChi === '') {
+                oTrangThai.textContent = 'Nhập địa chỉ ở ô trên trước đã.';
+                oDiaChi.focus();
+                return;
+            }
+
+            oTrangThai.textContent = 'Đang tìm…';
+            anKetQuaTim();
+
+            fetch('/admin/geocode?q=' + encodeURIComponent(diaChi), {
+                headers: { 'Accept': 'application/json' }
+            })
+                .then(function (traLoi) {
+                    if (!traLoi.ok) {
+                        throw new Error('HTTP ' + traLoi.status);
+                    }
+                    return traLoi.json();
+                })
+                .then(function (cacKetQua) {
+                    if (!cacKetQua || cacKetQua.length === 0) {
+                        oTrangThai.textContent =
+                            'Không tìm thấy. Gõ tay hai ô tọa độ, hoặc thử tên đường ngắn hơn.';
+                        return;
+                    }
+                    oTrangThai.textContent = 'Chọn một dòng để điền tọa độ:';
+                    cacKetQua.forEach(function (ketQua) {
+                        var nut = document.createElement('button');
+                        nut.type = 'button';   // trong form thi mac dinh la nut submit
+                        nut.className = 'list-group-item list-group-item-action py-1 small';
+
+                        var dongTen = document.createElement('div');
+                        dongTen.textContent = ketQua.displayName;
+
+                        // Hien ca toa do de soat bang mat: noi thanh Ha Noi phai vao khoang
+                        // 20.9-21.1 va 105.7-105.9, lech xa la Nominatim doan sai
+                        var dongToaDo = document.createElement('div');
+                        dongToaDo.className = 'chu-phu';
+                        dongToaDo.textContent = Number(ketQua.latitude).toFixed(7)
+                            + ', ' + Number(ketQua.longitude).toFixed(7);
+
+                        nut.appendChild(dongTen);
+                        nut.appendChild(dongToaDo);
+                        nut.addEventListener('click', function () {
+                            oViDo.value = Number(ketQua.latitude).toFixed(7);
+                            oKinhDo.value = Number(ketQua.longitude).toFixed(7);
+                            anKetQuaTim();
+                            oTrangThai.textContent = 'Đã điền tọa độ. Sửa tay được nếu chưa đúng.';
+                        });
+                        khungKetQua.appendChild(nut);
+                    });
+                    khungKetQua.classList.remove('d-none');
+                })
+                .catch(function (loi) {
+                    // Nuot loi co chu y: Nominatim chet khong duoc lam hong ca man hinh tao don
+                    console.warn('Loi goi /admin/geocode:', loi);
+                    oTrangThai.textContent = 'Không gọi được dịch vụ tìm tọa độ. Gõ tay hai ô tọa độ.';
+                });
+        });
+
+        // ---- Gui form bang fetch, khong tai lai trang ----
+        formKhach.addEventListener('submit', function (suKien) {
+            suKien.preventDefault();
+            anLoi();
+
+            /*
+             * URLSearchParams gui dang x-www-form-urlencoded, dung khuon ma @ModelAttribute
+             * ben may chu doc duoc. FormData cung chay nhung gui dang multipart, khong can.
+             * The an chua CSRF token do Thymeleaf tu chen nam trong form nen di theo luon.
+             */
+            var duLieu = new URLSearchParams(new FormData(formKhach));
+
+            fetch(formKhach.action, {
+                method: 'POST',
+                headers: { 'Accept': 'application/json' },
+                body: duLieu
+            })
+                .then(function (traLoi) {
+                    return traLoi.json().then(function (than) {
+                        return { ok: traLoi.ok, than: than };
+                    });
+                })
+                .then(function (ketQua) {
+                    if (!ketQua.ok) {
+                        var loi = ketQua.than.loi || {};
+                        var cacCau = Object.keys(loi).map(function (ten) { return loi[ten]; });
+                        hienLoi(cacCau.length ? cacCau : ['Không thêm được khách hàng.']);
+                        return;
+                    }
+                    themKhachVaoOChon(ketQua.than);
+                })
+                .catch(function (loi) {
+                    console.warn('Loi goi /orders/quick-customer:', loi);
+                    hienLoi(['Không gọi được máy chủ. Vui lòng thử lại.']);
+                });
+        });
+
+        /** Them khach vua luu vao o chon roi CHON LUON cho don dang tao (CN-02-10). */
+        function themKhachVaoOChon(khach) {
+            var dong = document.createElement('option');
+            dong.value = khach.id;
+            dong.textContent = khach.name + ' — ' + khach.phone;
+            dong.setAttribute('data-dia-chi', khach.address);
+            dong.setAttribute('data-vi-do', khach.latitude);
+            dong.setAttribute('data-kinh-do', khach.longitude);
+            dong.setAttribute('data-thanh-toan', khach.paymentMethod);
+            if (khach.deliveryNote) {
+                dong.setAttribute('data-ghi-chu', khach.deliveryNote);
+            }
+            oKhach.appendChild(dong);
+            oKhach.value = String(khach.id);
+
+            // Phat su kien change de dung doan da co: tu dien dia chi, toa do, hinh thuc
+            // thanh toan va tinh lai so tien phai thu
+            oKhach.dispatchEvent(new Event('change'));
+
+            formKhach.reset();
+            anKetQuaTim();
+            oTrangThai.textContent = '';
+            bootstrap.Modal.getInstance(hopThoai).hide();
+
+            // Trung so dien thoai chi la canh bao mem, khach van duoc luu
+            if (khach.canhBao) {
+                oGhiChuKhach.textContent =
+                    (oGhiChuKhach.textContent ? oGhiChuKhach.textContent + ' · ' : '') + khach.canhBao;
+            }
+        }
+    }
+
+    // ==================== Phan 3: nut sao chep o trang chi tiet ====================
 
     var nutSaoChep = document.getElementById('nut-sao-chep');
     if (nutSaoChep) {

@@ -11,13 +11,13 @@
 | | |
 |---|---|
 | Theo kế hoạch | Tuần 4 — đơn hàng |
-| Thực tế | Xong Nhóm 0, trọn Nhóm 1. **Nhóm 2 xong CN-02-01 → CN-02-09**, chỉ còn CN-02-10 |
+| Thực tế | Xong Nhóm 0, trọn Nhóm 1, **trọn Nhóm 2** (CN-02-11 nhập Excel là mục ○, đã cắt) |
 
 ```
 [x] T1  Chot de tai, hoi Minh Phu 3 cau
 [x] T2  Project chay, 16 bang sinh ra, dang nhap duoc
 [x] T3  CRUD 7 danh muc xong + tim toa do Nominatim
-[~] T4  Tao don hang, tu tinh kg/m3/tien — xong het tru CN-02-10
+[x] T4  Tao don hang, tu tinh kg/m3/tien — xong tron Nhom 2
 [ ] T5  OSRM chay, ma tran co cache, ban do hien diem
 [ ] T6  NearestNeighbor chay duoc bang main(), test xanh
 [ ] T7  2-opt chay duoc, OR-Tools cam vao, bang so sanh 4 dong
@@ -155,6 +155,18 @@
   - **BR02-16** kiểm luôn trong lần sửa đó: đổi `CASH` sang `CREDIT` thì phải thu về **0đ** ngay
   - Chặn thêm **3 nhánh sai**: duyệt lại đơn đã duyệt, hủy không nhập lý do, lý do quá 500 ký tự
   - Phân quyền: `admin` gõ `/orders/1/edit` và POST duyệt/hủy đều ra **403**, tài xế cũng **403**
+- **★ CN-02-10** — thêm khách ngay trong màn tạo đơn, hộp thoại gọi `POST /orders/quick-customer`
+  trả JSON, thêm xong tự chọn luôn cho đơn đang tạo, **không tải lại trang** (tải lại là mất hết
+  dòng chi tiết vừa gõ).
+  - **Đây là một ngoại lệ có chủ ý của ma trận phân quyền**, đã ghi vào `docs/09` mục **A4** kèm
+    lý do và phần được/mất. Ngoại lệ bó hẹp hết mức và đã kiểm chứng bằng cách gửi thẳng dữ liệu
+    lên máy chủ: gửi kèm `id=6` thì hệ thống **tạo khách mới**, khách #6 giữ nguyên tên và trạng thái;
+    gửi `status=INACTIVE` thì bị **ép về `ACTIVE`**; điều phối viên vẫn ra **403** ở cả 4 đường ghi
+    của `/admin/customers/**`
+  - Hộp thoại **cố ý không có bản đồ ghim tay** — chỉ tìm tọa độ theo địa chỉ hoặc gõ tay. Lý do kỹ
+    thuật ghi ở `docs/09` A4: `chon-toa-do.js` gắn cứng vào ba ô của chính trang, sửa thành dùng
+    chung thì phải đụng vào hai màn hình đang chạy tốt
+  - Trùng số điện thoại vẫn chỉ **cảnh báo mềm**, giống CN-01-04
 - **Sửa 405 thành 403** khi vai trò không đủ quyền gửi POST tới `/admin/**`. Nguyên nhân:
   `accessDeniedPage()` *chuyển tiếp* nên giữ nguyên method POST, mà `HomeController` khai `@GetMapping("/403")`.
   Đổi sang `@RequestMapping("/403")`
@@ -167,10 +179,12 @@ bước 12–14 (phương án B) cần hai tuyến chạy song song mới dựng
 
 ## Việc tiếp theo
 
-1. **CN-02-10 thêm khách ngay trong màn tạo đơn** — vướng ma trận phân quyền,
-   xem mục "Cần quyết định" bên dưới. Quyết xong mới làm
-2. Xong CN-02-10 là hết Nhóm 2 → sang **tuần 5: OSRM + Leaflet + ma trận khoảng cách**,
-   rồi tới tuần 6–7 là trái tim đồ án
+Hết Nhóm 2. Mốc hợp lý để `/clear` trước khi sang nhóm mới.
+
+1. **Tuần 5 — OSRM chạy Docker, ma trận khoảng cách có cache, bản đồ hiện điểm.**
+   Đây là đầu vào bắt buộc của tuần 6–7, không có nó thì thuật toán không có số để chạy
+2. Nhớ luật vàng số 4 ngay từ đầu: **nạp ma trận vào bộ nhớ trước**, không gọi OSRM
+   hay truy vấn CSDL bên trong vòng lặp thuật toán
 3. Còn nợ một phép nghiệm thu của BR02-11: đơn `ROUTED` mới ra đúng chữ MSG-07.
    **Tuần 8 có màn hình phân tuyến mới thử được** — hiện chỉ thử được nhánh đơn đã hủy
 
@@ -190,8 +204,8 @@ bước 12–14 (phương án B) cần hai tuyến chạy song song mới dựng
 |---|---|
 | **Cắt phạm vi — quyết trước tuần 8** | 86 chức năng bắt buộc / 12 tuần / một người. Ước lượng thật là 18–24 tuần. **Cắt chủ động ngay chứ đừng đợi tuần 9 mới cắt trong hoảng loạn.** Cắt hẳn RPT-01, RPT-02 và toàn bộ mục ○ từ bây giờ |
 | **Mâu thuẫn về thứ tự cắt** | `docs/00` xếp UC06 (sự cố) vào diện cắt sớm, nhưng kịch bản demo lại lấy bước 13 làm điểm nhấn. Dung hòa: giữ UC06 nhưng làm **phương án A và C trước**, phương án B (Cheapest Insertion) làm sau nếu còn thời gian |
-| **CN-02-10 mâu thuẫn với ma trận phân quyền** | `docs/04` bảo điều phối viên thêm khách ngay trong màn tạo đơn, nhưng `docs/01` xếp danh mục là "chỉ xem" với vai trò này. Ba hướng: (a) mở riêng đường thêm khách cho điều phối viên và ghi rõ ngoại lệ vào `docs/09`; (b) cắt CN-02-10, điều phối viên nhờ quản trị viên thêm trước; (c) đổi ma trận. **Nghiêng về (a)** — thực tế khách gọi đặt hàng lần đầu thì không thể bắt họ chờ |
 | Thư viện xuất Excel | CN-08-05 cần Apache POI. Thêm vào `pom.xml` khi làm tới tuần 10 |
+| ~~CN-02-10 mâu thuẫn với ma trận phân quyền~~ | **Đã quyết:** mở riêng đường thêm mới khách cho điều phối viên, bó hẹp hết mức, ghi vào `docs/09` mục **A4**. Muốn đổi ý thì gỡ đúng một endpoint và một hộp thoại |
 
 ---
 
@@ -211,7 +225,11 @@ bước 12–14 (phương án B) cần hai tuyến chạy song song mới dựng
   `/orders` đã có. Hết tuần 5–10 là tự hết
 - Trong CSDL đang có **4 đơn thử** do lần kiểm thử `curl` tạo ra: `MP2608160001` (Đã duyệt),
   `MP2608160002`, `MP2608160003`, `MP2608170001` (cả ba Đã hủy). Giữ lại để bấm thử giao diện;
-  xóa lúc seed lại dữ liệu ở tuần 11
+  xóa lúc seed lại dữ liệu ở tuần 11. Ba khách thử của CN-02-10 (`#22`, `#23`, `#24`) đã chuyển
+  **`INACTIVE`** nên không còn hiện trong ô chọn khách lúc tạo đơn
+- **MySQL chạy trong container Docker `mysql-8.0.44`, không phải service của Windows.** Docker Desktop
+  tắt là ứng dụng không khởi động được, báo `Communications link failure`. Mở lại:
+  chạy Docker Desktop rồi `docker start mysql-8.0.44`
 - Khi kiểm thử form bằng `curl` trong Git Bash: **phải percent-encode tiếng Việt sẵn** rồi dùng
   `--data-raw`. Git Bash chuyển tham số sang bảng mã ANSI khi gọi `curl.exe`, làm hỏng dấu tiếng Việt
   ngay từ máy khách — dễ tưởng nhầm là ứng dụng sai encoding. Kiểm bằng `HEX(cột)` trong MySQL.

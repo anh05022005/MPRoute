@@ -45,6 +45,17 @@
                 </select>
                 <div class="invalid-feedback d-block" th:if="${#fields.hasErrors('customerId')}"
                      th:errors="*{customerId}">Lỗi</div>
+
+                <!--
+                    CN-02-10: khach goi dat hang lan dau thi don dang go do, khong the bat ho
+                    cho toi khi quan tri vien them khach xong. Hop thoai nay them khach roi
+                    tu chon luon cho don dang tao, khong tai lai trang.
+                -->
+                <button type="button" class="btn btn-sm btn-outline-secondary mt-2"
+                        data-bs-toggle="modal" data-bs-target="#hop-thoai-them-khach">
+                    + Khách mới chưa có trong danh mục
+                </button>
+
                 <!-- Ghi chu giao hang cua khach (BR01-07) — dieu phoi vien can thay truoc khi chot -->
                 <div id="ghi-chu-khach" class="form-text"></div>
             </div>
@@ -223,6 +234,126 @@
             <a th:href="@{/orders}" class="btn btn-outline-secondary">Hủy</a>
         </div>
     </form>
+
+    <!--
+        ============ CN-02-10 Hop thoai them khach nhanh ============
+
+        Dat NGOAI the <form> o tren. HTML khong cho long form trong form: de ben trong
+        thi trinh duyet tu dong cat, ket qua la mot trong hai form mat nut gui.
+
+        The <form> rieng nay khong bao gio submit theo kieu thuong — don-hang.js chan lai
+        va goi bang fetch. Van de la <form> that de Thymeleaf tu chen the an chua CSRF token,
+        khoi phai tu di lay token o cho khac.
+    -->
+    <div class="modal fade" id="hop-thoai-them-khach" tabindex="-1">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header py-2">
+                    <h2 class="h6 modal-title">Thêm khách hàng mới</h2>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+
+                <form id="form-them-khach" th:action="@{/orders/quick-customer}" method="post">
+                    <div class="modal-body">
+
+                        <div id="loi-them-khach" class="alert alert-danger py-2 d-none"></div>
+
+                        <div class="row g-3">
+                            <div class="col-md-7">
+                                <label for="kh-name" class="form-label">
+                                    Tên cửa hàng <span class="text-danger">*</span>
+                                </label>
+                                <input type="text" id="kh-name" name="name" class="form-control"
+                                       placeholder="Tạp hóa Bà Lan">
+                            </div>
+
+                            <div class="col-md-5">
+                                <label for="kh-contactPerson" class="form-label">Người liên hệ</label>
+                                <input type="text" id="kh-contactPerson" name="contactPerson"
+                                       class="form-control" placeholder="Bà Lan">
+                            </div>
+
+                            <div class="col-md-4">
+                                <label for="kh-phone" class="form-label">
+                                    Số điện thoại <span class="text-danger">*</span>
+                                </label>
+                                <!-- type="text" chu khong phai number: o kieu number cat mat so 0 dau -->
+                                <input type="text" id="kh-phone" name="phone" class="form-control"
+                                       maxlength="10" inputmode="numeric" placeholder="0912345678">
+                            </div>
+
+                            <div class="col-md-8">
+                                <label for="kh-email" class="form-label">Email</label>
+                                <input type="text" id="kh-email" name="email" class="form-control"
+                                       placeholder="tapholaban@gmail.com">
+                            </div>
+
+                            <div class="col-12">
+                                <label for="kh-address" class="form-label">
+                                    Địa chỉ giao hàng <span class="text-danger">*</span>
+                                </label>
+                                <div class="d-flex gap-2">
+                                    <input type="text" id="kh-address" name="address" class="form-control"
+                                           placeholder="Số 12 ngõ 5 Phan Trọng Tuệ, Thanh Trì">
+                                    <button type="button" id="kh-nut-tim-toa-do"
+                                            class="btn btn-outline-secondary text-nowrap">Tìm tọa độ</button>
+                                </div>
+                                <div id="kh-trang-thai-tim" class="form-text"></div>
+                                <!-- Nominatim tra nhieu ket qua thi hien danh sach de chon (BR01-06) -->
+                                <div id="kh-ket-qua-tim" class="list-group mt-1 d-none"
+                                     style="max-height: 160px; overflow-y: auto;"></div>
+                            </div>
+
+                            <div class="col-md-3">
+                                <label for="kh-latitude" class="form-label">
+                                    Vĩ độ <span class="text-danger">*</span>
+                                </label>
+                                <input type="number" step="any" id="kh-latitude" name="latitude"
+                                       class="form-control" placeholder="21.0031">
+                            </div>
+
+                            <div class="col-md-3">
+                                <label for="kh-longitude" class="form-label">
+                                    Kinh độ <span class="text-danger">*</span>
+                                </label>
+                                <input type="number" step="any" id="kh-longitude" name="longitude"
+                                       class="form-control" placeholder="105.8201">
+                            </div>
+
+                            <div class="col-md-6">
+                                <label for="kh-paymentMethod" class="form-label">Hình thức thanh toán</label>
+                                <select id="kh-paymentMethod" name="paymentMethod" class="form-select">
+                                    <option th:each="ht : ${cacHinhThucThanhToan}"
+                                            th:value="${ht}" th:text="${ht.displayName}"
+                                            th:selected="${ht.name() == 'CASH'}">Tiền mặt</option>
+                                </select>
+                            </div>
+
+                            <div class="col-12">
+                                <label for="kh-deliveryNote" class="form-label">Ghi chú giao hàng</label>
+                                <input type="text" id="kh-deliveryNote" name="deliveryNote"
+                                       class="form-control"
+                                       placeholder="Chỉ nhận buổi sáng trước 11h. Xe lớn không vào được ngõ.">
+                            </div>
+                        </div>
+
+                        <div class="khoi-thong-tin mt-3 small chu-phu">
+                            Hộp thoại này <strong>chỉ thêm khách mới</strong>, không sửa được khách đang có.
+                            Bản đồ Hà Nội hầu như không có dữ liệu số nhà nên nút tìm chỉ đưa về đúng
+                            <strong>con đường</strong> — vẫn gõ tay hai ô tọa độ được, và sửa cho chính xác
+                            sau ở màn hình Khách hàng.
+                        </div>
+                    </div>
+
+                    <div class="modal-footer py-2">
+                        <button type="submit" class="btn btn-primary btn-sm">Thêm và chọn cho đơn này</button>
+                        <button type="button" class="btn btn-outline-secondary btn-sm"
+                                data-bs-dismiss="modal">Đóng</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
 
 </div>
 

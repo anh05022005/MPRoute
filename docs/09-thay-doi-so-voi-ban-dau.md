@@ -82,6 +82,43 @@ tính tay 8000 m trong 1,5 giây. Không đổi kế hoạch dựa trên giả �
 **Thứ tự làm không đổi:** tuần 6–7 vẫn viết NN rồi 2-opt trước, tuần 7 mới cắm OR-Tools vào.
 Làm ngược lại thì lúc bản tự viết ra số lạ sẽ không biết là thuật toán yếu hay code sai.
 
+### A4. Điều phối viên được **thêm mới** khách hàng, dù danh mục là "chỉ xem"
+
+**Mâu thuẫn trong đặc tả gốc.** `docs/01` xếp toàn bộ danh mục là **"chỉ xem"** với điều phối viên.
+Nhưng `docs/04` lại có **CN-02-10 — thêm khách hàng ngay trong màn hình tạo đơn**, và người tạo đơn
+chính là điều phối viên. Hai chỗ này không thể cùng đúng.
+
+**Quyết:** giữ CN-02-10, mở một ngoại lệ hẹp cho ma trận phân quyền.
+
+**Vì sao chọn hướng này.** Khách gọi điện đặt hàng lần đầu là tình huống thật và thường gặp — lúc đó
+điều phối viên đang gõ dở đơn, khách đang chờ máy. Bắt họ dừng lại, gọi quản trị viên thêm khách,
+rồi quay lại gõ đơn từ đầu là biến một cuộc gọi hai phút thành mười phút. Đơn hàng bắt buộc phải trỏ
+tới một khách có tọa độ (BR01-05, CBR-07) nên không có đường vòng nào khác.
+
+**Ngoại lệ được bó hẹp hết mức** — đây là phần cần nói rõ khi hội đồng hỏi:
+
+| Điều phối viên | Được / Không |
+|---|---|
+| `POST /orders/quick-customer` (hộp thoại trong màn tạo đơn) | **Được** — chỉ thêm mới |
+| Gửi kèm `id` để sửa khách đang có qua đường đó | Không — `id` bị ép về `null`, hệ thống tạo bản ghi mới |
+| Gửi kèm `status=INACTIVE` | Không — ép `ACTIVE`, không cho tự chọn |
+| `/admin/customers/create`, `/admin/customers/{id}/edit`, `/admin/customers/save` | Không — **403** |
+| `/admin/customers/{id}/toggle-status` (ngừng dùng khách) | Không — **403** |
+
+Đã kiểm chứng đúng năm dòng trên bằng cách gửi thẳng dữ liệu lên máy chủ, không qua giao diện:
+gửi `id=6&status=INACTIVE` thì hệ thống tạo khách **mới** ở trạng thái `ACTIVE`, khách #6 giữ nguyên
+tên và trạng thái cũ.
+
+**Được và mất.** Được: đúng quy trình làm việc thật, và CN-02-10 không phải cắt. Mất: ma trận phân
+quyền không còn phát biểu gọn được thành một câu "danh mục là chỉ xem" — phải nhớ thêm ngoại lệ này.
+Đổi lại thì nó nằm ở đúng một đường dẫn, đọc `OrderController.quickAddCustomer()` là thấy hết.
+
+Hộp thoại này **cố ý không có bản đồ ghim tay**, chỉ tìm tọa độ theo địa chỉ hoặc gõ tay hai ô.
+Lý do là kỹ thuật: `chon-toa-do.js` gắn cứng vào ba ô `address` / `latitude` / `longitude` của chính
+trang, sửa nó thành dùng chung được thì phải sửa cả màn hình khách hàng và màn hình kho đang chạy tốt.
+Muốn ghim tay chính xác thì vào màn hình Khách hàng sửa lại sau — thao tác đó không gấp như lúc
+đang nghe điện thoại.
+
 ---
 
 ## B. Sửa lỗi logic tìm ra khi rà soát đặc tả
@@ -216,10 +253,12 @@ RPT-02 và toàn bộ mục ○.
 Gợi ý dung hòa: giữ UC06 nhưng làm **phương án A và C trước**, phương án B (Cheapest Insertion) làm
 sau nếu còn thời gian.
 
-### E3. Phân quyền danh mục chưa thống nhất
+### E3. Phân quyền danh mục chưa thống nhất — **đã xử lý xong**
 
 Ma trận phân quyền trong `docs/01` cho điều phối viên quyền **"chỉ xem"** danh mục. Nhưng `docs/05`
 xếp SCR-02…06 là màn hình của **quản trị viên**.
 
-Hiện code chặn `/admin/**` ở `hasRole("ADMIN")` — điều phối gõ vào là 403. Quyết dứt điểm khi làm nốt
-các màn hình danh mục còn lại của tuần 3.
+Đã quyết theo `docs/01`: điều phối viên **xem được** sản phẩm, phương tiện, tài xế, khách hàng, kho
+nhưng mọi đường ghi đều trả 403; tài khoản và tham số vẫn chỉ quản trị viên. Đã kiểm 14 địa chỉ.
+Sau đó có thêm **một ngoại lệ duy nhất** cho việc thêm mới khách hàng từ màn hình tạo đơn — xem
+mục **A4** ở trên.

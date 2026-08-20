@@ -1,5 +1,6 @@
 package com.minhphu.mproute.controller;
 
+import com.minhphu.mproute.dto.CustomerForm;
 import com.minhphu.mproute.dto.OrderForm;
 import com.minhphu.mproute.dto.OrderTotals;
 import com.minhphu.mproute.entity.Customer;
@@ -12,6 +13,7 @@ import com.minhphu.mproute.entity.enums.RecordStatus;
 import com.minhphu.mproute.repository.CustomerRepository;
 import com.minhphu.mproute.repository.ProductRepository;
 import com.minhphu.mproute.security.CurrentUser;
+import com.minhphu.mproute.service.CustomerService;
 import com.minhphu.mproute.service.OrderService;
 import com.minhphu.mproute.service.StatusHistoryService;
 import jakarta.validation.Valid;
@@ -20,6 +22,7 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
 import org.springframework.format.annotation.DateTimeFormat;
+import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.stereotype.Controller;
@@ -30,6 +33,8 @@ import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
 import java.time.LocalDate;
 import java.util.Arrays;
+import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -72,6 +77,7 @@ public class OrderController {
     }
 
     private final OrderService orderService;
+    private final CustomerService customerService;
     private final CustomerRepository customerRepository;
     private final ProductRepository productRepository;
     private final StatusHistoryService statusHistoryService;
@@ -259,6 +265,62 @@ public class OrderController {
         redirectAttributes.addFlashAttribute("thongBao",
                 "Đã hủy đơn " + daHuy.getCode() + ". Đơn vẫn được giữ lại để tra cứu.");
         return "redirect:/orders/" + id;
+    }
+
+    // ==================== CN-02-10 Them khach ngay trong man tao don ====================
+
+    /**
+     * Them mot khach hang moi tu hop thoai tren man hinh tao don.
+     *
+     * NGOAI LE CO CHU Y CUA MA TRAN PHAN QUYEN (docs/01: danh muc la "chi xem" voi dieu
+     * phoi vien). Ly do: khach goi dat hang lan dau thi don dang go do, khong the bat ho
+     * cho toi khi quan tri vien ranh de them khach. Xem docs/09 muc A4.
+     *
+     * Ngoai le duoc bo HEP HET MUC:
+     *   - chi THEM MOI, khong sua: id bi ep ve null truoc khi luu, gui id len khong an thua
+     *   - chi qua duong nay, dieu phoi vien van khong vao duoc /admin/customers de sua hay
+     *     ngung dung khach dang co
+     *   - trang thai ep ACTIVE, khong cho tu chon
+     *
+     * Tra JSON chu khong tra ten view: man hinh dang go do don, tai lai trang la mat het.
+     */
+    @PreAuthorize("hasRole('DISPATCHER')")
+    @PostMapping("/quick-customer")
+    @ResponseBody
+    public ResponseEntity<Map<String, Object>> quickAddCustomer(
+            @Valid @ModelAttribute CustomerForm form, BindingResult binding) {
+
+        if (binding.hasErrors()) {
+            // Gom loi theo ten o nhap de JavaScript to do dung o do trong hop thoai
+            Map<String, String> loi = new HashMap<>();
+            binding.getFieldErrors()
+                    .forEach(fe -> loi.putIfAbsent(fe.getField(), fe.getDefaultMessage()));
+            return ResponseEntity.badRequest().body(Map.of("loi", loi));
+        }
+
+        form.setId(null);
+        form.setStatus(RecordStatus.ACTIVE);
+
+        // Trung so dien thoai chi CANH BAO, khong chan — giong CN-01-04, vi thuc te
+        // hai cua hang cung mot chu dung chung mot so
+        boolean trungSoDienThoai = customerService.isPhoneTaken(form.getPhone(), null);
+        Customer daLuu = customerService.save(form);
+
+        // LinkedHashMap de giu thu tu truong, doc JSON tra ve trong tab Network cho de
+        Map<String, Object> ketQua = new LinkedHashMap<>();
+        ketQua.put("id", daLuu.getId());
+        ketQua.put("name", daLuu.getName());
+        ketQua.put("phone", daLuu.getPhone());
+        ketQua.put("address", daLuu.getAddress());
+        ketQua.put("latitude", daLuu.getLatitude());
+        ketQua.put("longitude", daLuu.getLongitude());
+        ketQua.put("paymentMethod", daLuu.getPaymentMethod().name());
+        ketQua.put("deliveryNote", daLuu.getDeliveryNote());
+        if (trungSoDienThoai) {
+            ketQua.put("canhBao", "Số điện thoại này đã dùng cho một khách hàng khác. "
+                    + "Khách vẫn được thêm, nhưng trang tra cứu công khai sẽ khó phân biệt.");
+        }
+        return ResponseEntity.ok(ketQua);
     }
 
     // ==================== Kiem quy tac nghiep vu ====================
