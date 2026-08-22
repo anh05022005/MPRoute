@@ -31,3 +31,9 @@ build/
 
 ### VS Code ###
 .vscode/
+
+# Du lieu ban do OSRM — rat nang (327 MB pbf, ~1,3 GB sau tien xu ly).
+# Thuc te du lieu de o D:\JavaProject\osrm-data, NGOAI kho, nhung giu hai dong nay
+# de lo co ai chep vao trong kho thi git cung khong nuot.
+*.osm.pbf
+*.osrm*
