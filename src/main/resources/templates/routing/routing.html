@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<!-- SCR-09 — Man hinh phan tuyen, phan lam o tuan 5 (CN-03-01, CN-03-02, CN-03-05) -->
+<html lang="vi"
+      xmlns:th="http://www.thymeleaf.org"
+      xmlns:sec="http://www.thymeleaf.org/extras/spring-security"
+      th:replace="~{layout :: main('Phân tuyến', ~{::content})}">
+<body>
+
+<div th:fragment="content">
+
+    <div class="thanh-cong-cu d-flex justify-content-between align-items-end flex-wrap gap-2">
+
+        <form th:action="@{/routing}" method="get" class="d-flex align-items-end gap-2">
+            <div>
+                <label for="deliveryDate" class="form-label mb-1 small">Ngày giao</label>
+                <input type="date" id="deliveryDate" name="deliveryDate"
+                       class="form-control form-control-sm" style="width: 170px;"
+                       th:value="${ngayGiao}">
+            </div>
+            <button type="submit" class="btn btn-sm btn-outline-secondary">Xem đơn</button>
+        </form>
+
+        <!--
+            CN-03-05: nap truoc ma tran khoang cach. Bam lan hai voi cung tap diem thi
+            so o "phai lay moi" phai bang 0 — do la cach chung minh bo nho dem chay dung.
+        -->
+        <form th:action="@{/routing/prepare-matrix}" method="post" sec:authorize="hasRole('DISPATCHER')">
+            <input type="hidden" name="deliveryDate" th:value="${ngayGiao}">
+            <button type="submit" class="btn btn-sm btn-primary"
+                    th:disabled="${cacDon.isEmpty()}">Chuẩn bị ma trận khoảng cách</button>
+        </form>
+    </div>
+
+    <!-- ============ CN-03-01 Tong quan nhu cau cua ngay ============ -->
+    <div class="khoi-thong-tin mb-3">
+        <span class="me-4">Đơn đã duyệt: <strong th:text="${cacDon.size()}">0</strong></span>
+        <span class="me-4">Tổng khối lượng:
+            <strong class="so" th:text="${#numbers.formatDecimal(tongKg, 1, 'NONE', 1, 'POINT')} + ' kg'">0.0 kg</strong>
+        </span>
+        <span class="me-4">Tổng thể tích:
+            <strong class="so" th:text="${#numbers.formatDecimal(tongM3, 1, 'NONE', 3, 'POINT')} + ' m³'">0.000 m³</strong>
+        </span>
+        <span th:if="${kho != null}" class="chu-phu">
+            Kho: <span th:text="${kho.name}">Kho Minh Phú</span>
+        </span>
+    </div>
+
+    <div class="row g-3">
+
+        <!-- ============ Danh sach don cho phan tuyen ============ -->
+        <div class="col-lg-6">
+            <table class="table table-bordered table-striped table-sm align-middle">
+                <thead>
+                <tr>
+                    <th style="width: 130px;">Mã đơn</th>
+                    <th>Khách hàng</th>
+                    <th style="width: 90px;">Khối lượng</th>
+                    <th style="width: 90px;">Thể tích</th>
+                </tr>
+                </thead>
+                <tbody>
+                <tr th:if="${cacDon.isEmpty()}">
+                    <td colspan="4" class="text-center chu-phu py-3">
+                        Ngày này chưa có đơn nào ở trạng thái <strong>Đã duyệt</strong>.
+                        Đơn phải được duyệt mới vào được danh sách chờ phân tuyến (BR03-01).
+                    </td>
+                </tr>
+                <tr th:each="don : ${cacDon}">
+                    <td><a th:href="@{/orders/{id}(id=${don.id})}" th:text="${don.code}">MP2608160001</a></td>
+                    <td>
+                        <span th:text="${don.customer.name}">Tạp hóa Bà Lan</span>
+                        <div class="small chu-phu" th:text="${don.deliveryAddress}">91 Chùa Bộc</div>
+                    </td>
+                    <td class="so" th:text="${#numbers.formatDecimal(don.totalWeight, 1, 'NONE', 1, 'POINT')}">67.6</td>
+                    <td class="so" th:text="${#numbers.formatDecimal(don.totalVolume, 1, 'NONE', 3, 'POINT')}">0.317</td>
+                </tr>
+                </tbody>
+            </table>
+        </div>
+
+        <!-- ============ CN-03-02 Ban do diem giao ============ -->
+        <div class="col-lg-6">
+            <div id="ban-do-phan-tuyen"
+                 style="height: 460px; border: 1px solid var(--vien); border-radius: 4px;"></div>
+            <div class="form-text">
+                Ô vuông đậm là kho, ghim tròn là điểm giao. Rê chuột vào ghim để xem tên khách
+                và số thùng. Ảnh nền bản đồ lấy từ OpenStreetMap nên cần mạng; mất mạng thì
+                khung xám nhưng số liệu bên trái vẫn đầy đủ.
+            </div>
+        </div>
+    </div>
+
+    <!--
+        Du lieu ghim de o day duoi dang JSON thay vi noi thang vao JavaScript.
+        th:text tu escape nen ten khach co dau nhay kep cung khong lam vo trang;
+        JavaScript doc lai bang textContent thi duoc dung chuoi goc.
+    -->
+    <script id="du-lieu-diem" type="application/json" th:text="${diemJson}">[]</script>
+
+</div>
+
+</body>
+</html>

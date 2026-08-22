@@ -111,5 +111,9 @@
 <!-- Man hinh don hang: tinh tong kg/m3/tien ngay khi go (CN-02-03) va nut sao chep
      khoi tom tat (CN-02-06). Controller nao can thi dat model.addAttribute("canJsDonHang", true) -->
 <script th:if="${canJsDonHang}" th:src="@{/js/don-hang.js}"></script>
+
+<!-- Man hinh phan tuyen: ve diem giao len ban do (CN-03-02).
+     Can ca canBanDo de nap Leaflet truoc -->
+<script th:if="${canJsPhanTuyen}" th:src="@{/js/phan-tuyen.js}"></script>
 </body>
 </html>
