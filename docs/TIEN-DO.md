@@ -2,7 +2,7 @@
 
 > Trạng thái hiện tại của đồ án. **Giữ dưới 60 dòng.** Cập nhật sau mỗi mốc hoàn thành.
 
-**Cập nhật lần cuối:** 15/08/2026 · Kho: `github.com/anh05022005/MPRoute` (riêng tư), nhánh `main`
+**Cập nhật lần cuối:** 21/08/2026 · Kho: `github.com/anh05022005/MPRoute` (riêng tư), nhánh `main`
 
 ---
 
@@ -10,15 +10,15 @@
 
 | | |
 |---|---|
-| Theo kế hoạch | Tuần 4 — đơn hàng |
-| Thực tế | Xong Nhóm 0, trọn Nhóm 1, **trọn Nhóm 2** (CN-02-11 nhập Excel là mục ○, đã cắt) |
+| Theo kế hoạch | Tuần 6 — thuật toán giai đoạn 1 |
+| Thực tế | **Đúng tiến độ.** Xong Nhóm 0, 1, 2 và trọn tuần 5 — OSRM chạy, ma trận có bộ nhớ đệm |
 
 ```
 [x] T1  Chot de tai, hoi Minh Phu 3 cau
 [x] T2  Project chay, 16 bang sinh ra, dang nhap duoc
 [x] T3  CRUD 7 danh muc xong + tim toa do Nominatim
 [x] T4  Tao don hang, tu tinh kg/m3/tien — xong tron Nhom 2
-[ ] T5  OSRM chay, ma tran co cache, ban do hien diem
+[x] T5  OSRM chay, ma tran co cache, ban do hien diem
 [ ] T6  NearestNeighbor chay duoc bang main(), test xanh
 [ ] T7  2-opt chay duoc, OR-Tools cam vao, bang so sanh 4 dong
 [ ] T8  Man hinh phan tuyen hoan chinh, ve tuyen len ban do
@@ -167,6 +167,50 @@
     thuật ghi ở `docs/09` A4: `chon-toa-do.js` gắn cứng vào ba ô của chính trang, sửa thành dùng
     chung thì phải đụng vào hai màn hình đang chạy tốt
   - Trùng số điện thoại vẫn chỉ **cảnh báo mềm**, giống CN-01-04
+
+- **★ Tuần 5 — nền tảng khoảng cách.** Package `service/optimization/` bắt đầu có người ở:
+  `OptimizationPoint`, `DistanceCalculator` (interface), `HaversineDistanceCalculator`,
+  `OsrmDistanceCalculator`, `DistanceMatrixService`.
+  - **Strategy pattern ở chỗ tính khoảng cách** — đổi cách tính không phải sửa một dòng nào của
+    thuật toán. Đây vừa là điều kiện để hệ thống sống sót khi OSRM chết (CBR-11), vừa là một ý
+    trả lời sẵn khi vấn đáp
+  - **`DistanceMatrixService` đủ 4 bước B1→B4** theo `docs/03`. Nạp ma trận vào bộ nhớ **một lần**,
+    sau đó thuật toán chỉ tra `matrix[i][j]` — đúng điều cấm số 4. Bộ nhớ đệm nạp bằng **một câu
+    truy vấn** rồi đổ vào `HashMap`, không phải n² câu SELECT
+  - **Bước B3 đối xứng hóa không được quên.** OSRM trả ma trận bất đối xứng (đường một chiều),
+    mà công thức bốn cạnh của 2-opt chỉ đúng khi ma trận đối xứng
+  - **Cố ý KHÔNG lưu giá trị Haversine vào bảng `distance_matrix`.** Bảng đó là bộ nhớ đệm *của
+    OSRM*; lưu số xấp xỉ vào thì lần sau tra thấy "đã có" rồi vĩnh viễn không gọi OSRM nữa, mà
+    lúc đó cờ `dungXapXi` cũng không còn bật lên để ai biết
+  - **★ Test bắt buộc số 2 `testHaversineHaiDiemBiet` — đã xanh.** Một độ vĩ độ ra đúng
+    `R × π/180 = 111194,93 m`; kho → 91 Chùa Bộc ra `6455,43 m` chim bay, `8392,06 m` sau khi
+    nhân hệ số 1.3. Đối chiếu độc lập bằng phép xấp xỉ mặt phẳng, lệch dưới 1 mm
+  - **★ CN-03-02** — màn hình `/routing` chọn ngày, hiện đơn `APPROVED` kèm tổng kg/m³, vẽ điểm
+    giao lên Leaflet: kho là ô vuông đậm, khách là chấm tròn, rê chuột hiện tên và số thùng.
+    Dữ liệu ghim truyền qua khối JSON `th:text` (tự escape) chứ không nối chuỗi vào JavaScript
+  - **★ CN-03-11 (nhánh dự phòng) đã chạy thật:** tắt OSRM rồi bấm "Chuẩn bị ma trận" → ra
+    `ma trận 4×4 (12 ô) trong 67 ms, lấy từ bộ nhớ đệm: 0, phải lấy mới: 12, nguồn Haversine (xấp xỉ)`
+    kèm **MSG-09**, bảng `distance_matrix` vẫn rỗng đúng như thiết kế
+  - Phân quyền như màn hình đơn: `admin` gõ `/routing` ra 200 nhưng POST chuẩn bị ma trận ra **403**,
+    tài xế **403** cả hai
+
+- **★ OSRM đã dựng xong và chạy được** (21/08/2026). Bản đồ Việt Nam của Geofabrik, 327 MB,
+  tiền xử lý bằng Docker hết khoảng 10 phút: `osrm-extract` đỉnh **7,2 GB RAM** / 19,3 triệu cạnh,
+  `osrm-partition` 4,4 GB, `osrm-customize` 2,7 GB. Máy 16 GB chạy thoải mái, **máy 8 GB thì phải
+  cắt riêng vùng Hà Nội trước**.
+  - Dữ liệu để ở **`D:\JavaProject\osrm-data`, NGOÀI kho git** (327 MB + ~1,3 GB sau xử lý).
+    Đã thêm `*.osm.pbf` và `*.osrm*` vào `.gitignore` làm lưới an toàn
+  - Máy chủ chạy trong container tên **`osrm-vietnam`** cổng 5000, chiếm ~2,4 GB RAM.
+    Mở lại sau khi khởi động máy: `docker start osrm-vietnam`
+  - **★ CN-03-05 nghiệm thu đạt.** Cùng một tập 4 điểm, bấm "Chuẩn bị ma trận" hai lần:
+    lần 1 `0 ô từ bộ nhớ đệm / 12 ô lấy mới / 307 ms`, lần 2 `12 ô từ bộ nhớ đệm / 0 ô lấy mới / 31 ms`.
+    **Log lần 2 không có dòng nào gọi OSRM** — đúng tiêu chí. Nhanh gấp 10 lần
+  - **Con số chứng minh vì sao phải đối xứng hóa (bước B3), lấy từ chính dữ liệu thật:**
+    kho → 91 Chùa Bộc là **10 481 m**, chiều ngược lại **11 538 m** — lệch **1 057 m, hơn 10%**.
+    Đây là số nên đưa vào báo cáo chương 4, mạnh hơn hẳn ví dụ dựng sẵn trong `docs/03`
+  - Đối chiếu Haversine với đường thật trên chính cặp điểm đó: xấp xỉ ra 8 392 m, đường thật
+    trung bình hai chiều 11 010 m → **hệ số 1.3 đang ước lượng THIẾU khoảng 24%** cho tuyến này.
+    Chưa đổi vội, đợi có nhiều cặp điểm hơn ở tuần 8 rồi tính lại `HAVERSINE_FACTOR` bằng số liệu
 - **Sửa 405 thành 403** khi vai trò không đủ quyền gửi POST tới `/admin/**`. Nguyên nhân:
   `accessDeniedPage()` *chuyển tiếp* nên giữ nguyên method POST, mà `HomeController` khai `@GetMapping("/403")`.
   Đổi sang `@RequestMapping("/403")`
@@ -177,16 +221,22 @@ bước 12–14 (phương án B) cần hai tuyến chạy song song mới dựng
 
 ---
 
-## Việc tiếp theo
+## Việc tiếp theo — TUẦN 6, TRÁI TIM ĐỒ ÁN
 
-Hết Nhóm 2. Mốc hợp lý để `/clear` trước khi sang nhóm mới.
+Xong Nhóm 2 và tuần 5. Mốc hợp lý để `/clear` trước khi bắt đầu thuật toán.
 
-1. **Tuần 5 — OSRM chạy Docker, ma trận khoảng cách có cache, bản đồ hiện điểm.**
-   Đây là đầu vào bắt buộc của tuần 6–7, không có nó thì thuật toán không có số để chạy
-2. Nhớ luật vàng số 4 ngay từ đầu: **nạp ma trận vào bộ nhớ trước**, không gọi OSRM
-   hay truy vấn CSDL bên trong vòng lặp thuật toán
-3. Còn nợ một phép nghiệm thu của BR02-11: đơn `ROUTED` mới ra đúng chữ MSG-07.
-   **Tuần 8 có màn hình phân tuyến mới thử được** — hiện chỉ thử được nhánh đơn đã hủy
+1. **Chạy tay trên giấy với 5 điểm trước khi viết dòng code nào** (thứ tự bắt buộc trong `docs/03`)
+2. Viết `OptimizationVehicle`, `OptimizationRoute`, `RoutingResult` — `OptimizationPoint` có rồi
+3. Viết `NearestNeighborSolver`, kiểm **đồng thời** kg và m³, xe tải trọng lớn nhận điểm trước
+4. Viết `AlgorithmRunner` có `main()`, dữ liệu cứng 10 điểm 3 xe, **chạy không cần web,
+   không cần MySQL, không cần OSRM**
+5. Viết `calculateTotalDistance` — kiểm kỹ **chặng cuối về kho**
+6. Viết 10 test bắt buộc cho bản tự cài đặt (đã có 1/14: `testHaversineHaiDiemBiet`)
+
+**Không sang tuần 7 khi chưa chạy được `main()` và in ra tuyến hợp lệ.**
+
+Còn nợ một phép nghiệm thu của BR02-11: đơn `ROUTED` mới ra đúng chữ MSG-07.
+**Tuần 8 có màn hình phân tuyến hoàn chỉnh mới thử được** — hiện chỉ thử được nhánh đơn đã hủy
 
 ## Ba việc còn nợ, phải quay lại làm
 
@@ -227,9 +277,15 @@ Hết Nhóm 2. Mốc hợp lý để `/clear` trước khi sang nhóm mới.
   `MP2608160002`, `MP2608160003`, `MP2608170001` (cả ba Đã hủy). Giữ lại để bấm thử giao diện;
   xóa lúc seed lại dữ liệu ở tuần 11. Ba khách thử của CN-02-10 (`#22`, `#23`, `#24`) đã chuyển
   **`INACTIVE`** nên không còn hiện trong ô chọn khách lúc tạo đơn
-- **MySQL chạy trong container Docker `mysql-8.0.44`, không phải service của Windows.** Docker Desktop
-  tắt là ứng dụng không khởi động được, báo `Communications link failure`. Mở lại:
-  chạy Docker Desktop rồi `docker start mysql-8.0.44`
+- **Hai container Docker phải bật trước khi chạy ứng dụng**, cả hai đều không phải service Windows:
+
+  | Container | Việc | Mở lại |
+  |---|---|---|
+  | `mysql-8.0.44` | CSDL. Tắt là app báo `Communications link failure` | `docker start mysql-8.0.44` |
+  | `osrm-vietnam` | Khoảng cách đường thật, cổng 5000, ~2,4 GB RAM | `docker start osrm-vietnam` |
+
+  Quên bật `osrm-vietnam` thì **app vẫn chạy**, chỉ lùi về Haversine và hiện MSG-09 — đúng thiết kế,
+  nhưng số km sẽ là xấp xỉ, đừng lấy số đó đưa vào báo cáo
 - Khi kiểm thử form bằng `curl` trong Git Bash: **phải percent-encode tiếng Việt sẵn** rồi dùng
   `--data-raw`. Git Bash chuyển tham số sang bảng mã ANSI khi gọi `curl.exe`, làm hỏng dấu tiếng Việt
   ngay từ máy khách — dễ tưởng nhầm là ứng dụng sai encoding. Kiểm bằng `HEX(cột)` trong MySQL.
