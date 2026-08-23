@@ -25,8 +25,8 @@ public class CustomerService {
     public Page<Customer> search(String keyword, RecordStatus status, Pageable pageable) {
         // O tim kiem de trong gui len chuoi rong chu khong phai null.
         // Doi ve null de cau JPQL bo qua dieu kien do
-        String tuKhoa = (keyword == null || keyword.isBlank()) ? null : keyword.trim();
-        return customerRepository.search(tuKhoa, status, pageable);
+        String normalizedKeyword = (keyword == null || keyword.isBlank()) ? null : keyword.trim();
+        return customerRepository.search(normalizedKeyword, status, pageable);
     }
 
     @Transactional(readOnly = true)
@@ -51,7 +51,7 @@ public class CustomerService {
             return false;
         }
         return customerRepository.findByPhone(phone.trim()).stream()
-                .anyMatch(khach -> !khach.getId().equals(excludeId));
+                .anyMatch(other -> !other.getId().equals(excludeId));
     }
 
     @Transactional
@@ -60,20 +60,20 @@ public class CustomerService {
         Customer customer = (form.getId() == null) ? new Customer() : getById(form.getId());
 
         customer.setName(form.getName().trim());
-        customer.setContactPerson(chuoiHoacNull(form.getContactPerson()));
+        customer.setContactPerson(blankToNull(form.getContactPerson()));
         customer.setPhone(form.getPhone().trim());
-        customer.setEmail(chuoiHoacNull(form.getEmail()));
+        customer.setEmail(blankToNull(form.getEmail()));
         customer.setAddress(form.getAddress().trim());
         customer.setLatitude(form.getLatitude());
         customer.setLongitude(form.getLongitude());
         customer.setPaymentMethod(form.getPaymentMethod());
-        customer.setDeliveryNote(chuoiHoacNull(form.getDeliveryNote()));
+        customer.setDeliveryNote(blankToNull(form.getDeliveryNote()));
         customer.setStatus(form.getStatus());
 
-        Customer daLuu = customerRepository.save(customer);
+        Customer saved = customerRepository.save(customer);
         log.info("Luu khach hang {} - {} ({}, {})",
-                daLuu.getName(), daLuu.getPhone(), daLuu.getLatitude(), daLuu.getLongitude());
-        return daLuu;
+                saved.getName(), saved.getPhone(), saved.getLatitude(), saved.getLongitude());
+        return saved;
     }
 
     /**
@@ -86,17 +86,17 @@ public class CustomerService {
     @Transactional
     public RecordStatus toggleStatus(Long id) {
         Customer customer = getById(id);
-        RecordStatus moi = (customer.getStatus() == RecordStatus.ACTIVE)
+        RecordStatus newStatus = (customer.getStatus() == RecordStatus.ACTIVE)
                 ? RecordStatus.INACTIVE
                 : RecordStatus.ACTIVE;
-        customer.setStatus(moi);
+        customer.setStatus(newStatus);
         customerRepository.save(customer);
-        log.info("Khach hang {} chuyen sang trang thai {}", customer.getName(), moi);
-        return moi;
+        log.info("Khach hang {} chuyen sang trang thai {}", customer.getName(), newStatus);
+        return newStatus;
     }
 
     // O nhap khong bat buoc de trong gui len chuoi rong, luu vao DB nen la NULL cho gon
-    private String chuoiHoacNull(String giaTri) {
-        return (giaTri == null || giaTri.isBlank()) ? null : giaTri.trim();
+    private String blankToNull(String value) {
+        return (value == null || value.isBlank()) ? null : value.trim();
     }
 }

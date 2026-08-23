@@ -83,19 +83,19 @@ public class OrderService {
      * Vong lap chay nhieu nhat vai vong, khong phai vong lap thuat toan.
      */
     @Transactional(readOnly = true)
-    public String sinhMaDon(LocalDate ngayGiao) {
-        String tienTo = "MP" + ngayGiao.format(DateTimeFormatter.ofPattern("yyMMdd"));
-        int thuTu = (int) orderRepository.countByDeliveryDate(ngayGiao) + 1;
+    public String generateOrderCode(LocalDate deliveryDate) {
+        String prefix = "MP" + deliveryDate.format(DateTimeFormatter.ofPattern("yyMMdd"));
+        int sequence = (int) orderRepository.countByDeliveryDate(deliveryDate) + 1;
 
-        while (thuTu <= 9999) {
-            String ma = tienTo + String.format("%04d", thuTu);
-            if (orderRepository.findByCode(ma).isEmpty()) {
-                return ma;
+        while (sequence <= 9999) {
+            String code = prefix + String.format("%04d", sequence);
+            if (orderRepository.findByCode(code).isEmpty()) {
+                return code;
             }
-            thuTu++;
+            sequence++;
         }
         // 9999 don mot ngay la khong tuong voi quy mo Minh Phu, nhung khong de im lang
-        throw new IllegalStateException("Đã hết số thứ tự mã đơn cho ngày " + ngayGiao);
+        throw new IllegalStateException("Đã hết số thứ tự mã đơn cho ngày " + deliveryDate);
     }
 
     // ==================== Tu tinh kg / m3 / tien (BR02-04, BR02-13) ====================
@@ -108,24 +108,24 @@ public class OrderService {
      * co danh muc trong CSDL la dang tin (BR02-04).
      */
     @Transactional(readOnly = true)
-    public OrderTotals tinhTong(OrderForm form) {
-        double kg = 0;
-        double m3 = 0;
-        BigDecimal tien = BigDecimal.ZERO;
+    public OrderTotals calculateTotals(OrderForm form) {
+        double weight = 0;
+        double volume = 0;
+        BigDecimal amount = BigDecimal.ZERO;
 
-        for (OrderItemForm dong : form.getItems()) {
-            if (dong.laDongTrong()) {
+        for (OrderItemForm line : form.getItems()) {
+            if (line.isBlank()) {
                 continue;
             }
-            Product sp = laySanPham(dong.getProductId());
-            kg += sp.getWeightPerBox() * dong.getBoxCount();
-            m3 += sp.getVolumePerBox() * dong.getBoxCount();
-            tien = tien.add(sp.getUnitPrice().multiply(BigDecimal.valueOf(dong.getBoxCount())));
+            Product product = findProduct(line.getProductId());
+            weight += product.getWeightPerBox() * line.getBoxCount();
+            volume += product.getVolumePerBox() * line.getBoxCount();
+            amount = amount.add(product.getUnitPrice().multiply(BigDecimal.valueOf(line.getBoxCount())));
         }
 
         // Lam tron dung so chu so thap phan cua cot trong CSDL (DECIMAL(10,2) va DECIMAL(10,3))
         // de con so hien tren man hinh khop het voi con so luu xuong
-        return new OrderTotals(lamTron(kg, 2), lamTron(m3, 3), tien);
+        return new OrderTotals(round(weight, 2), round(volume, 3), amount);
     }
 
     // ==================== Chan don vuot suc chua (BR02-05) ====================
@@ -144,32 +144,32 @@ public class OrderService {
      * @return thong bao loi MSG-06 khi khong xe nao cho noi, rong khi hop le
      */
     @Transactional(readOnly = true)
-    public Optional<String> kiemSucChua(OrderTotals tong) {
-        List<Vehicle> doiXe = vehicleRepository.findAll();
+    public Optional<String> checkCapacity(OrderTotals totals) {
+        List<Vehicle> vehicles = vehicleRepository.findAll();
 
-        if (doiXe.isEmpty()) {
+        if (vehicles.isEmpty()) {
             return Optional.of("Chưa khai báo phương tiện nào, không kiểm được sức chứa. "
                     + "Vui lòng thêm xe trong danh mục phương tiện trước.");
         }
 
-        boolean coXeChoDuoc = doiXe.stream()
-                .anyMatch(xe -> xe.getMaxWeight() >= tong.khoiLuong()
-                             && xe.getMaxVolume() >= tong.theTich());
-        if (coXeChoDuoc) {
+        boolean hasVehicleThatFits = vehicles.stream()
+                .anyMatch(vehicle -> vehicle.getMaxWeight() >= totals.weight()
+                             && vehicle.getMaxVolume() >= totals.volume());
+        if (hasVehicleThatFits) {
             return Optional.empty();
         }
 
         // Lay xe tai trong lon nhat lam moc de bao cho de hieu: don da khong vua xe nay
         // thi cung khong vua xe nao
-        Vehicle xeLonNhat = doiXe.stream()
+        Vehicle largestVehicle = vehicles.stream()
                 .max(Comparator.comparingDouble(Vehicle::getMaxWeight))
                 .orElseThrow();
 
         return Optional.of(String.format(
                 "Đơn hàng vượt sức chứa xe lớn nhất (%.2f kg / %.3f m³ so với %.2f kg / %.3f m³ "
                         + "của xe %s). Vui lòng tách đơn.",
-                tong.khoiLuong(), tong.theTich(),
-                xeLonNhat.getMaxWeight(), xeLonNhat.getMaxVolume(), xeLonNhat.getLicensePlate()));
+                totals.weight(), totals.volume(),
+                largestVehicle.getMaxWeight(), largestVehicle.getMaxVolume(), largestVehicle.getLicensePlate()));
     }
 
     // ==================== Tao don ====================
@@ -180,41 +180,41 @@ public class OrderService {
      * dia chi va toa do truoc khi don di vao thuat toan (BR02-10).
      */
     @Transactional
-    public Order taoDon(OrderForm form, Long nguoiTaoId) {
-        Customer khach = customerRepository.findById(form.getCustomerId())
+    public Order createOrder(OrderForm form, Long createdById) {
+        Customer customer = customerRepository.findById(form.getCustomerId())
                 .orElseThrow(() -> new IllegalArgumentException("Không tìm thấy khách hàng"));
 
-        Order don = new Order();
-        don.setCode(sinhMaDon(form.getDeliveryDate()));
-        don.setCustomer(khach);
-        don.setDeliveryDate(form.getDeliveryDate());
-        don.setDeliveryAddress(form.getDeliveryAddress().trim());
-        don.setLatitude(form.getLatitude());
-        don.setLongitude(form.getLongitude());
-        don.setPaymentMethod(form.getPaymentMethod());
-        don.setPaymentStatus(PaymentStatus.UNPAID);
-        don.setStatus(OrderStatus.PENDING_APPROVAL);
-        don.setNote(chuoiHoacNull(form.getNote()));
+        Order order = new Order();
+        order.setCode(generateOrderCode(form.getDeliveryDate()));
+        order.setCustomer(customer);
+        order.setDeliveryDate(form.getDeliveryDate());
+        order.setDeliveryAddress(form.getDeliveryAddress().trim());
+        order.setLatitude(form.getLatitude());
+        order.setLongitude(form.getLongitude());
+        order.setPaymentMethod(form.getPaymentMethod());
+        order.setPaymentStatus(PaymentStatus.UNPAID);
+        order.setStatus(OrderStatus.PENDING_APPROVAL);
+        order.setNote(blankToNull(form.getNote()));
 
-        if (nguoiTaoId != null) {
-            don.setCreatedBy(userRepository.findById(nguoiTaoId).orElse(null));
+        if (createdById != null) {
+            order.setCreatedBy(userRepository.findById(createdById).orElse(null));
         }
 
-        for (OrderItem dong : dungCacDongChiTiet(form)) {
-            don.addItem(dong);
+        for (OrderItem line : buildOrderItems(form)) {
+            order.addItem(line);
         }
-        apTongVaSoTienPhaiThu(don);
+        applyTotals(order);
 
-        Order daLuu = orderRepository.save(don);
+        Order saved = orderRepository.save(order);
 
         // CBR-14: moi lan chuyen trang thai deu ghi lai, ke ca lan dau tien
-        statusHistoryService.ghi(EntityType.ORDER, daLuu.getId(),
-                null, OrderStatus.PENDING_APPROVAL.name(), nguoiTaoId, "Tạo đơn hàng");
+        statusHistoryService.recordChange(EntityType.ORDER, saved.getId(),
+                null, OrderStatus.PENDING_APPROVAL.name(), createdById, "Tạo đơn hàng");
 
         log.info("Tao don {} cho khach {}: {} dong, {} kg, {} m3, {} d",
-                daLuu.getCode(), khach.getName(), daLuu.getItems().size(),
-                daLuu.getTotalWeight(), daLuu.getTotalVolume(), daLuu.getTotalAmount());
-        return daLuu;
+                saved.getCode(), customer.getName(), saved.getItems().size(),
+                saved.getTotalWeight(), saved.getTotalVolume(), saved.getTotalAmount());
+        return saved;
     }
 
     // ==================== CN-02-08 Sua don ====================
@@ -226,9 +226,9 @@ public class OrderService {
      * doi dia chi la doi ca thu tu diem dung ma tuyen thi da chot va tai xe co the dang
      * tren duong. Muon doi thi phai huy tuyen roi phan lai.
      */
-    public boolean coTheSuaHoacHuy(Order don) {
-        return don.getStatus() == OrderStatus.PENDING_APPROVAL
-                || don.getStatus() == OrderStatus.APPROVED;
+    public boolean canEditOrCancel(Order order) {
+        return order.getStatus() == OrderStatus.PENDING_APPROVAL
+                || order.getStatus() == OrderStatus.APPROVED;
     }
 
     /**
@@ -243,24 +243,24 @@ public class OrderService {
      * (docs/01 khong co canh nao di nguoc nhu vay).
      */
     @Transactional
-    public Order capNhatDon(OrderForm form, Long nguoiSuaId) {
-        Order don = getById(form.getId());
+    public Order updateOrder(OrderForm form, Long updatedById) {
+        Order order = getById(form.getId());
 
         // Luoi an toan: Controller da chan roi, nhung ham nay cung phai tu bao ve minh
-        if (!coTheSuaHoacHuy(don)) {
-            throw new IllegalStateException("Không sửa được đơn ở trạng thái " + don.getStatus());
+        if (!canEditOrCancel(order)) {
+            throw new IllegalStateException("Không sửa được đơn ở trạng thái " + order.getStatus());
         }
 
-        Customer khach = customerRepository.findById(form.getCustomerId())
+        Customer customer = customerRepository.findById(form.getCustomerId())
                 .orElseThrow(() -> new IllegalArgumentException("Không tìm thấy khách hàng"));
 
-        don.setCustomer(khach);
-        don.setDeliveryDate(form.getDeliveryDate());
-        don.setDeliveryAddress(form.getDeliveryAddress().trim());
-        don.setLatitude(form.getLatitude());
-        don.setLongitude(form.getLongitude());
-        don.setPaymentMethod(form.getPaymentMethod());
-        don.setNote(chuoiHoacNull(form.getNote()));
+        order.setCustomer(customer);
+        order.setDeliveryDate(form.getDeliveryDate());
+        order.setDeliveryAddress(form.getDeliveryAddress().trim());
+        order.setLatitude(form.getLatitude());
+        order.setLongitude(form.getLongitude());
+        order.setPaymentMethod(form.getPaymentMethod());
+        order.setNote(blankToNull(form.getNote()));
 
         /*
          * Dung .clear() tren chinh danh sach dang co chu KHONG setItems(danh sach moi):
@@ -268,17 +268,17 @@ public class OrderService {
          * thay bang danh sach khac thi cac dong cu khong bi xoa, don thanh ra cong don
          * hang cu va hang moi (BR02-03).
          */
-        don.getItems().clear();
-        for (OrderItem dong : dungCacDongChiTiet(form)) {
-            don.addItem(dong);
+        order.getItems().clear();
+        for (OrderItem line : buildOrderItems(form)) {
+            order.addItem(line);
         }
-        apTongVaSoTienPhaiThu(don);
+        applyTotals(order);
 
-        Order daLuu = orderRepository.save(don);
+        Order saved = orderRepository.save(order);
         log.info("Sua don {} (nguoi sua #{}): {} dong, {} kg, {} m3, {} d",
-                daLuu.getCode(), nguoiSuaId, daLuu.getItems().size(),
-                daLuu.getTotalWeight(), daLuu.getTotalVolume(), daLuu.getTotalAmount());
-        return daLuu;
+                saved.getCode(), updatedById, saved.getItems().size(),
+                saved.getTotalWeight(), saved.getTotalVolume(), saved.getTotalAmount());
+        return saved;
     }
 
     // ==================== CN-02-07 Duyet don ====================
@@ -292,22 +292,22 @@ public class OrderService {
      * phan tuyen (BR03-01).
      */
     @Transactional
-    public Order duyetDon(Long id, Long nguoiDuyetId) {
-        Order don = getById(id);
+    public Order approveOrder(Long id, Long approvedById) {
+        Order order = getById(id);
 
-        if (don.getStatus() != OrderStatus.PENDING_APPROVAL) {
+        if (order.getStatus() != OrderStatus.PENDING_APPROVAL) {
             throw new IllegalStateException("Chỉ duyệt được đơn đang chờ duyệt");
         }
 
-        don.setStatus(OrderStatus.APPROVED);
-        Order daLuu = orderRepository.save(don);
+        order.setStatus(OrderStatus.APPROVED);
+        Order saved = orderRepository.save(order);
 
-        statusHistoryService.ghi(EntityType.ORDER, daLuu.getId(),
+        statusHistoryService.recordChange(EntityType.ORDER, saved.getId(),
                 OrderStatus.PENDING_APPROVAL.name(), OrderStatus.APPROVED.name(),
-                nguoiDuyetId, "Duyệt đơn");
+                approvedById, "Duyệt đơn");
 
-        log.info("Duyet don {}", daLuu.getCode());
-        return daLuu;
+        log.info("Duyet don {}", saved.getCode());
+        return saved;
     }
 
     // ==================== CN-02-09 Huy don ====================
@@ -320,26 +320,26 @@ public class OrderService {
      * thoi ghi vao ghi chu cua lich su trang thai de trang tra cuu doc thang ra.
      */
     @Transactional
-    public Order huyDon(Long id, String lyDo, Long nguoiHuyId) {
-        Order don = getById(id);
+    public Order cancelOrder(Long id, String reason, Long cancelledById) {
+        Order order = getById(id);
 
-        if (!coTheSuaHoacHuy(don)) {
-            throw new IllegalStateException("Không hủy được đơn ở trạng thái " + don.getStatus());
+        if (!canEditOrCancel(order)) {
+            throw new IllegalStateException("Không hủy được đơn ở trạng thái " + order.getStatus());
         }
-        if (lyDo == null || lyDo.isBlank()) {
+        if (reason == null || reason.isBlank()) {
             throw new IllegalArgumentException("Hủy đơn bắt buộc nhập lý do");
         }
 
-        String trangThaiCu = don.getStatus().name();
-        don.setStatus(OrderStatus.CANCELLED);
-        don.setCancelReason(lyDo.trim());
-        Order daLuu = orderRepository.save(don);
+        String previousStatus = order.getStatus().name();
+        order.setStatus(OrderStatus.CANCELLED);
+        order.setCancelReason(reason.trim());
+        Order saved = orderRepository.save(order);
 
-        statusHistoryService.ghi(EntityType.ORDER, daLuu.getId(),
-                trangThaiCu, OrderStatus.CANCELLED.name(), nguoiHuyId, lyDo.trim());
+        statusHistoryService.recordChange(EntityType.ORDER, saved.getId(),
+                previousStatus, OrderStatus.CANCELLED.name(), cancelledById, reason.trim());
 
-        log.info("Huy don {}: {}", daLuu.getCode(), lyDo.trim());
-        return daLuu;
+        log.info("Huy don {}: {}", saved.getCode(), reason.trim());
+        return saved;
     }
 
     // ==================== CN-02-06 Khoi tom tat doc lai cho khach ====================
@@ -352,34 +352,34 @@ public class OrderService {
      * thanh mot bieu thuc dai loang ngoang khong sua noi. Nguoi dung con bam nut sao chep
      * de dan sang Zalo nen phai la van ban thuan, khong phai bang HTML.
      */
-    public String tomTatDeDocLai(Order don) {
-        StringBuilder tomTat = new StringBuilder();
-        tomTat.append("Đơn hàng ").append(don.getCode()).append('\n');
-        tomTat.append("Khách: ").append(don.getCustomer().getName())
-                .append(" — ").append(don.getCustomer().getPhone()).append('\n');
-        tomTat.append("Giao tới: ").append(don.getDeliveryAddress()).append('\n');
-        tomTat.append("Ngày giao: ")
-                .append(don.getDeliveryDate().format(DateTimeFormatter.ofPattern("dd/MM/yyyy")))
+    public String buildReadBackSummary(Order order) {
+        StringBuilder summary = new StringBuilder();
+        summary.append("Đơn hàng ").append(order.getCode()).append('\n');
+        summary.append("Khách: ").append(order.getCustomer().getName())
+                .append(" — ").append(order.getCustomer().getPhone()).append('\n');
+        summary.append("Giao tới: ").append(order.getDeliveryAddress()).append('\n');
+        summary.append("Ngày giao: ")
+                .append(order.getDeliveryDate().format(DateTimeFormatter.ofPattern("dd/MM/yyyy")))
                 .append('\n');
 
-        tomTat.append("Hàng:\n");
-        for (OrderItem dong : don.getItems()) {
-            tomTat.append(" - ").append(dong.getProduct().getName())
-                    .append(": ").append(dong.getBoxCount())
-                    .append(' ').append(dong.getProduct().getUnit()).append('\n');
+        summary.append("Hàng:\n");
+        for (OrderItem line : order.getItems()) {
+            summary.append(" - ").append(line.getProduct().getName())
+                    .append(": ").append(line.getBoxCount())
+                    .append(' ').append(line.getProduct().getUnit()).append('\n');
         }
 
-        tomTat.append("Tiền hàng: ").append(dinhDangTien(don.getTotalAmount())).append('\n');
-        tomTat.append("Thanh toán: ").append(don.getPaymentMethod().getDisplayName()).append('\n');
-        tomTat.append("Phải thu khi giao: ").append(dinhDangTien(don.getAmountToCollect()));
-        return tomTat.toString();
+        summary.append("Tiền hàng: ").append(formatCurrency(order.getTotalAmount())).append('\n');
+        summary.append("Thanh toán: ").append(order.getPaymentMethod().getDisplayName()).append('\n');
+        summary.append("Phải thu khi giao: ").append(formatCurrency(order.getAmountToCollect()));
+        return summary.toString();
     }
 
     /** Tien kieu Viet Nam: dau cham ngan nghin, khong phan thap phan. Vi du 3.720.000d */
-    private String dinhDangTien(BigDecimal soTien) {
-        DecimalFormatSymbols kyHieu = new DecimalFormatSymbols(Locale.forLanguageTag("vi-VN"));
-        kyHieu.setGroupingSeparator('.');
-        return new DecimalFormat("#,##0", kyHieu).format(soTien) + "đ";
+    private String formatCurrency(BigDecimal amount) {
+        DecimalFormatSymbols symbols = new DecimalFormatSymbols(Locale.forLanguageTag("vi-VN"));
+        symbols.setGroupingSeparator('.');
+        return new DecimalFormat("#,##0", symbols).format(amount) + "đ";
     }
 
     // ==================== Ham dung chung ====================
@@ -391,26 +391,26 @@ public class OrderService {
      * bang products lay gia, thi quan tri vien doi gia hom sau la don hang thang truoc
      * tu doi tien theo. Do la loi nghiep vu nghiem trong, hoi dong hay hoi dung cho nay.
      */
-    private List<OrderItem> dungCacDongChiTiet(OrderForm form) {
-        List<OrderItem> ketQua = new ArrayList<>();
+    private List<OrderItem> buildOrderItems(OrderForm form) {
+        List<OrderItem> items = new ArrayList<>();
 
-        for (OrderItemForm dong : form.getItems()) {
-            if (dong.laDongTrong()) {
+        for (OrderItemForm line : form.getItems()) {
+            if (line.isBlank()) {
                 continue;   // dong de trong tren man hinh, bo qua
             }
-            Product sp = laySanPham(dong.getProductId());
-            int soThung = dong.getBoxCount();
+            Product product = findProduct(line.getProductId());
+            int boxCount = line.getBoxCount();
 
             OrderItem item = new OrderItem();
-            item.setProduct(sp);
-            item.setBoxCount(soThung);
-            item.setLineWeight(lamTron(sp.getWeightPerBox() * soThung, 2));
-            item.setLineVolume(lamTron(sp.getVolumePerBox() * soThung, 3));
-            item.setUnitPrice(sp.getUnitPrice());
-            item.setLineTotal(sp.getUnitPrice().multiply(BigDecimal.valueOf(soThung)));
-            ketQua.add(item);
+            item.setProduct(product);
+            item.setBoxCount(boxCount);
+            item.setLineWeight(round(product.getWeightPerBox() * boxCount, 2));
+            item.setLineVolume(round(product.getVolumePerBox() * boxCount, 3));
+            item.setUnitPrice(product.getUnitPrice());
+            item.setLineTotal(product.getUnitPrice().multiply(BigDecimal.valueOf(boxCount)));
+            items.add(item);
         }
-        return ketQua;
+        return items;
     }
 
     /**
@@ -421,36 +421,36 @@ public class OrderService {
      * BR02-16: doi hinh thuc thanh toan la con so nay tinh lai ngay, vi no duoc tinh
      * o day chu khong luu roi de do.
      */
-    private void apTongVaSoTienPhaiThu(Order don) {
-        double kg = 0;
-        double m3 = 0;
-        BigDecimal tien = BigDecimal.ZERO;
+    private void applyTotals(Order order) {
+        double weight = 0;
+        double volume = 0;
+        BigDecimal amount = BigDecimal.ZERO;
 
-        for (OrderItem dong : don.getItems()) {
-            kg += dong.getLineWeight();
-            m3 += dong.getLineVolume();
-            tien = tien.add(dong.getLineTotal());
+        for (OrderItem line : order.getItems()) {
+            weight += line.getLineWeight();
+            volume += line.getLineVolume();
+            amount = amount.add(line.getLineTotal());
         }
 
-        don.setTotalWeight(lamTron(kg, 2));
-        don.setTotalVolume(lamTron(m3, 3));
-        don.setTotalAmount(tien);
-        don.setAmountToCollect(don.getPaymentMethod() == PaymentMethod.CASH
-                ? tien
+        order.setTotalWeight(round(weight, 2));
+        order.setTotalVolume(round(volume, 3));
+        order.setTotalAmount(amount);
+        order.setAmountToCollect(order.getPaymentMethod() == PaymentMethod.CASH
+                ? amount
                 : BigDecimal.ZERO);
     }
 
-    private Product laySanPham(Long id) {
+    private Product findProduct(Long id) {
         return productRepository.findById(id)
                 .orElseThrow(() -> new IllegalArgumentException("Không tìm thấy sản phẩm #" + id));
     }
 
     /** Lam tron ve dung so chu so thap phan cua cot trong CSDL. */
-    private double lamTron(double giaTri, int soChuSo) {
-        return BigDecimal.valueOf(giaTri).setScale(soChuSo, RoundingMode.HALF_UP).doubleValue();
+    private double round(double value, int scale) {
+        return BigDecimal.valueOf(value).setScale(scale, RoundingMode.HALF_UP).doubleValue();
     }
 
-    private String chuoiHoacNull(String giaTri) {
-        return (giaTri == null || giaTri.isBlank()) ? null : giaTri.trim();
+    private String blankToNull(String value) {
+        return (value == null || value.isBlank()) ? null : value.trim();
     }
 }

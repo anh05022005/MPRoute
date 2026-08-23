@@ -48,7 +48,7 @@ public class AuthController {
         // vi annotation kiem tung truong rieng le, khong so sanh duoc hai truong voi nhau
         if (!binding.hasFieldErrors("confirmPassword")
                 && !form.getNewPassword().equals(form.getConfirmPassword())) {
-            binding.rejectValue("confirmPassword", "khongKhop", "Mật khẩu nhập lại không khớp");
+            binding.rejectValue("confirmPassword", "passwordMismatch", "Mật khẩu nhập lại không khớp");
         }
 
         if (binding.hasErrors()) {
@@ -58,13 +58,13 @@ public class AuthController {
         try {
             userService.changePassword(currentUser.getUsername(),
                     form.getCurrentPassword(), form.getNewPassword());
-        } catch (IllegalArgumentException e) {
+        } catch (IllegalArgumentException ex) {
             // Sai mat khau hien tai: hien loi ngay duoi o do, khong hien o dau trang
-            binding.rejectValue("currentPassword", "sai", e.getMessage());
+            binding.rejectValue("currentPassword", "incorrectPassword", ex.getMessage());
             return "change-password";
         }
 
-        redirectAttributes.addFlashAttribute("thongBao", "Đổi mật khẩu thành công.");
+        redirectAttributes.addFlashAttribute("successMessage", "Đổi mật khẩu thành công.");
         return "redirect:/";
     }
 }

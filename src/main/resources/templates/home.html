@@ -12,7 +12,7 @@
         Xin chào, <span th:text="${currentUser.fullName}">Người dùng</span>
     </h1>
 
-    <div class="khoi-thong-tin mb-4" style="max-width: 520px;">
+    <div class="info-block mb-4" style="max-width: 520px;">
         <table class="table table-sm mb-0">
             <tbody>
             <tr>
@@ -28,15 +28,15 @@
     </div>
 
     <div sec:authorize="hasRole('ADMIN')">
-        <p class="chu-phu">Bạn quản lý danh mục, tài khoản và tham số hệ thống. Chọn chức năng trên thanh menu.</p>
+        <p class="text-sub">Bạn quản lý danh mục, tài khoản và tham số hệ thống. Chọn chức năng trên thanh menu.</p>
     </div>
 
     <div sec:authorize="hasRole('DISPATCHER')">
-        <p class="chu-phu">Bạn tiếp nhận đơn hàng, phân tuyến và theo dõi giao hàng. Chọn chức năng trên thanh menu.</p>
+        <p class="text-sub">Bạn tiếp nhận đơn hàng, phân tuyến và theo dõi giao hàng. Chọn chức năng trên thanh menu.</p>
     </div>
 
     <div sec:authorize="hasRole('DRIVER')">
-        <p class="chu-phu">Xem tuyến giao hàng hôm nay của bạn.</p>
+        <p class="text-sub">Xem tuyến giao hàng hôm nay của bạn.</p>
         <a class="btn btn-primary" th:href="@{/driver/my-route}">Tuyến của tôi</a>
     </div>
 

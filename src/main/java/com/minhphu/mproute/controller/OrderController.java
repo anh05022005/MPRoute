@@ -53,11 +53,11 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 public class OrderController {
 
-    private static final int SO_DONG_MOI_TRANG = 15;
+    private static final int PAGE_SIZE = 15;
 
     // Bao layout.html nap Leaflet va JavaScript tinh tong cho man hinh nay
-    private static final String CO_BAN_DO = "canBanDo";
-    private static final String CO_JS_DON_HANG = "canJsDonHang";
+    private static final String NEEDS_MAP = "needsMap";
+    private static final String NEEDS_ORDER_JS = "needsOrderJs";
 
     private static final String VIEW_FORM = "orders/order-form";
 
@@ -70,8 +70,8 @@ public class OrderController {
      * Don da huy cung roi vao nhanh nay nhung ly do khac han, bao nham thanh
      * "don da phan tuyen" thi nguoi dung di tim tuyen khong co that.
      */
-    private String thongBaoKhongSuaDuoc(Order don) {
-        return (don.getStatus() == OrderStatus.CANCELLED)
+    private String notEditableMessage(Order order) {
+        return (order.getStatus() == OrderStatus.CANCELLED)
                 ? "Đơn này đã hủy, không sửa hay hủy lại được."
                 : MSG_07;
     }
@@ -82,13 +82,13 @@ public class OrderController {
     private final ProductRepository productRepository;
     private final StatusHistoryService statusHistoryService;
 
-    @ModelAttribute("cacTrangThaiDon")
-    public OrderStatus[] cacTrangThaiDon() {
+    @ModelAttribute("orderStatuses")
+    public OrderStatus[] orderStatuses() {
         return OrderStatus.values();
     }
 
-    @ModelAttribute("cacHinhThucThanhToan")
-    public PaymentMethod[] cacHinhThucThanhToan() {
+    @ModelAttribute("paymentMethods")
+    public PaymentMethod[] paymentMethods() {
         return PaymentMethod.values();
     }
 
@@ -99,8 +99,8 @@ public class OrderController {
      * chung cho ca don hang lan tuyen (docs/02). Vay nen muon hien ten tieng Viet thi
      * phai tu tra bang, khong goi thang duoc .displayName.
      */
-    @ModelAttribute("tenTrangThaiDon")
-    public Map<String, String> tenTrangThaiDon() {
+    @ModelAttribute("orderStatusLabels")
+    public Map<String, String> orderStatusLabels() {
         return Arrays.stream(OrderStatus.values())
                 .collect(Collectors.toMap(Enum::name, OrderStatus::getDisplayName));
     }
@@ -116,15 +116,15 @@ public class OrderController {
                        Model model) {
 
         // Don moi nhat len dau: dieu phoi vien vao man hinh nay chu yeu de xem don vua nhap
-        var pageable = PageRequest.of(page, SO_DONG_MOI_TRANG,
+        var pageable = PageRequest.of(page, PAGE_SIZE,
                 Sort.by("deliveryDate").descending().and(Sort.by("id").descending()));
-        Page<Order> trang = orderService.search(deliveryDate, status, customerId, pageable);
+        Page<Order> pageResult = orderService.search(deliveryDate, status, customerId, pageable);
 
-        model.addAttribute("trang", trang);
+        model.addAttribute("pageResult", pageResult);
         model.addAttribute("deliveryDate", deliveryDate);
         model.addAttribute("status", status);
         model.addAttribute("customerId", customerId);
-        model.addAttribute("cacKhachHang", khachHangDangDung());
+        model.addAttribute("customers", activeCustomers());
         return "orders/orders";
     }
 
@@ -132,14 +132,14 @@ public class OrderController {
 
     @GetMapping("/{id}")
     public String detail(@PathVariable Long id, Model model) {
-        Order don = orderService.getById(id);
-        model.addAttribute("don", don);
-        model.addAttribute("tomTat", orderService.tomTatDeDocLai(don));
-        model.addAttribute("lichSu", statusHistoryService.lichSuCua(EntityType.ORDER, id));
+        Order order = orderService.getById(id);
+        model.addAttribute("order", order);
+        model.addAttribute("readBackSummary", orderService.buildReadBackSummary(order));
+        model.addAttribute("statusHistory", statusHistoryService.historyOf(EntityType.ORDER, id));
         // Quyet dinh hien hay an ba nut Sua / Duyet / Huy. Giao dien an nut la de nhin,
         // cho chan that nam o cac duong POST ben duoi (CBR-15)
-        model.addAttribute("coTheSuaHoacHuy", orderService.coTheSuaHoacHuy(don));
-        model.addAttribute(CO_JS_DON_HANG, true);
+        model.addAttribute("canEditOrCancel", orderService.canEditOrCancel(order));
+        model.addAttribute(NEEDS_ORDER_JS, true);
         return "orders/order-detail";
     }
 
@@ -150,7 +150,7 @@ public class OrderController {
     public String createForm(Model model) {
         // BR02-06: ngay giao mac dinh la ngay mai — da dat san trong OrderForm
         model.addAttribute("form", new OrderForm());
-        napDuLieuChoForm(model);
+        loadFormData(model);
         return VIEW_FORM;
     }
 
@@ -160,20 +160,20 @@ public class OrderController {
     @GetMapping("/{id}/edit")
     public String editForm(@PathVariable Long id, Model model,
                            RedirectAttributes redirectAttributes) {
-        Order don = orderService.getById(id);
+        Order order = orderService.getById(id);
 
         /*
          * BR02-11 chan o PHIA MAY CHU (CBR-15). Nut Sua tren man hinh da bi an khi don
          * da phan tuyen, nen den duoc day nghia la co nguoi go thang dia chi vao thanh
          * dia chi — dung thu hoi dong hay lam nhat.
          */
-        if (!orderService.coTheSuaHoacHuy(don)) {
-            redirectAttributes.addFlashAttribute("loi", thongBaoKhongSuaDuoc(don));
+        if (!orderService.canEditOrCancel(order)) {
+            redirectAttributes.addFlashAttribute("errorMessage", notEditableMessage(order));
             return "redirect:/orders/" + id;
         }
 
-        model.addAttribute("form", OrderForm.from(don));
-        napDuLieuChoForm(model);
+        model.addAttribute("form", OrderForm.from(order));
+        loadFormData(model);
         return VIEW_FORM;
     }
 
@@ -182,36 +182,36 @@ public class OrderController {
     @PostMapping("/save")
     public String save(@Valid @ModelAttribute("form") OrderForm form,
                        BindingResult binding,
-                       @AuthenticationPrincipal CurrentUser nguoiDung,
+                       @AuthenticationPrincipal CurrentUser currentUser,
                        Model model,
                        RedirectAttributes redirectAttributes) {
 
-        boolean dangSua = (form.getId() != null);
+        boolean editing = (form.getId() != null);
 
-        if (dangSua) {
-            Order donDangCo = orderService.getById(form.getId());
-            if (!orderService.coTheSuaHoacHuy(donDangCo)) {
-                redirectAttributes.addFlashAttribute("loi", thongBaoKhongSuaDuoc(donDangCo));
+        if (editing) {
+            Order existingOrder = orderService.getById(form.getId());
+            if (!orderService.canEditOrCancel(existingOrder)) {
+                redirectAttributes.addFlashAttribute("errorMessage", notEditableMessage(existingOrder));
                 return "redirect:/orders/" + form.getId();
             }
         }
 
-        kiemQuyTacNghiepVu(form, binding);
+        validateBusinessRules(form, binding);
 
         if (binding.hasErrors()) {
-            napDuLieuChoForm(model);
+            loadFormData(model);
             return VIEW_FORM;
         }
 
-        Order daLuu = dangSua
-                ? orderService.capNhatDon(form, nguoiDung.getId())
-                : orderService.taoDon(form, nguoiDung.getId());
+        Order saved = editing
+                ? orderService.updateOrder(form, currentUser.getId())
+                : orderService.createOrder(form, currentUser.getId());
 
-        redirectAttributes.addFlashAttribute("thongBao", dangSua
-                ? "Đã lưu thay đổi cho đơn " + daLuu.getCode() + "."
-                : "Đã tạo đơn hàng " + daLuu.getCode() + ". Đơn đang chờ duyệt.");
+        redirectAttributes.addFlashAttribute("successMessage", editing
+                ? "Đã lưu thay đổi cho đơn " + saved.getCode() + "."
+                : "Đã tạo đơn hàng " + saved.getCode() + ". Đơn đang chờ duyệt.");
         // CN-02-06: ve thang trang chi tiet, o do co khoi tom tat de doc lai cho khach
-        return "redirect:/orders/" + daLuu.getId();
+        return "redirect:/orders/" + saved.getId();
     }
 
     // ==================== CN-02-07 Duyet don ====================
@@ -219,19 +219,19 @@ public class OrderController {
     @PreAuthorize("hasRole('DISPATCHER')")
     @PostMapping("/{id}/approve")
     public String approve(@PathVariable Long id,
-                          @AuthenticationPrincipal CurrentUser nguoiDung,
+                          @AuthenticationPrincipal CurrentUser currentUser,
                           RedirectAttributes redirectAttributes) {
-        Order don = orderService.getById(id);
+        Order order = orderService.getById(id);
 
-        if (don.getStatus() != OrderStatus.PENDING_APPROVAL) {
-            redirectAttributes.addFlashAttribute("loi",
+        if (order.getStatus() != OrderStatus.PENDING_APPROVAL) {
+            redirectAttributes.addFlashAttribute("errorMessage",
                     "Đơn này không ở trạng thái chờ duyệt nên không duyệt lại được.");
             return "redirect:/orders/" + id;
         }
 
-        Order daDuyet = orderService.duyetDon(id, nguoiDung.getId());
-        redirectAttributes.addFlashAttribute("thongBao",
-                "Đã duyệt đơn " + daDuyet.getCode() + ". Đơn đã vào danh sách chờ phân tuyến.");
+        Order approved = orderService.approveOrder(id, currentUser.getId());
+        redirectAttributes.addFlashAttribute("successMessage",
+                "Đã duyệt đơn " + approved.getCode() + ". Đơn đã vào danh sách chờ phân tuyến.");
         return "redirect:/orders/" + id;
     }
 
@@ -241,29 +241,29 @@ public class OrderController {
     @PostMapping("/{id}/cancel")
     public String cancel(@PathVariable Long id,
                          @RequestParam(required = false) String cancelReason,
-                         @AuthenticationPrincipal CurrentUser nguoiDung,
+                         @AuthenticationPrincipal CurrentUser currentUser,
                          RedirectAttributes redirectAttributes) {
-        Order don = orderService.getById(id);
+        Order order = orderService.getById(id);
 
-        if (!orderService.coTheSuaHoacHuy(don)) {
-            redirectAttributes.addFlashAttribute("loi", thongBaoKhongSuaDuoc(don));
+        if (!orderService.canEditOrCancel(order)) {
+            redirectAttributes.addFlashAttribute("errorMessage", notEditableMessage(order));
             return "redirect:/orders/" + id;
         }
 
         // BR02-12: ly do la bat buoc. O nhap co thuoc tinh required, nhung day moi la cho chan that
         if (cancelReason == null || cancelReason.isBlank()) {
-            redirectAttributes.addFlashAttribute("loi",
+            redirectAttributes.addFlashAttribute("errorMessage",
                     "Hủy đơn bắt buộc nhập lý do. Đơn chưa bị hủy.");
             return "redirect:/orders/" + id;
         }
         if (cancelReason.trim().length() > 500) {
-            redirectAttributes.addFlashAttribute("loi", "Lý do hủy tối đa 500 ký tự.");
+            redirectAttributes.addFlashAttribute("errorMessage", "Lý do hủy tối đa 500 ký tự.");
             return "redirect:/orders/" + id;
         }
 
-        Order daHuy = orderService.huyDon(id, cancelReason, nguoiDung.getId());
-        redirectAttributes.addFlashAttribute("thongBao",
-                "Đã hủy đơn " + daHuy.getCode() + ". Đơn vẫn được giữ lại để tra cứu.");
+        Order cancelled = orderService.cancelOrder(id, cancelReason, currentUser.getId());
+        redirectAttributes.addFlashAttribute("successMessage",
+                "Đã hủy đơn " + cancelled.getCode() + ". Đơn vẫn được giữ lại để tra cứu.");
         return "redirect:/orders/" + id;
     }
 
@@ -292,10 +292,10 @@ public class OrderController {
 
         if (binding.hasErrors()) {
             // Gom loi theo ten o nhap de JavaScript to do dung o do trong hop thoai
-            Map<String, String> loi = new HashMap<>();
+            Map<String, String> fieldErrors = new HashMap<>();
             binding.getFieldErrors()
-                    .forEach(fe -> loi.putIfAbsent(fe.getField(), fe.getDefaultMessage()));
-            return ResponseEntity.badRequest().body(Map.of("loi", loi));
+                    .forEach(fe -> fieldErrors.putIfAbsent(fe.getField(), fe.getDefaultMessage()));
+            return ResponseEntity.badRequest().body(Map.of("errorMessage", fieldErrors));
         }
 
         form.setId(null);
@@ -303,24 +303,24 @@ public class OrderController {
 
         // Trung so dien thoai chi CANH BAO, khong chan — giong CN-01-04, vi thuc te
         // hai cua hang cung mot chu dung chung mot so
-        boolean trungSoDienThoai = customerService.isPhoneTaken(form.getPhone(), null);
-        Customer daLuu = customerService.save(form);
+        boolean phoneTaken = customerService.isPhoneTaken(form.getPhone(), null);
+        Customer saved = customerService.save(form);
 
         // LinkedHashMap de giu thu tu truong, doc JSON tra ve trong tab Network cho de
-        Map<String, Object> ketQua = new LinkedHashMap<>();
-        ketQua.put("id", daLuu.getId());
-        ketQua.put("name", daLuu.getName());
-        ketQua.put("phone", daLuu.getPhone());
-        ketQua.put("address", daLuu.getAddress());
-        ketQua.put("latitude", daLuu.getLatitude());
-        ketQua.put("longitude", daLuu.getLongitude());
-        ketQua.put("paymentMethod", daLuu.getPaymentMethod().name());
-        ketQua.put("deliveryNote", daLuu.getDeliveryNote());
-        if (trungSoDienThoai) {
-            ketQua.put("canhBao", "Số điện thoại này đã dùng cho một khách hàng khác. "
+        Map<String, Object> payload = new LinkedHashMap<>();
+        payload.put("id", saved.getId());
+        payload.put("name", saved.getName());
+        payload.put("phone", saved.getPhone());
+        payload.put("address", saved.getAddress());
+        payload.put("latitude", saved.getLatitude());
+        payload.put("longitude", saved.getLongitude());
+        payload.put("paymentMethod", saved.getPaymentMethod().name());
+        payload.put("deliveryNote", saved.getDeliveryNote());
+        if (phoneTaken) {
+            payload.put("warning", "Số điện thoại này đã dùng cho một khách hàng khác. "
                     + "Khách vẫn được thêm, nhưng trang tra cứu công khai sẽ khó phân biệt.");
         }
-        return ResponseEntity.ok(ketQua);
+        return ResponseEntity.ok(payload);
     }
 
     // ==================== Kiem quy tac nghiep vu ====================
@@ -332,46 +332,46 @@ public class OrderController {
      * va thuoc tinh min cua o nhap, nhung nguoi gui du lieu thang bang cong cu ngoai
      * trinh duyet thi nhung cai do khong con tac dung.
      */
-    private void kiemQuyTacNghiepVu(OrderForm form, BindingResult binding) {
+    private void validateBusinessRules(OrderForm form, BindingResult binding) {
 
         // BR02-06: ngay giao khong duoc nho hon hom nay
         if (form.getDeliveryDate() != null && form.getDeliveryDate().isBefore(LocalDate.now())) {
-            binding.rejectValue("deliveryDate", "ngayGiaoQuaKhu",
+            binding.rejectValue("deliveryDate", "deliveryDateInPast",
                     "Ngày giao không được nhỏ hơn hôm nay.");
         }
 
-        long soDongHopLe = form.getItems().stream()
-                .filter(dong -> !dong.laDongTrong())
+        long validLineCount = form.getItems().stream()
+                .filter(line -> !line.isBlank())
                 .count();
 
         // Dong da chon san pham thi so thung bat buoc > 0 — bo qua im lang cho nay
         // se lam don thieu hang ma nguoi nhap khong biet
-        boolean coDongSaiSoThung = form.getItems().stream()
-                .anyMatch(dong -> dong.getProductId() != null
-                        && (dong.getBoxCount() == null || dong.getBoxCount() <= 0));
+        boolean hasInvalidBoxCount = form.getItems().stream()
+                .anyMatch(line -> line.getProductId() != null
+                        && (line.getBoxCount() == null || line.getBoxCount() <= 0));
 
-        if (coDongSaiSoThung) {
-            binding.reject("soThungKhongHopLe",
+        if (hasInvalidBoxCount) {
+            binding.reject("invalidBoxCount",
                     "Có dòng đã chọn sản phẩm nhưng số thùng để trống hoặc không lớn hơn 0.");
 
-        } else if (soDongHopLe == 0) {
+        } else if (validLineCount == 0) {
             // BR02-02: it nhat mot dong chi tiet. Chi bao cau nay khi khong co dong nao
             // dang go do — neu khong nguoi dung nhan hai cau loi cho cung mot cai sai
-            binding.reject("thieuDongChiTiet",
+            binding.reject("noOrderLines",
                     "Đơn hàng phải có ít nhất một dòng chi tiết. "
                             + "Vui lòng chọn sản phẩm và nhập số thùng lớn hơn 0.");
         }
 
         if (form.getCustomerId() != null) {
-            kiemGhiDeDiaChi(form, binding);
+            validateAddressOverride(form, binding);
         }
 
         // BR02-05: chan don khong xe nao cho noi. Kiem sau cung vi phai co dong chi tiet
         // hop le thi tinh tong moi co nghia
-        if (soDongHopLe > 0 && !coDongSaiSoThung) {
-            OrderTotals tong = orderService.tinhTong(form);
-            orderService.kiemSucChua(tong)
-                    .ifPresent(thongBao -> binding.reject("vuotSucChua", thongBao));
+        if (validLineCount > 0 && !hasInvalidBoxCount) {
+            OrderTotals totals = orderService.calculateTotals(form);
+            orderService.checkCapacity(totals)
+                    .ifPresent(message -> binding.reject("capacityExceeded", message));
         }
     }
 
@@ -382,20 +382,20 @@ public class OrderController {
      * toa do cu thi don van duoc giao ve dung dia chi cu, ma man hinh lai hien dia chi moi —
      * sai kieu nguy hiem nhat vi khong ai nhin ra.
      */
-    private void kiemGhiDeDiaChi(OrderForm form, BindingResult binding) {
-        Customer khach = customerRepository.findById(form.getCustomerId()).orElse(null);
-        if (khach == null) {
-            binding.rejectValue("customerId", "khongCoKhach", "Không tìm thấy khách hàng đã chọn.");
+    private void validateAddressOverride(OrderForm form, BindingResult binding) {
+        Customer customer = customerRepository.findById(form.getCustomerId()).orElse(null);
+        if (customer == null) {
+            binding.rejectValue("customerId", "customerNotFound", "Không tìm thấy khách hàng đã chọn.");
             return;
         }
 
-        boolean daSuaDiaChi = form.getDeliveryAddress() != null
-                && !form.getDeliveryAddress().trim().equalsIgnoreCase(khach.getAddress().trim());
-        boolean giuNguyenToaDo = Objects.equals(form.getLatitude(), khach.getLatitude())
-                && Objects.equals(form.getLongitude(), khach.getLongitude());
+        boolean addressChanged = form.getDeliveryAddress() != null
+                && !form.getDeliveryAddress().trim().equalsIgnoreCase(customer.getAddress().trim());
+        boolean coordinatesUnchanged = Objects.equals(form.getLatitude(), customer.getLatitude())
+                && Objects.equals(form.getLongitude(), customer.getLongitude());
 
-        if (daSuaDiaChi && giuNguyenToaDo) {
-            binding.rejectValue("deliveryAddress", "thieuToaDoMoi",
+        if (addressChanged && coordinatesUnchanged) {
+            binding.rejectValue("deliveryAddress", "coordinatesRequired",
                     "Đã sửa địa chỉ giao cho riêng đơn này thì phải xác định lại tọa độ: "
                             + "bấm \"Tìm tọa độ từ địa chỉ\" hoặc ghim thẳng lên bản đồ.");
         }
@@ -404,22 +404,22 @@ public class OrderController {
     // ==================== Ham dung chung ====================
 
     /** Do danh sach khach, san pham va cac co bao layout nap thu vien vao model. */
-    private void napDuLieuChoForm(Model model) {
-        model.addAttribute("cacKhachHang", khachHangDangDung());
-        model.addAttribute("cacSanPham", sanPhamDangDung());
-        model.addAttribute(CO_BAN_DO, true);
-        model.addAttribute(CO_JS_DON_HANG, true);
+    private void loadFormData(Model model) {
+        model.addAttribute("customers", activeCustomers());
+        model.addAttribute("products", activeProducts());
+        model.addAttribute(NEEDS_MAP, true);
+        model.addAttribute(NEEDS_ORDER_JS, true);
     }
 
     // Chi khach dang su dung moi hien trong o chon (CBR-17: khach ngung dung van con
     // trong CSDL de don cu khong mat thong tin, nhung khong dat don moi duoc nua)
-    private List<Customer> khachHangDangDung() {
+    private List<Customer> activeCustomers() {
         return customerRepository.findByStatus(RecordStatus.ACTIVE).stream()
                 .sorted((a, b) -> a.getName().compareToIgnoreCase(b.getName()))
                 .toList();
     }
 
-    private List<Product> sanPhamDangDung() {
+    private List<Product> activeProducts() {
         return productRepository.findByStatus(RecordStatus.ACTIVE).stream()
                 .sorted((a, b) -> a.getName().compareToIgnoreCase(b.getName()))
                 .toList();

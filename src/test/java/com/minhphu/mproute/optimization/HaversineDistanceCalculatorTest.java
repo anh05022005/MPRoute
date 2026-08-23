@@ -19,13 +19,15 @@ class HaversineDistanceCalculatorTest {
      *   Kho Minh Phu, duong Phan Trong Tue, Thanh Tri
      *   Cua hang Bao Chau, 91 Chua Boc, Dong Da
      */
-    private static final double KHO_VI_DO = 20.9497;
-    private static final double KHO_KINH_DO = 105.8172;
-    private static final double KHACH_VI_DO = 21.0067;
-    private static final double KHACH_KINH_DO = 105.8290;
+    private static final double DEPOT_LAT = 20.9497;
+    private static final double DEPOT_LON = 105.8172;
+    private static final double CUSTOMER_LAT = 21.0067;
+    private static final double CUSTOMER_LON = 105.8290;
+
+    private static final double DETOUR_FACTOR = 1.3;
 
     @Test
-    void testHaversineHaiDiemBiet() {
+    void haversineMatchesHandCalculatedDistances() {
 
         /*
          * TRUONG HOP 1 — mot do vi do, tinh tay duoc bang giay but.
@@ -39,8 +41,8 @@ class HaversineDistanceCalculatorTest {
          *
          * Day la con so quen thuoc: mot do vi do bang khoang 111,2 km.
          */
-        double motDoViDo = HaversineDistanceCalculator.duongChimBay(0.0, 0.0, 1.0, 0.0);
-        assertEquals(111194.93, motDoViDo, 0.01,
+        double oneDegreeOfLatitude = HaversineDistanceCalculator.greatCircleDistance(0.0, 0.0, 1.0, 0.0);
+        assertEquals(111194.93, oneDegreeOfLatitude, 0.01,
                 "Mot do vi do phai bang R * pi/180 = 111194.93 m");
 
         /*
@@ -62,9 +64,9 @@ class HaversineDistanceCalculatorTest {
          *   doc   = 0.0570 do vi  * 111194.93                   = 6338.1 m
          *   can(1225.4^2 + 6338.1^2) = 6455.43 m  ->  khop
          */
-        double chimBay = HaversineDistanceCalculator.duongChimBay(
-                KHO_VI_DO, KHO_KINH_DO, KHACH_VI_DO, KHACH_KINH_DO);
-        assertEquals(6455.43, chimBay, 0.5,
+        double straightLine = HaversineDistanceCalculator.greatCircleDistance(
+                DEPOT_LAT, DEPOT_LON, CUSTOMER_LAT, CUSTOMER_LON);
+        assertEquals(6455.43, straightLine, 0.5,
                 "Kho -> 91 Chua Boc theo duong chim bay phai la 6455,43 m");
 
         /*
@@ -72,12 +74,14 @@ class HaversineDistanceCalculatorTest {
          * 6455.43 * 1.3 = 8392.06 m. He so 1.3 la vi xe phai di theo pho chu khong
          * bay thang duoc (CBR-11).
          */
-        OptimizationPoint kho = OptimizationPoint.depot(KHO_VI_DO, KHO_KINH_DO);
-        OptimizationPoint khach = OptimizationPoint.cuaDon(
-                1L, "Cua hang Bao Chau", KHACH_VI_DO, KHACH_KINH_DO, 6.0, 0.085);
+        OptimizationPoint depot = OptimizationPoint.depot(DEPOT_LAT, DEPOT_LON);
+        OptimizationPoint customer = OptimizationPoint.forOrder(
+                1L, "Cua hang Bao Chau", CUSTOMER_LAT, CUSTOMER_LON, 6.0, 0.085);
 
-        double duongDiXapXi = new HaversineDistanceCalculator(1.3).khoangCach(kho, khach);
-        assertEquals(8392.06, duongDiXapXi, 0.5,
+        HaversineDistanceCalculator calculator = new HaversineDistanceCalculator(DETOUR_FACTOR);
+
+        double approximateRoadDistance = calculator.distanceBetween(depot, customer);
+        assertEquals(8392.06, approximateRoadDistance, 0.5,
                 "Nhan he so 1.3 phai ra 8392,06 m");
 
         /*
@@ -85,11 +89,11 @@ class HaversineDistanceCalculatorTest {
          * Ghi lai day de thay ro su khac biet voi OSRM: OSRM tra ve ma tran BAT doi xung
          * vi duong mot chieu, do la ly do DistanceMatrixService phai doi xung hoa o buoc B3.
          */
-        double chieuNguoc = new HaversineDistanceCalculator(1.3).khoangCach(khach, kho);
-        assertEquals(duongDiXapXi, chieuNguoc, 1e-9,
+        double reverseDirection = calculator.distanceBetween(customer, depot);
+        assertEquals(approximateRoadDistance, reverseDirection, 1e-9,
                 "Haversine phai doi xung: di va ve bang nhau");
 
         // Di tu mot diem toi chinh no phai bang 0
-        assertEquals(0.0, new HaversineDistanceCalculator(1.3).khoangCach(kho, kho), 1e-9);
+        assertEquals(0.0, calculator.distanceBetween(depot, depot), 1e-9);
     }
 }

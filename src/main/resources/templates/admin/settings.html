@@ -7,8 +7,8 @@
 
 <div th:fragment="content">
 
-    <h1 class="h5 mb-1">Tham số hệ thống</h1>
-    <div class="small chu-phu mb-3">
+    <div class="page-title mb-1">Tham số hệ thống</div>
+    <div class="small text-sub mb-3">
         Năm tham số đầu ảnh hưởng thẳng tới kết quả phân tuyến và giờ đến dự kiến.
     </div>
 
@@ -24,7 +24,7 @@
             </thead>
             <tbody>
 
-            <tr th:each="dong, tt : *{items}">
+            <tr th:each="row, rowStat : *{items}">
 
                 <td>
                     <!--
@@ -32,37 +32,37 @@
                         Gui len dang an de biet dong nao ung voi tham so nao; server
                         van chi ghi nhung ma da co san trong bang, ma la thi bo qua.
                     -->
-                    <input type="hidden" th:field="*{items[__${tt.index}__].code}">
-                    <code th:text="${dong.code}">AVERAGE_SPEED</code>
+                    <input type="hidden" th:field="*{items[__${rowStat.index}__].code}">
+                    <code th:text="${row.code}">AVERAGE_SPEED</code>
                 </td>
 
                 <td>
                     <!-- Rieng thuat toan la o chon, khong cho go tay -->
-                    <select th:if="${dong.code == 'DEFAULT_ALGORITHM'}"
+                    <select th:if="${row.code == 'DEFAULT_ALGORITHM'}"
                             class="form-select form-select-sm"
-                            th:field="*{items[__${tt.index}__].value}"
-                            th:classappend="${#fields.hasErrors('items[__${tt.index}__].value')} ? 'is-invalid'">
-                        <option th:each="tt2 : ${cacThuatToan}"
-                                th:value="${tt2.name()}"
-                                th:text="${tt2.displayName}">OR-Tools</option>
+                            th:field="*{items[__${rowStat.index}__].value}"
+                            th:classappend="${#fields.hasErrors('items[__${rowStat.index}__].value')} ? 'is-invalid'">
+                        <option th:each="algorithmOption : ${algorithms}"
+                                th:value="${algorithmOption.name()}"
+                                th:text="${algorithmOption.displayName}">OR-Tools</option>
                     </select>
 
-                    <input th:unless="${dong.code == 'DEFAULT_ALGORITHM'}"
+                    <input th:unless="${row.code == 'DEFAULT_ALGORITHM'}"
                            type="text" class="form-control form-control-sm"
-                           th:field="*{items[__${tt.index}__].value}"
-                           th:classappend="${#fields.hasErrors('items[__${tt.index}__].value')} ? 'is-invalid'">
+                           th:field="*{items[__${rowStat.index}__].value}"
+                           th:classappend="${#fields.hasErrors('items[__${rowStat.index}__].value')} ? 'is-invalid'">
 
                     <div class="invalid-feedback d-block"
-                         th:if="${#fields.hasErrors('items[__${tt.index}__].value')}"
-                         th:errors="*{items[__${tt.index}__].value}">Lỗi</div>
+                         th:if="${#fields.hasErrors('items[__${rowStat.index}__].value')}"
+                         th:errors="*{items[__${rowStat.index}__].value}">Lỗi</div>
                 </td>
 
-                <td class="small chu-phu" th:text="${dong.description}">Mô tả</td>
+                <td class="small text-sub" th:text="${row.description}">Mô tả</td>
             </tr>
             </tbody>
         </table>
 
-        <div class="khoi-thong-tin mt-3 small chu-phu">
+        <div class="info-block mt-3 small text-sub">
             Cách kiểm chứng tham số thật sự được dùng chứ không bị viết cứng trong code
             (tiêu chí nghiệm thu của CN-01-08): đổi <code>AVERAGE_SPEED</code> từ 30 xuống 15,
             chạy lại phân tuyến, <strong>giờ đến dự kiến của mọi điểm phải giãn ra gấp đôi</strong>.

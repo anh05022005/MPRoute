@@ -7,7 +7,7 @@
 
 <div th:fragment="content">
 
-    <h1 class="h5 mb-3" th:text="${form.id == null} ? 'Thêm phương tiện' : 'Sửa phương tiện'">Thêm phương tiện</h1>
+    <div class="page-title mb-3" th:text="${form.id == null} ? 'Thêm phương tiện' : 'Sửa phương tiện'">Thêm phương tiện</div>
 
     <form th:action="@{/admin/vehicles/save}" th:object="${form}" method="post" style="max-width: 640px;">
 
@@ -67,8 +67,8 @@
                 <select th:unless="${form.status != null && form.status.name() == 'IN_USE'}"
                         id="status" class="form-select" th:field="*{status}"
                         th:classappend="${#fields.hasErrors('status')} ? 'is-invalid'">
-                    <option th:each="tt : ${cacTrangThaiChonDuoc}"
-                            th:value="${tt}" th:text="${tt.displayName}">Trạng thái</option>
+                    <option th:each="statusOption : ${selectableStatuses}"
+                            th:value="${statusOption}" th:text="${statusOption.displayName}">Trạng thái</option>
                 </select>
                 <div class="invalid-feedback d-block" th:if="${#fields.hasErrors('status')}"
                      th:errors="*{status}">Lỗi</div>
@@ -82,7 +82,7 @@
             </div>
         </div>
 
-        <div class="khoi-thong-tin mt-3 small chu-phu">
+        <div class="info-block mt-3 small text-sub">
             Tải trọng và thể tích thùng xe là hai giới hạn mà hệ thống kiểm tra
             <strong>đồng thời</strong> khi xếp đơn lên xe. Một xe chở hàng nhẹ mà cồng kềnh
             sẽ đầy chỗ trước khi đầy tải, nên thiếu một trong hai con số là không chia tuyến được.

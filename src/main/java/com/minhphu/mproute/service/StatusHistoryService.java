@@ -38,35 +38,35 @@ public class StatusHistoryService {
      * @param nguoiThucHienId null khi he thong tu chuyen chu khong phai nguoi dung bam nut
      */
     @Transactional
-    public void ghi(EntityType loaiDoiTuong,
-                    Long doiTuongId,
-                    String trangThaiCu,
-                    String trangThaiMoi,
-                    Long nguoiThucHienId,
-                    String ghiChu) {
+    public void recordChange(EntityType entityType,
+                    Long entityId,
+                    String oldStatus,
+                    String newStatus,
+                    Long changedById,
+                    String note) {
 
-        StatusHistory ban = new StatusHistory();
-        ban.setEntityType(loaiDoiTuong);
-        ban.setEntityId(doiTuongId);
-        ban.setOldStatus(trangThaiCu);
-        ban.setNewStatus(trangThaiMoi);
-        ban.setChangedAt(LocalDateTime.now());
-        ban.setNote(ghiChu);
+        StatusHistory entry = new StatusHistory();
+        entry.setEntityType(entityType);
+        entry.setEntityId(entityId);
+        entry.setOldStatus(oldStatus);
+        entry.setNewStatus(newStatus);
+        entry.setChangedAt(LocalDateTime.now());
+        entry.setNote(note);
 
-        if (nguoiThucHienId != null) {
-            User nguoi = userRepository.findById(nguoiThucHienId).orElse(null);
-            ban.setChangedBy(nguoi);
+        if (changedById != null) {
+            User changedBy = userRepository.findById(changedById).orElse(null);
+            entry.setChangedBy(changedBy);
         }
 
-        statusHistoryRepository.save(ban);
+        statusHistoryRepository.save(entry);
         log.info("Lich su trang thai: {} #{} tu {} sang {}",
-                loaiDoiTuong, doiTuongId, trangThaiCu, trangThaiMoi);
+                entityType, entityId, oldStatus, newStatus);
     }
 
     /** Hanh trinh cua mot don hang hoac mot tuyen, sap theo thoi gian tang dan. */
     @Transactional(readOnly = true)
-    public List<StatusHistory> lichSuCua(EntityType loaiDoiTuong, Long doiTuongId) {
+    public List<StatusHistory> historyOf(EntityType entityType, Long entityId) {
         return statusHistoryRepository
-                .findByEntityTypeAndEntityIdOrderByChangedAtAsc(loaiDoiTuong, doiTuongId);
+                .findByEntityTypeAndEntityIdOrderByChangedAtAsc(entityType, entityId);
     }
 }

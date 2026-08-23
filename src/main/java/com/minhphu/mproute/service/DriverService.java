@@ -35,8 +35,8 @@ public class DriverService {
     public Page<Driver> search(String keyword, RecordStatus status, Pageable pageable) {
         // O tim kiem de trong gui len chuoi rong chu khong phai null.
         // Doi ve null de cau JPQL bo qua dieu kien do
-        String tuKhoa = (keyword == null || keyword.isBlank()) ? null : keyword.trim();
-        return driverRepository.search(tuKhoa, status, pageable);
+        String normalizedKeyword = (keyword == null || keyword.isBlank()) ? null : keyword.trim();
+        return driverRepository.search(normalizedKeyword, status, pageable);
     }
 
     @Transactional(readOnly = true)
@@ -54,9 +54,9 @@ public class DriverService {
      */
     @Transactional(readOnly = true)
     public List<User> selectableAccounts(Long currentDriverId) {
-        List<Long> daGan = driverRepository.findLinkedUserIds(currentDriverId);
+        List<Long> linkedUserIds = driverRepository.findLinkedUserIds(currentDriverId);
         return userRepository.findByRoleOrderByUsernameAsc(Role.DRIVER).stream()
-                .filter(taiKhoan -> !daGan.contains(taiKhoan.getId()))
+                .filter(account -> !linkedUserIds.contains(account.getId()))
                 .toList();
     }
 
@@ -89,7 +89,7 @@ public class DriverService {
     @Transactional(readOnly = true)
     public boolean isDriverAccount(Long userId) {
         return userRepository.findById(userId)
-                .map(taiKhoan -> taiKhoan.getRole() == Role.DRIVER)
+                .map(account -> account.getRole() == Role.DRIVER)
                 .orElse(false);
     }
 
@@ -100,7 +100,7 @@ public class DriverService {
 
         driver.setFullName(form.getFullName().trim());
         driver.setPhone(form.getPhone().trim());
-        driver.setLicenseNumber(chuoiHoacNull(form.getLicenseNumber()));
+        driver.setLicenseNumber(blankToNull(form.getLicenseNumber()));
         driver.setStatus(form.getStatus());
 
         // Hai o chon duoi day de trong thi gan null, khong tra ve loi
@@ -112,9 +112,9 @@ public class DriverService {
                 : vehicleRepository.findById(form.getDefaultVehicleId())
                         .orElseThrow(() -> new IllegalArgumentException("Không tìm thấy phương tiện")));
 
-        Driver daLuu = driverRepository.save(driver);
-        log.info("Luu tai xe {} - {}", daLuu.getFullName(), daLuu.getPhone());
-        return daLuu;
+        Driver saved = driverRepository.save(driver);
+        log.info("Luu tai xe {} - {}", saved.getFullName(), saved.getPhone());
+        return saved;
     }
 
     /**
@@ -127,17 +127,17 @@ public class DriverService {
     @Transactional
     public RecordStatus toggleStatus(Long id) {
         Driver driver = getById(id);
-        RecordStatus moi = (driver.getStatus() == RecordStatus.ACTIVE)
+        RecordStatus newStatus = (driver.getStatus() == RecordStatus.ACTIVE)
                 ? RecordStatus.INACTIVE
                 : RecordStatus.ACTIVE;
-        driver.setStatus(moi);
+        driver.setStatus(newStatus);
         driverRepository.save(driver);
-        log.info("Tai xe {} chuyen sang trang thai {}", driver.getFullName(), moi);
-        return moi;
+        log.info("Tai xe {} chuyen sang trang thai {}", driver.getFullName(), newStatus);
+        return newStatus;
     }
 
     // O nhap khong bat buoc de trong gui len chuoi rong, luu vao DB nen la NULL cho gon
-    private String chuoiHoacNull(String giaTri) {
-        return (giaTri == null || giaTri.isBlank()) ? null : giaTri.trim();
+    private String blankToNull(String value) {
+        return (value == null || value.isBlank()) ? null : value.trim();
     }
 }

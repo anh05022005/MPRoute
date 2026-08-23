@@ -8,14 +8,14 @@
 
 <div th:fragment="content">
 
-    <div class="thanh-cong-cu d-flex justify-content-between align-items-end flex-wrap gap-2">
+    <div class="toolbar">
 
         <form th:action="@{/routing}" method="get" class="d-flex align-items-end gap-2">
             <div>
                 <label for="deliveryDate" class="form-label mb-1 small">Ngày giao</label>
                 <input type="date" id="deliveryDate" name="deliveryDate"
                        class="form-control form-control-sm" style="width: 170px;"
-                       th:value="${ngayGiao}">
+                       th:value="${deliveryDate}">
             </div>
             <button type="submit" class="btn btn-sm btn-outline-secondary">Xem đơn</button>
         </form>
@@ -24,68 +24,89 @@
             CN-03-05: nap truoc ma tran khoang cach. Bam lan hai voi cung tap diem thi
             so o "phai lay moi" phai bang 0 — do la cach chung minh bo nho dem chay dung.
         -->
-        <form th:action="@{/routing/prepare-matrix}" method="post" sec:authorize="hasRole('DISPATCHER')">
-            <input type="hidden" name="deliveryDate" th:value="${ngayGiao}">
+        <form th:action="@{/routing/prepare-matrix}" method="post"
+              class="push-right" sec:authorize="hasRole('DISPATCHER')">
+            <input type="hidden" name="deliveryDate" th:value="${deliveryDate}">
             <button type="submit" class="btn btn-sm btn-primary"
-                    th:disabled="${cacDon.isEmpty()}">Chuẩn bị ma trận khoảng cách</button>
+                    th:disabled="${orders.isEmpty()}">Chuẩn bị ma trận khoảng cách</button>
         </form>
     </div>
 
     <!-- ============ CN-03-01 Tong quan nhu cau cua ngay ============ -->
-    <div class="khoi-thong-tin mb-3">
-        <span class="me-4">Đơn đã duyệt: <strong th:text="${cacDon.size()}">0</strong></span>
-        <span class="me-4">Tổng khối lượng:
-            <strong class="so" th:text="${#numbers.formatDecimal(tongKg, 1, 'NONE', 1, 'POINT')} + ' kg'">0.0 kg</strong>
-        </span>
-        <span class="me-4">Tổng thể tích:
-            <strong class="so" th:text="${#numbers.formatDecimal(tongM3, 1, 'NONE', 3, 'POINT')} + ' m³'">0.000 m³</strong>
-        </span>
-        <span th:if="${kho != null}" class="chu-phu">
-            Kho: <span th:text="${kho.name}">Kho Minh Phú</span>
-        </span>
+    <div class="panel panel-info mb-3">
+        <div class="metric-row">
+            <div>
+                <div class="metric-label">Đơn đã duyệt</div>
+                <div class="metric-value" th:text="${orders.size()}">0</div>
+            </div>
+            <div>
+                <div class="metric-label">Tổng khối lượng</div>
+                <div class="metric-value"
+                     th:text="${#numbers.formatDecimal(totalWeight, 1, 'POINT', 1, 'COMMA')} + ' kg'">0,0 kg</div>
+            </div>
+            <div>
+                <div class="metric-label">Tổng thể tích</div>
+                <div class="metric-value"
+                     th:text="${#numbers.formatDecimal(totalVolume, 1, 'POINT', 3, 'COMMA')} + ' m³'">0,000 m³</div>
+            </div>
+            <div>
+                <div class="metric-label">Kho xuất phát</div>
+                <div class="metric-value" style="font-size: 15px;"
+                     th:text="${depot != null} ? ${depot.name} : '—'">Kho Minh Phú</div>
+            </div>
+        </div>
     </div>
 
-    <div class="row g-3">
+    <div class="split">
 
         <!-- ============ Danh sach don cho phan tuyen ============ -->
-        <div class="col-lg-6">
-            <table class="table table-bordered table-striped table-sm align-middle">
+        <div>
+            <div class="section-label">Đơn hàng chờ phân tuyến</div>
+            <table class="table table-striped align-middle">
                 <thead>
                 <tr>
                     <th style="width: 130px;">Mã đơn</th>
                     <th>Khách hàng</th>
-                    <th style="width: 90px;">Khối lượng</th>
-                    <th style="width: 90px;">Thể tích</th>
+                    <th class="num" style="width: 100px;">Khối lượng</th>
+                    <th class="num" style="width: 100px;">Thể tích</th>
                 </tr>
                 </thead>
                 <tbody>
-                <tr th:if="${cacDon.isEmpty()}">
-                    <td colspan="4" class="text-center chu-phu py-3">
+                <tr th:if="${orders.isEmpty()}">
+                    <td colspan="4" class="text-center text-sub py-3">
                         Ngày này chưa có đơn nào ở trạng thái <strong>Đã duyệt</strong>.
                         Đơn phải được duyệt mới vào được danh sách chờ phân tuyến (BR03-01).
                     </td>
                 </tr>
-                <tr th:each="don : ${cacDon}">
-                    <td><a th:href="@{/orders/{id}(id=${don.id})}" th:text="${don.code}">MP2608160001</a></td>
+                <tr th:each="order : ${orders}">
+                    <td><a th:href="@{/orders/{id}(id=${order.id})}" th:text="${order.code}">MP2608160001</a></td>
                     <td>
-                        <span th:text="${don.customer.name}">Tạp hóa Bà Lan</span>
-                        <div class="small chu-phu" th:text="${don.deliveryAddress}">91 Chùa Bộc</div>
+                        <span th:text="${order.customer.name}">Tạp hóa Bà Lan</span>
+                        <div class="small text-sub" th:text="${order.deliveryAddress}">91 Chùa Bộc</div>
                     </td>
-                    <td class="so" th:text="${#numbers.formatDecimal(don.totalWeight, 1, 'NONE', 1, 'POINT')}">67.6</td>
-                    <td class="so" th:text="${#numbers.formatDecimal(don.totalVolume, 1, 'NONE', 3, 'POINT')}">0.317</td>
+                    <td class="num"
+                        th:text="${#numbers.formatDecimal(order.totalWeight, 1, 'POINT', 1, 'COMMA')} + ' kg'">67,6 kg</td>
+                    <td class="num"
+                        th:text="${#numbers.formatDecimal(order.totalVolume, 1, 'POINT', 3, 'COMMA')} + ' m³'">0,317 m³</td>
                 </tr>
                 </tbody>
             </table>
         </div>
 
         <!-- ============ CN-03-02 Ban do diem giao ============ -->
-        <div class="col-lg-6">
-            <div id="ban-do-phan-tuyen"
-                 style="height: 460px; border: 1px solid var(--vien); border-radius: 4px;"></div>
+        <div>
+            <div class="section-label">Vị trí các điểm giao</div>
+            <div class="map-frame">
+                <div id="routing-map" class="map-canvas"></div>
+                <div class="map-legend">
+                    <span><span class="legend-swatch" style="background: var(--blue-900);"></span>Kho</span>
+                    <span><span class="legend-swatch" style="background: var(--route-1);"></span>Điểm giao</span>
+                    <span class="text-faint">Rê chuột vào ghim để xem tên khách và số thùng</span>
+                </div>
+            </div>
             <div class="form-text">
-                Ô vuông đậm là kho, ghim tròn là điểm giao. Rê chuột vào ghim để xem tên khách
-                và số thùng. Ảnh nền bản đồ lấy từ OpenStreetMap nên cần mạng; mất mạng thì
-                khung xám nhưng số liệu bên trái vẫn đầy đủ.
+                Ảnh nền bản đồ lấy từ OpenStreetMap nên cần mạng. Mất mạng thì khung xám
+                nhưng số liệu bên trái vẫn đầy đủ.
             </div>
         </div>
     </div>
@@ -95,7 +116,7 @@
         th:text tu escape nen ten khach co dau nhay kep cung khong lam vo trang;
         JavaScript doc lai bang textContent thi duoc dung chuoi goc.
     -->
-    <script id="du-lieu-diem" type="application/json" th:text="${diemJson}">[]</script>
+    <script id="map-points-data" type="application/json" th:text="${mapPointsJson}">[]</script>
 
 </div>
 

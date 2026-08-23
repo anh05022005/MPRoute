@@ -28,18 +28,18 @@ import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 @RequiredArgsConstructor
 public class CustomerController {
 
-    private static final int SO_DONG_MOI_TRANG = 15;
+    private static final int PAGE_SIZE = 15;
 
     private final CustomerService customerService;
 
     /** Dung chung cho o loc tren danh sach va o chon trang thai trong form. */
-    @ModelAttribute("cacTrangThai")
-    public RecordStatus[] cacTrangThai() {
+    @ModelAttribute("statuses")
+    public RecordStatus[] statuses() {
         return RecordStatus.values();
     }
 
-    @ModelAttribute("cacHinhThucThanhToan")
-    public PaymentMethod[] cacHinhThucThanhToan() {
+    @ModelAttribute("paymentMethods")
+    public PaymentMethod[] paymentMethods() {
         return PaymentMethod.values();
     }
 
@@ -49,10 +49,10 @@ public class CustomerController {
                        @RequestParam(defaultValue = "0") int page,
                        Model model) {
 
-        var pageable = PageRequest.of(page, SO_DONG_MOI_TRANG, Sort.by("name").ascending());
-        Page<Customer> trang = customerService.search(keyword, status, pageable);
+        var pageable = PageRequest.of(page, PAGE_SIZE, Sort.by("name").ascending());
+        Page<Customer> pageResult = customerService.search(keyword, status, pageable);
 
-        model.addAttribute("trang", trang);
+        model.addAttribute("pageResult", pageResult);
         model.addAttribute("keyword", keyword);
         model.addAttribute("status", status);
         return "admin/customers";
@@ -62,7 +62,7 @@ public class CustomerController {
      * Bao layout.html nap Leaflet cho man hinh nay (CN-01-05). Dat o ca ba cho tra ve
      * form: quen mot cho thi luc do ban do khong hien, ma o nhap toa do van trong.
      */
-    private static final String CO_BAN_DO = "canBanDo";
+    private static final String CO_BAN_DO = "needsMap";
 
     @PreAuthorize("hasRole('ADMIN')")
     @GetMapping("/create")
@@ -92,7 +92,7 @@ public class CustomerController {
             return "admin/customer-form";
         }
 
-        boolean themMoi = (form.getId() == null);
+        boolean isNew = (form.getId() == null);
 
         /*
          * Trung so dien thoai chi CANH BAO chu khong chan: cot phone khong dat unique
@@ -100,14 +100,14 @@ public class CustomerController {
          * cung mot chu dung chung mot so. Nhung trung so lam trang tra cuu cong khai
          * /track tra ve nhieu khach khac nhau, nen van bao cho nguoi nhap biet.
          */
-        boolean trungSoDienThoai = customerService.isPhoneTaken(form.getPhone(), form.getId());
+        boolean phoneTaken = customerService.isPhoneTaken(form.getPhone(), form.getId());
 
         customerService.save(form);
 
-        redirectAttributes.addFlashAttribute("thongBao",
-                themMoi ? "Đã thêm khách hàng mới." : "Lưu dữ liệu thành công.");
-        if (trungSoDienThoai) {
-            redirectAttributes.addFlashAttribute("loi",
+        redirectAttributes.addFlashAttribute("successMessage",
+                isNew ? "Đã thêm khách hàng mới." : "Lưu dữ liệu thành công.");
+        if (phoneTaken) {
+            redirectAttributes.addFlashAttribute("errorMessage",
                     "Lưu ý: số điện thoại này đã dùng cho một khách hàng khác. "
                             + "Dữ liệu vẫn được lưu, nhưng trang tra cứu công khai sẽ khó phân biệt.");
         }
@@ -117,9 +117,9 @@ public class CustomerController {
     @PreAuthorize("hasRole('ADMIN')")
     @PostMapping("/{id}/toggle-status")
     public String toggleStatus(@PathVariable Long id, RedirectAttributes redirectAttributes) {
-        RecordStatus moi = customerService.toggleStatus(id);
-        redirectAttributes.addFlashAttribute("thongBao",
-                "Đã chuyển khách hàng sang trạng thái: " + moi.getDisplayName() + ".");
+        RecordStatus newStatus = customerService.toggleStatus(id);
+        redirectAttributes.addFlashAttribute("successMessage",
+                "Đã chuyển khách hàng sang trạng thái: " + newStatus.getDisplayName() + ".");
         return "redirect:/admin/customers";
     }
 }

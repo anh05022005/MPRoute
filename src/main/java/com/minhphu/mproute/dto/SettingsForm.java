@@ -34,14 +34,14 @@ public class SettingsForm {
         private String description;
     }
 
-    public static SettingsForm from(List<SystemParameter> danhSach) {
+    public static SettingsForm from(List<SystemParameter> parameters) {
         SettingsForm form = new SettingsForm();
-        for (SystemParameter thamSo : danhSach) {
-            Item dong = new Item();
-            dong.setCode(thamSo.getCode());
-            dong.setValue(thamSo.getValue());
-            dong.setDescription(thamSo.getDescription());
-            form.getItems().add(dong);
+        for (SystemParameter parameter : parameters) {
+            Item row = new Item();
+            row.setCode(parameter.getCode());
+            row.setValue(parameter.getValue());
+            row.setDescription(parameter.getDescription());
+            form.getItems().add(row);
         }
         return form;
     }

@@ -24,6 +24,7 @@ import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Locale;
 
 /**
  * SCR-09 — Man hinh phan tuyen (CN-03-01, CN-03-02, CN-03-05).
@@ -42,8 +43,8 @@ import java.util.List;
 @Slf4j
 public class RoutingController {
 
-    private static final String CO_BAN_DO = "canBanDo";
-    private static final String CO_JS_PHAN_TUYEN = "canJsPhanTuyen";
+    private static final String NEEDS_MAP = "needsMap";
+    private static final String NEEDS_ROUTING_JS = "needsRoutingJs";
 
     private final OrderRepository orderRepository;
     private final DepotService depotService;
@@ -51,11 +52,11 @@ public class RoutingController {
     private final ObjectMapper objectMapper;
 
     /** Mot ghim tren ban do. Chi chua thu can ve, khong day ca entity ra giao dien. */
-    public record DiemTrenBanDo(String ten,
-                                double viDo,
-                                double kinhDo,
-                                boolean laKho,
-                                String moTa) {}
+    public record MapPoint(String name,
+                           double latitude,
+                           double longitude,
+                           boolean depot,
+                           String description) {}
 
     @GetMapping
     public String screen(@RequestParam(required = false)
@@ -63,25 +64,25 @@ public class RoutingController {
                          Model model) {
 
         // Mac dinh xem ngay mai — dung ngay ma don duoc tao san (BR02-06)
-        LocalDate ngayGiao = (deliveryDate != null) ? deliveryDate : LocalDate.now().plusDays(1);
+        LocalDate targetDate = (deliveryDate != null) ? deliveryDate : LocalDate.now().plusDays(1);
 
         // BR03-01: chi don DA DUYET moi duoc dua vao phan tuyen
-        List<Order> cacDon = orderRepository.findByDeliveryDateAndStatus(ngayGiao, OrderStatus.APPROVED);
+        List<Order> orders = orderRepository.findByDeliveryDateAndStatus(targetDate, OrderStatus.APPROVED);
 
-        double tongKg = cacDon.stream().mapToDouble(Order::getTotalWeight).sum();
-        double tongM3 = cacDon.stream().mapToDouble(Order::getTotalVolume).sum();
+        double totalWeight = orders.stream().mapToDouble(Order::getTotalWeight).sum();
+        double totalVolume = orders.stream().mapToDouble(Order::getTotalVolume).sum();
 
-        model.addAttribute("ngayGiao", ngayGiao);
-        model.addAttribute("cacDon", cacDon);
-        model.addAttribute("tongKg", tongKg);
-        model.addAttribute("tongM3", tongM3);
+        model.addAttribute("deliveryDate", targetDate);
+        model.addAttribute("orders", orders);
+        model.addAttribute("totalWeight", totalWeight);
+        model.addAttribute("totalVolume", totalVolume);
 
-        Depot kho = layKho(model);
-        model.addAttribute("kho", kho);
-        model.addAttribute("diemJson", dungJsonDiem(kho, cacDon));
+        Depot depot = findActiveDepot(model);
+        model.addAttribute("depot", depot);
+        model.addAttribute("mapPointsJson", buildMapPointsJson(depot, orders));
 
-        model.addAttribute(CO_BAN_DO, true);
-        model.addAttribute(CO_JS_PHAN_TUYEN, true);
+        model.addAttribute(NEEDS_MAP, true);
+        model.addAttribute(NEEDS_ROUTING_JS, true);
         return "routing/routing";
     }
 
@@ -97,34 +98,34 @@ public class RoutingController {
                                 @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate deliveryDate,
                                 RedirectAttributes redirectAttributes) {
 
-        List<Order> cacDon = orderRepository.findByDeliveryDateAndStatus(deliveryDate, OrderStatus.APPROVED);
-        if (cacDon.isEmpty()) {
-            redirectAttributes.addFlashAttribute("loi",
+        List<Order> orders = orderRepository.findByDeliveryDateAndStatus(deliveryDate, OrderStatus.APPROVED);
+        if (orders.isEmpty()) {
+            redirectAttributes.addFlashAttribute("errorMessage",
                     "Ngày này chưa có đơn nào đã duyệt nên chưa có điểm giao để tính khoảng cách.");
             return "redirect:/routing?deliveryDate=" + deliveryDate;
         }
 
-        Depot kho = depotService.getActiveDepot();
-        List<OptimizationPoint> cacDiem = dungDanhSachDiem(kho, cacDon);
+        Depot depot = depotService.getActiveDepot();
+        List<OptimizationPoint> points = buildOptimizationPoints(depot, orders);
 
-        long batDau = System.currentTimeMillis();
-        DistanceMatrixService.MaTranKhoangCach maTran = distanceMatrixService.napMaTran(cacDiem);
-        long mili = System.currentTimeMillis() - batDau;
+        long startedAt = System.currentTimeMillis();
+        DistanceMatrixService.DistanceMatrix matrix = distanceMatrixService.loadMatrix(points);
+        long elapsedMs = System.currentTimeMillis() - startedAt;
 
-        int n = cacDiem.size();
-        String thongBao = String.format(
+        int size = points.size();
+        String message = String.format(
                 "Đã chuẩn bị ma trận %d×%d (%d ô) trong %d ms. "
                         + "Lấy từ bộ nhớ đệm: %d ô. Phải lấy mới: %d ô. Nguồn: %s.",
-                n, n, n * n - n, mili,
-                maTran.soOLayTuCache(), maTran.soOGoiMoi(), maTran.nguon().getDisplayName());
+                size, size, size * size - size, elapsedMs,
+                matrix.cacheHits(), matrix.cacheMisses(), matrix.source().getDisplayName());
 
-        if (maTran.dungXapXi()) {
+        if (matrix.approximate()) {
             // MSG-09
-            redirectAttributes.addFlashAttribute("loi",
+            redirectAttributes.addFlashAttribute("errorMessage",
                     "Không kết nối được OSRM. Đang dùng khoảng cách xấp xỉ (Haversine × hệ số). "
                             + "Tuyến sinh ra từ ma trận này sẽ được đánh dấu là xấp xỉ.");
         }
-        redirectAttributes.addFlashAttribute("thongBao", thongBao);
+        redirectAttributes.addFlashAttribute("successMessage", message);
         return "redirect:/routing?deliveryDate=" + deliveryDate;
     }
 
@@ -136,20 +137,20 @@ public class RoutingController {
      * KHO LUON DUNG DAU danh sach — quy uoc xuyen suot do an: chi so 0 trong ma tran
      * la kho. DistanceMatrixService dua vao dung thu tu nay de danh matrixIndex.
      */
-    private List<OptimizationPoint> dungDanhSachDiem(Depot kho, List<Order> cacDon) {
-        List<OptimizationPoint> cacDiem = new ArrayList<>();
-        cacDiem.add(OptimizationPoint.depot(kho.getLatitude(), kho.getLongitude()));
+    private List<OptimizationPoint> buildOptimizationPoints(Depot depot, List<Order> orders) {
+        List<OptimizationPoint> points = new ArrayList<>();
+        points.add(OptimizationPoint.depot(depot.getLatitude(), depot.getLongitude()));
 
-        for (Order don : cacDon) {
-            cacDiem.add(OptimizationPoint.cuaDon(
-                    don.getId(),
-                    don.getCustomer().getName(),
-                    don.getLatitude(),
-                    don.getLongitude(),
-                    don.getTotalWeight(),
-                    don.getTotalVolume()));
+        for (Order order : orders) {
+            points.add(OptimizationPoint.forOrder(
+                    order.getId(),
+                    order.getCustomer().getName(),
+                    order.getLatitude(),
+                    order.getLongitude(),
+                    order.getTotalWeight(),
+                    order.getTotalVolume()));
         }
-        return cacDiem;
+        return points;
     }
 
     /**
@@ -158,38 +159,38 @@ public class RoutingController {
      * Dung Jackson chu khong tu noi chuoi: ten khach hang co the chua dau nhay kep
      * ("Tap hoa "Ba Lan""), noi tay thi vo JSON va ca ban do trang.
      */
-    private String dungJsonDiem(Depot kho, List<Order> cacDon) {
-        List<DiemTrenBanDo> cacDiem = new ArrayList<>();
+    private String buildMapPointsJson(Depot depot, List<Order> orders) {
+        List<MapPoint> mapPoints = new ArrayList<>();
 
-        if (kho != null) {
-            cacDiem.add(new DiemTrenBanDo(kho.getName(), kho.getLatitude(), kho.getLongitude(),
-                    true, kho.getAddress()));
+        if (depot != null) {
+            mapPoints.add(new MapPoint(depot.getName(), depot.getLatitude(), depot.getLongitude(),
+                    true, depot.getAddress()));
         }
 
-        for (Order don : cacDon) {
-            int soThung = don.getItems().stream().mapToInt(dong -> dong.getBoxCount()).sum();
+        for (Order order : orders) {
+            int boxCount = order.getItems().stream().mapToInt(item -> item.getBoxCount()).sum();
             // Locale.ROOT de dau thap phan luon la dau cham, dung quy uoc hien thi o docs/05
-            String moTa = String.format(java.util.Locale.ROOT, "%d thùng · %.1f kg · %.3f m³",
-                    soThung, don.getTotalWeight(), don.getTotalVolume());
-            cacDiem.add(new DiemTrenBanDo(don.getCustomer().getName(),
-                    don.getLatitude(), don.getLongitude(), false, moTa));
+            String description = String.format(Locale.ROOT, "%d thùng · %.1f kg · %.3f m³",
+                    boxCount, order.getTotalWeight(), order.getTotalVolume());
+            mapPoints.add(new MapPoint(order.getCustomer().getName(),
+                    order.getLatitude(), order.getLongitude(), false, description));
         }
 
         try {
-            return objectMapper.writeValueAsString(cacDiem);
-        } catch (JsonProcessingException loi) {
+            return objectMapper.writeValueAsString(mapPoints);
+        } catch (JsonProcessingException ex) {
             // Khong de mot loi dinh dang lam hong ca man hinh: ban do rong, bang van con
-            log.error("Khong dung duoc JSON cho ban do phan tuyen", loi);
+            log.error("Khong dung duoc JSON cho ban do phan tuyen", ex);
             return "[]";
         }
     }
 
     /** Lay kho dang hoat dong. Chua khai bao kho thi bao ro chu khong nem loi 500. */
-    private Depot layKho(Model model) {
+    private Depot findActiveDepot(Model model) {
         try {
             return depotService.getActiveDepot();
-        } catch (RuntimeException loi) {
-            model.addAttribute("loi",
+        } catch (RuntimeException ex) {
+            model.addAttribute("errorMessage",
                     "Chưa có kho nào đang hoạt động. Vào Danh mục → Kho để khai báo trước khi phân tuyến.");
             return null;
         }

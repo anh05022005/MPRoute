@@ -7,9 +7,9 @@
 
 <div th:fragment="content">
 
-    <h1 class="h5 mb-3" th:text="${form.id == null} ? 'Tạo đơn hàng' : 'Sửa đơn hàng ' + ${form.code}">Tạo đơn hàng</h1>
+    <div class="page-title mb-3" th:text="${form.id == null} ? 'Tạo đơn hàng' : 'Sửa đơn hàng ' + ${form.code}">Tạo đơn hàng</div>
 
-    <form th:action="@{/orders/save}" th:object="${form}" method="post" id="form-don-hang">
+    <form th:action="@{/orders/save}" th:object="${form}" method="post" id="order-form">
 
         <input type="hidden" th:field="*{id}">
 
@@ -18,7 +18,7 @@
             khong gan duoc vao mot o nhap cu the nen hien thanh mot khoi rieng o dau form.
         -->
         <div th:if="${#fields.hasGlobalErrors()}" class="alert alert-danger py-2">
-            <div th:each="loi : ${#fields.globalErrors()}" th:text="${loi}">Lỗi</div>
+            <div th:each="loi : ${#fields.globalErrors()}" th:text="${errorMessage}">Lỗi</div>
         </div>
 
         <div class="row g-3">
@@ -34,14 +34,14 @@
                 <select id="customerId" class="form-select" th:field="*{customerId}"
                         th:classappend="${#fields.hasErrors('customerId')} ? 'is-invalid'">
                     <option value="">— Chọn khách hàng —</option>
-                    <option th:each="kh : ${cacKhachHang}"
-                            th:value="${kh.id}"
-                            th:text="${kh.name} + ' — ' + ${kh.phone}"
-                            th:attr="data-dia-chi=${kh.address},
-                                     data-vi-do=${kh.latitude},
-                                     data-kinh-do=${kh.longitude},
-                                     data-thanh-toan=${kh.paymentMethod},
-                                     data-ghi-chu=${kh.deliveryNote}">Tạp hóa Bà Lan</option>
+                    <option th:each="customer : ${customers}"
+                            th:value="${customer.id}"
+                            th:text="${customer.name} + ' — ' + ${customer.phone}"
+                            th:attr="data-address=${customer.address},
+                                     data-latitude=${customer.latitude},
+                                     data-longitude=${customer.longitude},
+                                     data-payment-method=${customer.paymentMethod},
+                                     data-delivery-note=${customer.deliveryNote}">Tạp hóa Bà Lan</option>
                 </select>
                 <div class="invalid-feedback d-block" th:if="${#fields.hasErrors('customerId')}"
                      th:errors="*{customerId}">Lỗi</div>
@@ -52,12 +52,12 @@
                     tu chon luon cho don dang tao, khong tai lai trang.
                 -->
                 <button type="button" class="btn btn-sm btn-outline-secondary mt-2"
-                        data-bs-toggle="modal" data-bs-target="#hop-thoai-them-khach">
+                        data-bs-toggle="modal" data-bs-target="#quick-customer-modal">
                     + Khách mới chưa có trong danh mục
                 </button>
 
                 <!-- Ghi chu giao hang cua khach (BR01-07) — dieu phoi vien can thay truoc khi chot -->
-                <div id="ghi-chu-khach" class="form-text"></div>
+                <div id="customer-delivery-note" class="form-text"></div>
             </div>
 
             <div class="col-md-3">
@@ -75,8 +75,8 @@
                 <label for="paymentMethod" class="form-label">Hình thức thanh toán <span class="text-danger">*</span></label>
                 <select id="paymentMethod" class="form-select" th:field="*{paymentMethod}"
                         th:classappend="${#fields.hasErrors('paymentMethod')} ? 'is-invalid'">
-                    <option th:each="ht : ${cacHinhThucThanhToan}"
-                            th:value="${ht}" th:text="${ht.displayName}">Tiền mặt</option>
+                    <option th:each="paymentMethodOption : ${paymentMethods}"
+                            th:value="${paymentMethodOption}" th:text="${paymentMethodOption.displayName}">Tiền mặt</option>
                 </select>
                 <div class="invalid-feedback d-block" th:if="${#fields.hasErrors('paymentMethod')}"
                      th:errors="*{paymentMethod}">Lỗi</div>
@@ -103,8 +103,8 @@
                      th:errors="*{deliveryAddress}">Lỗi</div>
 
                 <div class="form-check mt-2">
-                    <input class="form-check-input" type="checkbox" id="o-ghi-de-dia-chi">
-                    <label class="form-check-label small" for="o-ghi-de-dia-chi">
+                    <input class="form-check-input" type="checkbox" id="override-address">
+                    <label class="form-check-label small" for="override-address">
                         Ghi đè địa chỉ cho riêng đơn này (giao nhờ sang chỗ khác) —
                         <strong>phải xác định lại tọa độ</strong>
                     </label>
@@ -115,7 +115,7 @@
                 Khoi toa do + ban do. An di khi khong ghi de dia chi, vi truong hop thuong gap
                 la giao dung dia chi trong danh muc, khong ai phai dong toi.
             -->
-            <div class="col-12 d-none" id="khoi-toa-do">
+            <div class="col-12 d-none" id="coordinates-block">
                 <div class="row g-3">
                     <div class="col-md-3">
                         <label for="latitude" class="form-label">Vĩ độ <span class="text-danger">*</span></label>
@@ -134,7 +134,7 @@
                 </div>
 
                 <div class="mt-3">
-                    <div th:replace="~{fragments/map-picker :: chon-toa-do}"></div>
+                    <div th:replace="~{fragments/map-picker :: map-picker}"></div>
                 </div>
             </div>
         </div>
@@ -142,7 +142,7 @@
         <!-- ============ CN-02-03 Cac dong chi tiet ============ -->
         <h2 class="h6 mt-4">Chi tiết đơn hàng</h2>
 
-        <table class="table table-bordered table-sm align-middle" id="bang-chi-tiet">
+        <table class="table table-bordered table-sm align-middle" id="order-lines-table">
             <thead>
             <tr>
                 <th>Sản phẩm</th>
@@ -155,38 +155,38 @@
             </tr>
             </thead>
 
-            <tbody id="than-bang-chi-tiet">
-            <tr class="dong-chi-tiet" th:each="dong, vt : *{items}">
+            <tbody id="order-lines-body">
+            <tr class="order-line" th:each="row, rowStat : *{items}">
                 <td>
                     <!--
                         Viet th:name tay thay vi th:field vi cac dong duoc them/xoa bang
                         JavaScript, chi so phai danh lai sau moi lan xoa. Spring van gan
                         duoc vao List<OrderItemForm> nho ten dang items[0].productId.
                     -->
-                    <select class="form-select form-select-sm o-san-pham"
-                            th:name="'items[' + ${vt.index} + '].productId'">
+                    <select class="form-select form-select-sm line-product"
+                            th:name="'items[' + ${rowStat.index} + '].productId'">
                         <option value="">— Chọn sản phẩm —</option>
-                        <option th:each="sp : ${cacSanPham}"
-                                th:value="${sp.id}"
-                                th:selected="${sp.id == dong.productId}"
-                                th:text="${sp.name} + ' (' + ${sp.unit} + ')'"
-                                th:attr="data-kg=${sp.weightPerBox},
-                                         data-m3=${sp.volumePerBox},
-                                         data-gia=${sp.unitPrice}">Bông tẩy trang</option>
+                        <option th:each="product : ${products}"
+                                th:value="${product.id}"
+                                th:selected="${product.id == row.productId}"
+                                th:text="${product.name} + ' (' + ${product.unit} + ')'"
+                                th:attr="data-weight=${product.weightPerBox},
+                                         data-volume=${product.volumePerBox},
+                                         data-price=${product.unitPrice}">Bông tẩy trang</option>
                     </select>
                 </td>
                 <td>
-                    <input type="number" min="1" step="1" class="form-control form-control-sm o-so-thung"
-                           th:name="'items[' + ${vt.index} + '].boxCount'"
-                           th:value="${dong.boxCount}">
+                    <input type="number" min="1" step="1" class="form-control form-control-sm line-box-count"
+                           th:name="'items[' + ${rowStat.index} + '].boxCount'"
+                           th:value="${row.boxCount}">
                 </td>
                 <!-- Ba o nay chi de nhin, khong gui len may chu: may chu tinh lai tu danh muc (BR02-04) -->
-                <td class="so o-kg">—</td>
-                <td class="so o-m3">—</td>
-                <td class="so o-gia">—</td>
-                <td class="so o-thanh-tien">—</td>
+                <td class="num line-weight">—</td>
+                <td class="num line-volume">—</td>
+                <td class="num line-unit-price">—</td>
+                <td class="num line-total">—</td>
                 <td>
-                    <button type="button" class="btn btn-sm btn-outline-secondary py-0 nut-xoa-dong"
+                    <button type="button" class="btn btn-sm btn-outline-secondary py-0 remove-line"
                             title="Xóa dòng">×</button>
                 </td>
             </tr>
@@ -195,21 +195,21 @@
             <tfoot>
             <tr>
                 <th colspan="2" class="text-end">Tổng cộng</th>
-                <th class="so" id="tong-kg">—</th>
-                <th class="so" id="tong-m3">—</th>
+                <th class="num" id="total-weight">—</th>
+                <th class="num" id="total-volume">—</th>
                 <th></th>
-                <th class="so" id="tong-tien">—</th>
+                <th class="num" id="total-amount">—</th>
                 <th></th>
             </tr>
             <tr>
                 <th colspan="5" class="text-end">Số tiền phải thu khi giao (BR02-14)</th>
-                <th class="so" id="tien-phai-thu">—</th>
+                <th class="num" id="amount-to-collect">—</th>
                 <th></th>
             </tr>
             </tfoot>
         </table>
 
-        <button type="button" class="btn btn-sm btn-outline-secondary" id="nut-them-dong">+ Thêm dòng</button>
+        <button type="button" class="btn btn-sm btn-outline-secondary" id="add-line">+ Thêm dòng</button>
 
         <div class="row g-3 mt-1">
             <div class="col-md-8">
@@ -222,7 +222,7 @@
             </div>
         </div>
 
-        <div class="khoi-thong-tin mt-3 small chu-phu">
+        <div class="info-block mt-3 small text-sub">
             Khối lượng, thể tích và tiền hàng do <strong>hệ thống tự tính</strong> từ các dòng chi tiết,
             không sửa tay được. Đơn giá được <strong>chép lại tại thời điểm tạo đơn</strong> — sau này
             danh mục đổi giá thì đơn cũ vẫn giữ giá cũ. Đơn vượt sức chứa của xe lớn nhất sẽ bị chặn,
@@ -241,11 +241,11 @@
         Dat NGOAI the <form> o tren. HTML khong cho long form trong form: de ben trong
         thi trinh duyet tu dong cat, ket qua la mot trong hai form mat nut gui.
 
-        The <form> rieng nay khong bao gio submit theo kieu thuong — don-hang.js chan lai
+        The <form> rieng nay khong bao gio submit theo kieu thuong — order-form.js chan lai
         va goi bang fetch. Van de la <form> that de Thymeleaf tu chen the an chua CSRF token,
         khoi phai tu di lay token o cho khac.
     -->
-    <div class="modal fade" id="hop-thoai-them-khach" tabindex="-1">
+    <div class="modal fade" id="quick-customer-modal" tabindex="-1">
         <div class="modal-dialog modal-lg">
             <div class="modal-content">
                 <div class="modal-header py-2">
@@ -253,91 +253,91 @@
                     <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                 </div>
 
-                <form id="form-them-khach" th:action="@{/orders/quick-customer}" method="post">
+                <form id="quick-customer-form" th:action="@{/orders/quick-customer}" method="post">
                     <div class="modal-body">
 
-                        <div id="loi-them-khach" class="alert alert-danger py-2 d-none"></div>
+                        <div id="quick-customer-errors" class="alert alert-danger py-2 d-none"></div>
 
                         <div class="row g-3">
                             <div class="col-md-7">
-                                <label for="kh-name" class="form-label">
+                                <label for="qc-name" class="form-label">
                                     Tên cửa hàng <span class="text-danger">*</span>
                                 </label>
-                                <input type="text" id="kh-name" name="name" class="form-control"
+                                <input type="text" id="qc-name" name="name" class="form-control"
                                        placeholder="Tạp hóa Bà Lan">
                             </div>
 
                             <div class="col-md-5">
-                                <label for="kh-contactPerson" class="form-label">Người liên hệ</label>
-                                <input type="text" id="kh-contactPerson" name="contactPerson"
+                                <label for="qc-contactPerson" class="form-label">Người liên hệ</label>
+                                <input type="text" id="qc-contactPerson" name="contactPerson"
                                        class="form-control" placeholder="Bà Lan">
                             </div>
 
                             <div class="col-md-4">
-                                <label for="kh-phone" class="form-label">
+                                <label for="qc-phone" class="form-label">
                                     Số điện thoại <span class="text-danger">*</span>
                                 </label>
                                 <!-- type="text" chu khong phai number: o kieu number cat mat so 0 dau -->
-                                <input type="text" id="kh-phone" name="phone" class="form-control"
+                                <input type="text" id="qc-phone" name="phone" class="form-control"
                                        maxlength="10" inputmode="numeric" placeholder="0912345678">
                             </div>
 
                             <div class="col-md-8">
-                                <label for="kh-email" class="form-label">Email</label>
-                                <input type="text" id="kh-email" name="email" class="form-control"
+                                <label for="qc-email" class="form-label">Email</label>
+                                <input type="text" id="qc-email" name="email" class="form-control"
                                        placeholder="tapholaban@gmail.com">
                             </div>
 
                             <div class="col-12">
-                                <label for="kh-address" class="form-label">
+                                <label for="qc-address" class="form-label">
                                     Địa chỉ giao hàng <span class="text-danger">*</span>
                                 </label>
                                 <div class="d-flex gap-2">
-                                    <input type="text" id="kh-address" name="address" class="form-control"
+                                    <input type="text" id="qc-address" name="address" class="form-control"
                                            placeholder="Số 12 ngõ 5 Phan Trọng Tuệ, Thanh Trì">
-                                    <button type="button" id="kh-nut-tim-toa-do"
+                                    <button type="button" id="qc-geocode-search"
                                             class="btn btn-outline-secondary text-nowrap">Tìm tọa độ</button>
                                 </div>
-                                <div id="kh-trang-thai-tim" class="form-text"></div>
+                                <div id="qc-geocode-status" class="form-text"></div>
                                 <!-- Nominatim tra nhieu ket qua thi hien danh sach de chon (BR01-06) -->
-                                <div id="kh-ket-qua-tim" class="list-group mt-1 d-none"
+                                <div id="qc-geocode-results" class="list-group mt-1 d-none"
                                      style="max-height: 160px; overflow-y: auto;"></div>
                             </div>
 
                             <div class="col-md-3">
-                                <label for="kh-latitude" class="form-label">
+                                <label for="qc-latitude" class="form-label">
                                     Vĩ độ <span class="text-danger">*</span>
                                 </label>
-                                <input type="number" step="any" id="kh-latitude" name="latitude"
+                                <input type="number" step="any" id="qc-latitude" name="latitude"
                                        class="form-control" placeholder="21.0031">
                             </div>
 
                             <div class="col-md-3">
-                                <label for="kh-longitude" class="form-label">
+                                <label for="qc-longitude" class="form-label">
                                     Kinh độ <span class="text-danger">*</span>
                                 </label>
-                                <input type="number" step="any" id="kh-longitude" name="longitude"
+                                <input type="number" step="any" id="qc-longitude" name="longitude"
                                        class="form-control" placeholder="105.8201">
                             </div>
 
                             <div class="col-md-6">
-                                <label for="kh-paymentMethod" class="form-label">Hình thức thanh toán</label>
-                                <select id="kh-paymentMethod" name="paymentMethod" class="form-select">
-                                    <option th:each="ht : ${cacHinhThucThanhToan}"
-                                            th:value="${ht}" th:text="${ht.displayName}"
-                                            th:selected="${ht.name() == 'CASH'}">Tiền mặt</option>
+                                <label for="qc-paymentMethod" class="form-label">Hình thức thanh toán</label>
+                                <select id="qc-paymentMethod" name="paymentMethod" class="form-select">
+                                    <option th:each="paymentMethodOption : ${paymentMethods}"
+                                            th:value="${paymentMethodOption}" th:text="${paymentMethodOption.displayName}"
+                                            th:selected="${paymentMethodOption.name() == 'CASH'}">Tiền mặt</option>
                                 </select>
                             </div>
 
                             <div class="col-12">
-                                <label for="kh-deliveryNote" class="form-label">Ghi chú giao hàng</label>
-                                <input type="text" id="kh-deliveryNote" name="deliveryNote"
+                                <label for="qc-deliveryNote" class="form-label">Ghi chú giao hàng</label>
+                                <input type="text" id="qc-deliveryNote" name="deliveryNote"
                                        class="form-control"
                                        placeholder="Chỉ nhận buổi sáng trước 11h. Xe lớn không vào được ngõ.">
                             </div>
                         </div>
 
-                        <div class="khoi-thong-tin mt-3 small chu-phu">
+                        <div class="info-block mt-3 small text-sub">
                             Hộp thoại này <strong>chỉ thêm khách mới</strong>, không sửa được khách đang có.
                             Bản đồ Hà Nội hầu như không có dữ liệu số nhà nên nút tìm chỉ đưa về đúng
                             <strong>con đường</strong> — vẫn gõ tay hai ô tọa độ được, và sửa cho chính xác

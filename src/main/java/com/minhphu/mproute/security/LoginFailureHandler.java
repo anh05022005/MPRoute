@@ -44,10 +44,10 @@ public class LoginFailureHandler implements AuthenticationFailureHandler {
             return;
         }
 
-        boolean vuaBiKhoa = loginAttemptService.recordFailure(username);
+        boolean justLocked = loginAttemptService.recordFailure(username);
 
         // Lan sai thu 5 vua lam khoa tai khoan thi bao MSG-13 luon,
         // khong de nguoi dung go them mot lan nua moi biet minh bi khoa
-        redirectStrategy.sendRedirect(request, response, vuaBiKhoa ? "/login?locked" : "/login?error");
+        redirectStrategy.sendRedirect(request, response, justLocked ? "/login?locked" : "/login?error");
     }
 }

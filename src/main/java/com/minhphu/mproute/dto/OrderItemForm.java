@@ -29,7 +29,7 @@ public class OrderItemForm {
     }
 
     /** Dong khong chon san pham hoac so thung <= 0 coi nhu dong trong, khong luu. */
-    public boolean laDongTrong() {
+    public boolean isBlank() {
         return productId == null || boxCount == null || boxCount <= 0;
     }
 }

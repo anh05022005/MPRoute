@@ -8,7 +8,7 @@
 
 <div th:fragment="content">
 
-    <div class="thanh-cong-cu d-flex justify-content-between align-items-end flex-wrap gap-2">
+    <div class="toolbar d-flex justify-content-between align-items-end flex-wrap gap-2">
 
         <form th:action="@{/admin/vehicles}" method="get" class="d-flex align-items-end gap-2">
             <div>
@@ -20,10 +20,10 @@
                 <label for="status" class="form-label mb-1 small">Trạng thái</label>
                 <select id="status" name="status" class="form-select form-select-sm" style="width: 160px;">
                     <option value="">Tất cả</option>
-                    <option th:each="tt : ${cacTrangThai}"
-                            th:value="${tt}"
-                            th:text="${tt.displayName}"
-                            th:selected="${tt == status}">Trạng thái</option>
+                    <option th:each="statusOption : ${statuses}"
+                            th:value="${statusOption}"
+                            th:text="${statusOption.displayName}"
+                            th:selected="${statusOption == status}">Trạng thái</option>
                 </select>
             </div>
             <button type="submit" class="btn btn-sm btn-outline-secondary">Tìm</button>
@@ -38,8 +38,8 @@
         <tr>
             <th style="width: 130px;">Biển số</th>
             <th>Loại xe</th>
-            <th style="width: 130px;" class="so">Tải trọng (kg)</th>
-            <th style="width: 130px;" class="so">Thể tích (m³)</th>
+            <th style="width: 130px;" class="num">Tải trọng (kg)</th>
+            <th style="width: 130px;" class="num">Thể tích (m³)</th>
             <th style="width: 120px;">Trạng thái</th>
             <th>Ghi chú</th>
             <th style="width: 170px;">Thao tác</th>
@@ -47,45 +47,45 @@
         </thead>
         <tbody>
 
-        <tr th:if="${trang.empty}">
-            <td colspan="7" class="text-center chu-phu py-3">Không có phương tiện nào phù hợp.</td>
+        <tr th:if="${pageResult.empty}">
+            <td colspan="7" class="text-center text-sub py-3">Không có phương tiện nào phù hợp.</td>
         </tr>
 
-        <tr th:each="xe : ${trang.content}">
-            <td th:text="${xe.licensePlate}">29H-123.45</td>
-            <td th:text="${xe.vehicleType}">Xe tải 1.5 tấn</td>
+        <tr th:each="vehicle : ${pageResult.content}">
+            <td th:text="${vehicle.licensePlate}">29H-123.45</td>
+            <td th:text="${vehicle.vehicleType}">Xe tải 1.5 tấn</td>
 
-            <td class="so" th:text="${#numbers.formatDecimal(xe.maxWeight, 1, 'NONE', 1, 'POINT')}">1500.0</td>
-            <td class="so" th:text="${#numbers.formatDecimal(xe.maxVolume, 1, 'NONE', 3, 'POINT')}">12.000</td>
+            <td class="num" th:text="${#numbers.formatDecimal(vehicle.maxWeight, 1, 'NONE', 1, 'POINT')}">1500.0</td>
+            <td class="num" th:text="${#numbers.formatDecimal(vehicle.maxVolume, 1, 'NONE', 3, 'POINT')}">12.000</td>
 
             <td>
-                <span th:class="'nhan ' + (${xe.status.name() == 'AVAILABLE'} ? 'nhan-thanh-cong'
-                                        : (${xe.status.name() == 'IN_USE'}    ? 'nhan-mac-dinh'
-                                                                             : 'nhan-canh-bao'))"
-                      th:text="${xe.status.displayName}">Sẵn sàng</span>
+                <span th:class="'status-tag ' + (${vehicle.status.name() == 'AVAILABLE'} ? 'status-tag-success'
+                                        : (${vehicle.status.name() == 'IN_USE'}    ? 'status-tag-info'
+                                                                             : 'status-tag-warning'))"
+                      th:text="${vehicle.status.displayName}">Sẵn sàng</span>
             </td>
 
-            <td class="chu-phu small" th:text="${xe.note}"></td>
+            <td class="text-sub small" th:text="${vehicle.note}"></td>
 
             <td>
-                <span sec:authorize="!hasRole('ADMIN')" class="chu-phu small">Chỉ xem</span>
+                <span sec:authorize="!hasRole('ADMIN')" class="text-sub small">Chỉ xem</span>
                 <a class="btn btn-sm btn-outline-secondary py-0" sec:authorize="hasRole('ADMIN')"
-                   th:href="@{/admin/vehicles/{id}/edit(id=${xe.id})}">Sửa</a>
+                   th:href="@{/admin/vehicles/{id}/edit(id=${vehicle.id})}">Sửa</a>
 
                 <!--
                     Xe dang chay tuyen thi khong doi trang thai duoc. O day chi lam mo nut,
                     con viec chan that nam o VehicleService.toggleMaintenance (BR01-04, CBR-15).
                 -->
-                <span th:if="${xe.status.name() == 'IN_USE'}"
+                <span th:if="${vehicle.status.name() == 'IN_USE'}"
                       class="btn btn-sm btn-outline-secondary py-0 disabled"
                       title="Xe đang chạy tuyến">Đang chạy</span>
 
-                <form th:unless="${xe.status.name() == 'IN_USE'}" sec:authorize="hasRole('ADMIN')"
-                      th:action="@{/admin/vehicles/{id}/toggle-status(id=${xe.id})}" method="post"
+                <form th:unless="${vehicle.status.name() == 'IN_USE'}" sec:authorize="hasRole('ADMIN')"
+                      th:action="@{/admin/vehicles/{id}/toggle-status(id=${vehicle.id})}" method="post"
                       class="d-inline"
                       onsubmit="return confirm('Bạn có chắc chắn muốn thực hiện thao tác này?');">
                     <button type="submit" class="btn btn-sm btn-outline-secondary py-0"
-                            th:text="${xe.status.name() == 'AVAILABLE'} ? 'Chuyển bảo trì' : 'Cho chạy lại'">
+                            th:text="${vehicle.status.name() == 'AVAILABLE'} ? 'Chuyển bảo trì' : 'Cho chạy lại'">
                         Chuyển bảo trì</button>
                 </form>
             </td>
@@ -93,13 +93,13 @@
         </tbody>
     </table>
 
-    <div th:replace="~{fragments/pagination :: phan-trang(
-             trang       = ${trang},
-             duongDan    = '/admin/vehicles',
+    <div th:replace="~{fragments/pagination :: pager(
+             pageResult       = ${pageResult},
+             basePath    = '/admin/vehicles',
              keyword     = ${keyword},
              status      = ${status},
              role        = null,
-             tenDoiTuong = 'phương tiện')}"></div>
+             entityLabel = 'phương tiện')}"></div>
 
 </div>
 

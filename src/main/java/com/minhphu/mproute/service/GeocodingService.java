@@ -32,22 +32,22 @@ public class GeocodingService {
     private static final int SO_KET_QUA_TOI_DA = 5;
 
     private final RestClient restClient;
-    private final String diaChiMayChu;
-    private final String khungHaNoi;
+    private final String serverUrl;
+    private final String hanoiViewBox;
 
     // Thoi diem goi Nominatim gan nhat, tinh bang nanoTime de khong bi anh huong
     // khi dong ho he thong bi chinh
-    private long lanGoiTruoc = 0L;
+    private long lastCallNs = 0L;
 
     public GeocodingService(
-            @Value("${mproute.nominatim.url:https://nominatim.openstreetmap.org}") String diaChiMayChu,
+            @Value("${mproute.nominatim.url:https://nominatim.openstreetmap.org}") String serverUrl,
             @Value("${mproute.nominatim.user-agent:MPRoute-DoAnTotNghiep/1.0}") String userAgent,
-            @Value("${mproute.nominatim.viewbox:105.28,21.39,106.05,20.53}") String khungHaNoi) {
+            @Value("${mproute.nominatim.viewbox:105.28,21.39,106.05,20.53}") String hanoiViewBox) {
 
-        this.diaChiMayChu = diaChiMayChu;
-        this.khungHaNoi = khungHaNoi;
+        this.serverUrl = serverUrl;
+        this.hanoiViewBox = hanoiViewBox;
         this.restClient = RestClient.builder()
-                .baseUrl(diaChiMayChu)
+                .baseUrl(serverUrl)
                 // Chinh sach su dung cua Nominatim bat buoc co dong nay
                 .defaultHeader("User-Agent", userAgent)
                 .defaultHeader("Accept-Language", "vi")
@@ -61,18 +61,18 @@ public class GeocodingService {
      * duoc thi bat nguoi dung ghim tay tren ban do. Loi mang cung tra ve danh sach
      * rong — o goc nhin cua man hinh thi hai truong hop nay xu ly nhu nhau.
      */
-    public List<GeocodingResult> search(String tuKhoa) {
-        if (tuKhoa == null || tuKhoa.isBlank()) {
+    public List<GeocodingResult> search(String keyword) {
+        if (keyword == null || keyword.isBlank()) {
             return List.of();
         }
 
-        choDuNhip();
+        throttle();
 
         try {
-            NominatimItem[] phanHoi = restClient.get()
+            NominatimItem[] response = restClient.get()
                     .uri(uriBuilder -> uriBuilder
                             .path("/search")
-                            .queryParam("q", tuKhoa.trim())
+                            .queryParam("q", keyword.trim())
                             .queryParam("format", "jsonv2")
                             .queryParam("limit", SO_KET_QUA_TOI_DA)
                             // Gioi han trong Viet Nam: khach hang cua Minh Phu deu o Ha Noi,
@@ -89,23 +89,23 @@ public class GeocodingService {
                              * Da do: khung nay khong lam mat ket qua dung nao — "24 Lang Ha"
                              * va "Phan Trong Tue" van ra du 5 ket qua o Ha Noi.
                              */
-                            .queryParam("viewbox", khungHaNoi)
+                            .queryParam("viewbox", hanoiViewBox)
                             .queryParam("bounded", 1)
                             .build())
                     .retrieve()
                     .body(NominatimItem[].class);
 
-            List<GeocodingResult> ketQua = doiSangKetQua(phanHoi);
-            log.info("Tim toa do \"{}\" — {} ket qua", tuKhoa, ketQua.size());
-            return ketQua;
+            List<GeocodingResult> results = toResult(response);
+            log.info("Tim toa do \"{}\" — {} ket qua", keyword, results.size());
+            return results;
 
-        } catch (Exception loi) {
+        } catch (Exception ex) {
             /*
              * Nuot ngoai le co chu dich. Nominatim la dich vu ngoai, no co the cham,
              * chan IP, hoac may khong co mang. Khong duoc de mot loi mang lam hong
              * ca man hinh them khach hang — nguoi dung van phai nhap toa do tay duoc.
              */
-            log.warn("Goi Nominatim that bai ({}): {}", diaChiMayChu, loi.getMessage());
+            log.warn("Goi Nominatim that bai ({}): {}", serverUrl, ex.getMessage());
             return List.of();
         }
     }
@@ -116,25 +116,25 @@ public class GeocodingService {
      * Bo qua dong nao thieu toa do hoac toa do khong doc duoc thanh so, thay vi
      * lam hong ca danh sach — mot dong hong khong duoc keo theo bon dong con lai.
      */
-    private List<GeocodingResult> doiSangKetQua(NominatimItem[] phanHoi) {
-        if (phanHoi == null) {
+    private List<GeocodingResult> toResult(NominatimItem[] response) {
+        if (response == null) {
             return List.of();
         }
-        List<GeocodingResult> ketQua = new ArrayList<>();
-        for (NominatimItem item : phanHoi) {
+        List<GeocodingResult> results = new ArrayList<>();
+        for (NominatimItem item : response) {
             if (item.lat() == null || item.lon() == null) {
                 continue;
             }
             try {
-                ketQua.add(new GeocodingResult(
+                results.add(new GeocodingResult(
                         item.displayName(),
                         Double.parseDouble(item.lat()),
                         Double.parseDouble(item.lon())));
-            } catch (NumberFormatException loi) {
+            } catch (NumberFormatException ex) {
                 log.warn("Nominatim tra toa do khong doc duoc: {} / {}", item.lat(), item.lon());
             }
         }
-        return ketQua;
+        return results;
     }
 
     /**
@@ -143,17 +143,17 @@ public class GeocodingService {
      * synchronized vi nhieu nguoi dung bam cung luc van la nhieu luong trong
      * cung mot ung dung — Nominatim nhin thay chung la mot nguon.
      */
-    private synchronized void choDuNhip() {
-        long daTroiNs = System.nanoTime() - lanGoiTruoc;
-        long conThieuMs = NHIP_TOI_THIEU.toMillis() - (daTroiNs / 1_000_000L);
-        if (lanGoiTruoc > 0 && conThieuMs > 0) {
+    private synchronized void throttle() {
+        long elapsedNs = System.nanoTime() - lastCallNs;
+        long remainingMs = NHIP_TOI_THIEU.toMillis() - (elapsedNs / 1_000_000L);
+        if (lastCallNs > 0 && remainingMs > 0) {
             try {
-                Thread.sleep(conThieuMs);
-            } catch (InterruptedException loi) {
+                Thread.sleep(remainingMs);
+            } catch (InterruptedException ex) {
                 Thread.currentThread().interrupt();
             }
         }
-        lanGoiTruoc = System.nanoTime();
+        lastCallNs = System.nanoTime();
     }
 
     /** Chi lay ba truong can dung, bo qua phan con lai cua phan hoi Nominatim. */

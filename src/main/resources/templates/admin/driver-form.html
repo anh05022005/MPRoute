@@ -7,7 +7,7 @@
 
 <div th:fragment="content">
 
-    <h1 class="h5 mb-3" th:text="${form.id == null} ? 'Thêm tài xế' : 'Sửa tài xế'">Thêm tài xế</h1>
+    <div class="page-title mb-3" th:text="${form.id == null} ? 'Thêm tài xế' : 'Sửa tài xế'">Thêm tài xế</div>
 
     <form th:action="@{/admin/drivers/save}" th:object="${form}" method="post" style="max-width: 640px;">
 
@@ -56,9 +56,9 @@
                 <select id="userId" class="form-select" th:field="*{userId}"
                         th:classappend="${#fields.hasErrors('userId')} ? 'is-invalid'">
                     <option value="">— Chưa gán tài khoản —</option>
-                    <option th:each="tk : ${cacTaiKhoan}"
-                            th:value="${tk.id}"
-                            th:text="${tk.username} + ' — ' + ${tk.fullName}">taixe1 — Nguyễn Văn Hùng</option>
+                    <option th:each="account : ${accounts}"
+                            th:value="${account.id}"
+                            th:text="${account.username} + ' — ' + ${account.fullName}">taixe1 — Nguyễn Văn Hùng</option>
                 </select>
                 <div class="invalid-feedback d-block" th:if="${#fields.hasErrors('userId')}"
                      th:errors="*{userId}">Lỗi</div>
@@ -70,10 +70,10 @@
                 <select id="defaultVehicleId" class="form-select" th:field="*{defaultVehicleId}"
                         th:classappend="${#fields.hasErrors('defaultVehicleId')} ? 'is-invalid'">
                     <option value="">— Chưa gán xe —</option>
-                    <option th:each="xe : ${cacXe}"
-                            th:value="${xe.id}"
-                            th:text="${xe.licensePlate} + ' — ' + ${xe.vehicleType}
-                                     + ' (' + ${xe.status.displayName} + ')'">29H-123.45 — Xe tải 1.5 tấn</option>
+                    <option th:each="vehicle : ${vehicles}"
+                            th:value="${vehicle.id}"
+                            th:text="${vehicle.licensePlate} + ' — ' + ${vehicle.vehicleType}
+                                     + ' (' + ${vehicle.status.displayName} + ')'">29H-123.45 — Xe tải 1.5 tấn</option>
                 </select>
                 <div class="invalid-feedback d-block" th:if="${#fields.hasErrors('defaultVehicleId')}"
                      th:errors="*{defaultVehicleId}">Lỗi</div>
@@ -83,15 +83,15 @@
                 <label for="status" class="form-label">Trạng thái</label>
                 <select id="status" class="form-select" th:field="*{status}"
                         th:classappend="${#fields.hasErrors('status')} ? 'is-invalid'">
-                    <option th:each="tt : ${cacTrangThai}"
-                            th:value="${tt}" th:text="${tt.displayName}">Trạng thái</option>
+                    <option th:each="statusOption : ${statuses}"
+                            th:value="${statusOption}" th:text="${statusOption.displayName}">Trạng thái</option>
                 </select>
                 <div class="invalid-feedback d-block" th:if="${#fields.hasErrors('status')}"
                      th:errors="*{status}">Lỗi</div>
             </div>
         </div>
 
-        <div class="khoi-thong-tin mt-3 small chu-phu">
+        <div class="info-block mt-3 small text-sub">
             Xe mặc định là xe tài xế <strong>thường lái</strong>, dùng để gợi ý sẵn khi chốt tuyến.
             Điều phối viên vẫn đổi được sang xe khác, và chỉ xe đang ở trạng thái
             <strong>Sẵn sàng</strong> mới được đưa vào phân tuyến.

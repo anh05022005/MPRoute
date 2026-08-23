@@ -7,7 +7,7 @@
 
 <div th:fragment="content">
 
-    <h1 class="h5 mb-3" th:text="${form.id == null} ? 'Thêm sản phẩm' : 'Sửa sản phẩm'">Thêm sản phẩm</h1>
+    <div class="page-title mb-3" th:text="${form.id == null} ? 'Thêm sản phẩm' : 'Sửa sản phẩm'">Thêm sản phẩm</div>
 
     <form th:action="@{/admin/products/save}" th:object="${form}" method="post" style="max-width: 640px;">
 
@@ -68,8 +68,8 @@
             <div class="col-md-4">
                 <label for="status" class="form-label">Trạng thái</label>
                 <select id="status" class="form-select" th:field="*{status}">
-                    <option th:each="tt : ${cacTrangThai}"
-                            th:value="${tt}" th:text="${tt.displayName}">Trạng thái</option>
+                    <option th:each="statusOption : ${statuses}"
+                            th:value="${statusOption}" th:text="${statusOption.displayName}">Trạng thái</option>
                 </select>
             </div>
 
@@ -85,7 +85,7 @@
             Hai o khoi luong va the tich la DAU VAO CUA THUAT TOAN (BR01-01).
             Ghi chu nay de ngay tren man hinh cho nguoi nhap lieu hieu vi sao bat buoc.
         -->
-        <div class="khoi-thong-tin mt-3 small chu-phu">
+        <div class="info-block mt-3 small text-sub">
             Khối lượng và thể tích mỗi thùng là dữ liệu đầu vào để chia tuyến giao hàng.
             Thiếu hoặc nhập bằng 0 thì hệ thống không xếp được đơn lên xe, nên hai ô này bắt buộc lớn hơn 0.
         </div>

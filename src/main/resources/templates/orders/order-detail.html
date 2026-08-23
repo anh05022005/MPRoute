@@ -9,13 +9,13 @@
 <div th:fragment="content">
 
     <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
-        <h1 class="h5 mb-0">
-            Đơn hàng <span th:text="${don.code}">MP2608040042</span>
-            <span th:class="${don.status.name() == 'CANCELLED'} ? 'nhan nhan-loi'
-                           : (${don.status.name() == 'PENDING_APPROVAL'} ? 'nhan nhan-cho'
-                           : (${don.status.name() == 'DELIVERED'} ? 'nhan nhan-thanh-cong' : 'nhan nhan-mac-dinh'))"
-                  th:text="${don.status.displayName}">Chờ duyệt</span>
-        </h1>
+        <div class="page-title mb-0">
+            Đơn hàng <span th:text="${order.code}">MP2608040042</span>
+            <span th:class="${order.status.name() == 'CANCELLED'} ? 'status-tag status-tag-danger'
+                           : (${order.status.name() == 'PENDING_APPROVAL'} ? 'status-tag status-tag-muted'
+                           : (${order.status.name() == 'DELIVERED'} ? 'status-tag status-tag-success' : 'status-tag status-tag-info'))"
+                  th:text="${order.status.displayName}">Chờ duyệt</span>
+        </div>
 
         <!--
             Ba nut Duyet / Sua / Huy chi hien voi dieu phoi vien va chi khi don con o hai
@@ -25,21 +25,21 @@
         <div class="d-flex gap-2 align-items-center" sec:authorize="hasRole('DISPATCHER')">
 
             <!-- BR02-09: chi don dang cho duyet moi co nut nay -->
-            <form th:if="${don.status.name() == 'PENDING_APPROVAL'}"
-                  th:action="@{/orders/{id}/approve(id=${don.id})}" method="post" class="m-0">
+            <form th:if="${order.status.name() == 'PENDING_APPROVAL'}"
+                  th:action="@{/orders/{id}/approve(id=${order.id})}" method="post" class="m-0">
                 <button type="submit" class="btn btn-sm btn-primary">Duyệt đơn</button>
             </form>
 
-            <a th:if="${coTheSuaHoacHuy}" th:href="@{/orders/{id}/edit(id=${don.id})}"
+            <a th:if="${canEditOrCancel}" th:href="@{/orders/{id}/edit(id=${order.id})}"
                class="btn btn-sm btn-outline-secondary">Sửa đơn</a>
 
-            <button th:if="${coTheSuaHoacHuy}" type="button" class="btn btn-sm btn-outline-danger"
-                    data-bs-toggle="collapse" data-bs-target="#khoi-huy-don">Hủy đơn</button>
+            <button th:if="${canEditOrCancel}" type="button" class="btn btn-sm btn-outline-danger"
+                    data-bs-toggle="collapse" data-bs-target="#cancel-order-block">Hủy đơn</button>
 
             <!-- Noi ro trang thai dang can chu khong noi chung chung "khong sua duoc":
                  don da huy va don da phan tuyen deu roi vao nhanh nay nhung ly do khac nhau -->
-            <span th:unless="${coTheSuaHoacHuy}" class="chu-phu small"
-                  th:text="'Đơn ở trạng thái ' + ${don.status.displayName} + ' — không sửa/hủy được'">
+            <span th:unless="${canEditOrCancel}" class="text-sub small"
+                  th:text="'Đơn ở trạng thái ' + ${order.status.displayName} + ' — không sửa/hủy được'">
                 Đơn ở trạng thái này — không sửa/hủy được
             </span>
 
@@ -56,10 +56,10 @@
         thi mot cai bam nham la don bien mat khoi danh sach cho phan tuyen.
         Dung collapse co san cua Bootstrap, khong phai viet them JavaScript.
     -->
-    <div class="collapse mb-3" id="khoi-huy-don" sec:authorize="hasRole('DISPATCHER')"
-         th:if="${coTheSuaHoacHuy}">
-        <form th:action="@{/orders/{id}/cancel(id=${don.id})}" method="post"
-              class="khoi-thong-tin d-flex gap-2 align-items-end"
+    <div class="collapse mb-3" id="cancel-order-block" sec:authorize="hasRole('DISPATCHER')"
+         th:if="${canEditOrCancel}">
+        <form th:action="@{/orders/{id}/cancel(id=${order.id})}" method="post"
+              class="info-block d-flex gap-2 align-items-end"
               onsubmit="return confirm('Hủy đơn này? Đơn vẫn được giữ lại để tra cứu.');">
             <div class="flex-grow-1">
                 <label for="cancelReason" class="form-label small mb-1">
@@ -82,51 +82,51 @@
                 <tr>
                     <th style="width: 180px;">Khách hàng</th>
                     <td>
-                        <span th:text="${don.customer.name}">Tạp hóa Bà Lan</span>
-                        — <span th:text="${don.customer.phone}">0912345678</span>
+                        <span th:text="${order.customer.name}">Tạp hóa Bà Lan</span>
+                        — <span th:text="${order.customer.phone}">0912345678</span>
                     </td>
                 </tr>
                 <tr>
                     <th>Địa chỉ giao</th>
                     <td>
-                        <span th:text="${don.deliveryAddress}">Số 12 ngõ 5 Phan Trọng Tuệ</span>
+                        <span th:text="${order.deliveryAddress}">Số 12 ngõ 5 Phan Trọng Tuệ</span>
                         <!-- Dia chi cua rieng don khac danh muc thi noi ro, de nguoi doc
                              khong tuong la nhap nham (BR02-07) -->
-                        <span th:if="${don.deliveryAddress != don.customer.address}"
-                              class="nhan nhan-canh-bao">Ghi đè cho riêng đơn này</span>
+                        <span th:if="${order.deliveryAddress != order.customer.address}"
+                              class="status-tag status-tag-warning">Ghi đè cho riêng đơn này</span>
                     </td>
                 </tr>
                 <tr>
                     <th>Tọa độ</th>
-                    <td class="so small" th:text="${don.latitude} + ', ' + ${don.longitude}">21.0, 105.8</td>
+                    <td class="num small" th:text="${order.latitude} + ', ' + ${order.longitude}">21.0, 105.8</td>
                 </tr>
                 <tr>
                     <th>Ngày giao</th>
-                    <td th:text="${#temporals.format(don.deliveryDate, 'dd/MM/yyyy')}">04/08/2026</td>
+                    <td th:text="${#temporals.format(order.deliveryDate, 'dd/MM/yyyy')}">04/08/2026</td>
                 </tr>
                 <tr>
                     <th>Hình thức thanh toán</th>
-                    <td th:text="${don.paymentMethod.displayName}">Tiền mặt</td>
+                    <td th:text="${order.paymentMethod.displayName}">Tiền mặt</td>
                 </tr>
                 <tr>
                     <th>Ghi chú đơn</th>
                     <td>
-                        <span th:if="${don.note != null}" th:text="${don.note}">Gọi trước 15 phút</span>
-                        <span th:unless="${don.note != null}" class="chu-phu">—</span>
+                        <span th:if="${order.note != null}" th:text="${order.note}">Gọi trước 15 phút</span>
+                        <span th:unless="${order.note != null}" class="text-sub">—</span>
                     </td>
                 </tr>
                 <!-- Don huy khong bien mat khoi CSDL (BR02-12, CBR-17), ly do hien ngay o day -->
-                <tr th:if="${don.cancelReason != null}">
+                <tr th:if="${order.cancelReason != null}">
                     <th>Lý do hủy</th>
-                    <td th:text="${don.cancelReason}">Khách báo hoãn sang tuần sau</td>
+                    <td th:text="${order.cancelReason}">Khách báo hoãn sang tuần sau</td>
                 </tr>
                 <tr>
                     <th>Người tạo</th>
                     <td>
-                        <span th:if="${don.createdBy != null}" th:text="${don.createdBy.fullName}">Điều phối</span>
-                        <span th:unless="${don.createdBy != null}" class="chu-phu">—</span>
-                        <span class="chu-phu small"
-                              th:text="'· ' + ${#temporals.format(don.createdAt, 'HH:mm dd/MM/yyyy')}">· 09:15 03/08/2026</span>
+                        <span th:if="${order.createdBy != null}" th:text="${order.createdBy.fullName}">Điều phối</span>
+                        <span th:unless="${order.createdBy != null}" class="text-sub">—</span>
+                        <span class="text-sub small"
+                              th:text="'· ' + ${#temporals.format(order.createdAt, 'HH:mm dd/MM/yyyy')}">· 09:15 03/08/2026</span>
                     </td>
                 </tr>
                 </tbody>
@@ -144,31 +144,31 @@
                 </tr>
                 </thead>
                 <tbody>
-                <tr th:each="dong : ${don.items}">
-                    <td th:text="${dong.product.name}">Bông tẩy trang</td>
-                    <td class="so" th:text="${dong.boxCount}">3</td>
-                    <td class="so" th:text="${#numbers.formatDecimal(dong.lineWeight, 1, 'NONE', 1, 'POINT')} + ' kg'">18.0 kg</td>
-                    <td class="so" th:text="${#numbers.formatDecimal(dong.lineVolume, 1, 'NONE', 3, 'POINT')} + ' m³'">0.255 m³</td>
+                <tr th:each="row : ${order.items}">
+                    <td th:text="${row.product.name}">Bông tẩy trang</td>
+                    <td class="num" th:text="${row.boxCount}">3</td>
+                    <td class="num" th:text="${#numbers.formatDecimal(row.lineWeight, 1, 'NONE', 1, 'POINT')} + ' kg'">18.0 kg</td>
+                    <td class="num" th:text="${#numbers.formatDecimal(row.lineVolume, 1, 'NONE', 3, 'POINT')} + ' m³'">0.255 m³</td>
                     <!-- Don gia CHEP tai thoi diem tao don (BR02-13), khong tra sang danh muc -->
-                    <td class="so" th:text="${#numbers.formatInteger(dong.unitPrice, 1, 'POINT')} + 'đ'">480.000đ</td>
-                    <td class="so" th:text="${#numbers.formatInteger(dong.lineTotal, 1, 'POINT')} + 'đ'">1.440.000đ</td>
+                    <td class="num" th:text="${#numbers.formatInteger(row.unitPrice, 1, 'POINT')} + 'đ'">480.000đ</td>
+                    <td class="num" th:text="${#numbers.formatInteger(row.lineTotal, 1, 'POINT')} + 'đ'">1.440.000đ</td>
                 </tr>
                 </tbody>
                 <tfoot>
                 <tr>
                     <th colspan="2" class="text-end">Tổng cộng</th>
-                    <th class="so" th:text="${#numbers.formatDecimal(don.totalWeight, 1, 'NONE', 1, 'POINT')} + ' kg'">18.0 kg</th>
-                    <th class="so" th:text="${#numbers.formatDecimal(don.totalVolume, 1, 'NONE', 3, 'POINT')} + ' m³'">0.255 m³</th>
+                    <th class="num" th:text="${#numbers.formatDecimal(order.totalWeight, 1, 'NONE', 1, 'POINT')} + ' kg'">18.0 kg</th>
+                    <th class="num" th:text="${#numbers.formatDecimal(order.totalVolume, 1, 'NONE', 3, 'POINT')} + ' m³'">0.255 m³</th>
                     <th></th>
-                    <th class="so" th:text="${#numbers.formatInteger(don.totalAmount, 1, 'POINT')} + 'đ'">1.440.000đ</th>
+                    <th class="num" th:text="${#numbers.formatInteger(order.totalAmount, 1, 'POINT')} + 'đ'">1.440.000đ</th>
                 </tr>
                 <tr>
                     <th colspan="5" class="text-end">Số tiền phải thu khi giao</th>
-                    <th class="so">
-                        <strong th:if="${don.amountToCollect.signum() > 0}"
-                                th:text="${#numbers.formatInteger(don.amountToCollect, 1, 'POINT')} + 'đ'">1.440.000đ</strong>
-                        <span th:unless="${don.amountToCollect.signum() > 0}" class="chu-phu"
-                              th:text="'0đ · ' + ${don.paymentMethod.displayName}">0đ · Công nợ</span>
+                    <th class="num">
+                        <strong th:if="${order.amountToCollect.signum() > 0}"
+                                th:text="${#numbers.formatInteger(order.amountToCollect, 1, 'POINT')} + 'đ'">1.440.000đ</strong>
+                        <span th:unless="${order.amountToCollect.signum() > 0}" class="text-sub"
+                              th:text="'0đ · ' + ${order.paymentMethod.displayName}">0đ · Công nợ</span>
                     </th>
                 </tr>
                 </tfoot>
@@ -177,10 +177,10 @@
 
         <!-- ============ CN-02-06 Khoi tom tat de doc lai cho khach ============ -->
         <div class="col-lg-5">
-            <div class="khoi-thong-tin">
+            <div class="info-block">
                 <div class="d-flex justify-content-between align-items-center mb-2">
                     <strong>Đọc lại cho khách</strong>
-                    <button type="button" class="btn btn-sm btn-outline-secondary" id="nut-sao-chep">Sao chép</button>
+                    <button type="button" class="btn btn-sm btn-outline-secondary" id="copy-summary">Sao chép</button>
                 </div>
 
                 <!--
@@ -188,8 +188,8 @@
                     truoc khi cup may. Vi vay noi dung viet thanh cau day du chu khong phai bang so.
                     De trong the <pre> de xuong dong dung nhu khi sao chep sang Zalo.
                 -->
-                <pre id="khoi-tom-tat" class="mb-0" style="white-space: pre-wrap; font-family: inherit;"
-                     th:text="${tomTat}">Tóm tắt đơn</pre>
+                <pre id="readback-summary" class="mb-0" style="white-space: pre-wrap; font-family: inherit;"
+                     th:text="${readBackSummary}">Tóm tắt đơn</pre>
             </div>
 
             <!-- ============ CBR-14 Hanh trinh trang thai ============ -->
@@ -204,16 +204,16 @@
                     </tr>
                     </thead>
                     <tbody>
-                    <tr th:each="ls : ${lichSu}">
-                        <td class="small" th:text="${#temporals.format(ls.changedAt, 'HH:mm dd/MM')}">09:15 03/08</td>
+                    <tr th:each="history : ${statusHistory}">
+                        <td class="small" th:text="${#temporals.format(history.changedAt, 'HH:mm dd/MM')}">09:15 03/08</td>
                         <td class="small">
                             <!-- Khong tra duoc ten tieng Viet thi hien nguyen ma, khong de trong -->
-                            <span th:text="${tenTrangThaiDon[ls.newStatus]} ?: ${ls.newStatus}">Chờ duyệt</span>
-                            <span th:if="${ls.note != null}" class="chu-phu" th:text="'· ' + ${ls.note}">· Tạo đơn hàng</span>
+                            <span th:text="${orderStatusLabels[history.newStatus]} ?: ${history.newStatus}">Chờ duyệt</span>
+                            <span th:if="${history.note != null}" class="text-sub" th:text="'· ' + ${history.note}">· Tạo đơn hàng</span>
                         </td>
                         <td class="small">
-                            <span th:if="${ls.changedBy != null}" th:text="${ls.changedBy.fullName}">Điều phối</span>
-                            <span th:unless="${ls.changedBy != null}" class="chu-phu">Hệ thống</span>
+                            <span th:if="${history.changedBy != null}" th:text="${history.changedBy.fullName}">Điều phối</span>
+                            <span th:unless="${history.changedBy != null}" class="text-sub">Hệ thống</span>
                         </td>
                     </tr>
                     </tbody>

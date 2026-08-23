@@ -30,7 +30,7 @@ public class GeocodingController {
     private final GeocodingService geocodingService;
 
     @GetMapping("/admin/geocode")
-    public List<GeocodingResult> search(@RequestParam("q") String tuKhoa) {
-        return geocodingService.search(tuKhoa);
+    public List<GeocodingResult> search(@RequestParam("q") String keyword) {
+        return geocodingService.search(keyword);
     }
 }

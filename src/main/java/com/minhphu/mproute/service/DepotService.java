@@ -84,23 +84,23 @@ public class DepotService {
          * Day la luoi an toan o tang service. Controller chan truoc va bao loi ro rang
          * cho nguoi dung (CBR-15) — khong dua vao mot minh cho nao.
          */
-        boolean muonActive = Boolean.TRUE.equals(form.getActive());
-        boolean phaiGiuActive = !muonActive && !hasAnotherActiveDepot(form.getId());
-        depot.setActive(muonActive || phaiGiuActive);
+        boolean wantsActive = Boolean.TRUE.equals(form.getActive());
+        boolean mustStayActive = !wantsActive && !hasAnotherActiveDepot(form.getId());
+        depot.setActive(wantsActive || mustStayActive);
 
-        Depot daLuu = depotRepository.save(depot);
+        Depot saved = depotRepository.save(depot);
 
         // BR01-10: dat kho nay active thi moi kho khac phai tat
-        if (Boolean.TRUE.equals(daLuu.getActive())) {
-            int soKhoBiTat = depotRepository.deactivateOthers(daLuu.getId());
-            if (soKhoBiTat > 0) {
-                log.info("Dat kho {} lam kho chinh, tat {} kho khac", daLuu.getName(), soKhoBiTat);
+        if (Boolean.TRUE.equals(saved.getActive())) {
+            int deactivatedCount = depotRepository.deactivateOthers(saved.getId());
+            if (deactivatedCount > 0) {
+                log.info("Dat kho {} lam kho chinh, tat {} kho khac", saved.getName(), deactivatedCount);
             }
         }
 
         log.info("Luu kho {} ({}, {}) active={}",
-                daLuu.getName(), daLuu.getLatitude(), daLuu.getLongitude(), daLuu.getActive());
-        return daLuu;
+                saved.getName(), saved.getLatitude(), saved.getLongitude(), saved.getActive());
+        return saved;
     }
 
     /**

@@ -8,7 +8,7 @@
 
 <div th:fragment="content">
 
-    <div class="thanh-cong-cu d-flex justify-content-between align-items-end flex-wrap gap-2">
+    <div class="toolbar d-flex justify-content-between align-items-end flex-wrap gap-2">
 
         <form th:action="@{/orders}" method="get" class="d-flex align-items-end gap-2 flex-wrap">
             <div>
@@ -21,20 +21,20 @@
                 <label for="status" class="form-label mb-1 small">Trạng thái</label>
                 <select id="status" name="status" class="form-select form-select-sm" style="width: 170px;">
                     <option value="">Tất cả</option>
-                    <option th:each="tt : ${cacTrangThaiDon}"
-                            th:value="${tt}"
-                            th:text="${tt.displayName}"
-                            th:selected="${tt == status}">Trạng thái</option>
+                    <option th:each="statusOption : ${orderStatuses}"
+                            th:value="${statusOption}"
+                            th:text="${statusOption.displayName}"
+                            th:selected="${statusOption == status}">Trạng thái</option>
                 </select>
             </div>
             <div>
                 <label for="customerId" class="form-label mb-1 small">Khách hàng</label>
                 <select id="customerId" name="customerId" class="form-select form-select-sm" style="width: 240px;">
                     <option value="">Tất cả</option>
-                    <option th:each="kh : ${cacKhachHang}"
-                            th:value="${kh.id}"
-                            th:text="${kh.name}"
-                            th:selected="${kh.id == customerId}">Khách hàng</option>
+                    <option th:each="customer : ${customers}"
+                            th:value="${customer.id}"
+                            th:text="${customer.name}"
+                            th:selected="${customer.id == customerId}">Khách hàng</option>
                 </select>
             </div>
             <button type="submit" class="btn btn-sm btn-outline-secondary">Lọc</button>
@@ -62,53 +62,53 @@
         </thead>
         <tbody>
 
-        <tr th:if="${trang.empty}">
-            <td colspan="9" class="text-center chu-phu py-3">Không có đơn hàng nào phù hợp.</td>
+        <tr th:if="${pageResult.empty}">
+            <td colspan="9" class="text-center text-sub py-3">Không có đơn hàng nào phù hợp.</td>
         </tr>
 
-        <tr th:each="don : ${trang.content}">
+        <tr th:each="order : ${pageResult.content}">
             <td>
-                <a th:href="@{/orders/{id}(id=${don.id})}" th:text="${don.code}">MP2608040042</a>
+                <a th:href="@{/orders/{id}(id=${order.id})}" th:text="${order.code}">MP2608040042</a>
             </td>
-            <td th:text="${#temporals.format(don.deliveryDate, 'dd/MM/yyyy')}">04/08/2026</td>
+            <td th:text="${#temporals.format(order.deliveryDate, 'dd/MM/yyyy')}">04/08/2026</td>
 
             <td>
-                <span th:text="${don.customer.name}">Tạp hóa Bà Lan</span>
-                <div class="small chu-phu" th:text="${don.deliveryAddress}">Số 12 ngõ 5 Phan Trọng Tuệ</div>
+                <span th:text="${order.customer.name}">Tạp hóa Bà Lan</span>
+                <div class="small text-sub" th:text="${order.deliveryAddress}">Số 12 ngõ 5 Phan Trọng Tuệ</div>
             </td>
 
             <!-- Hai con so nay la DAU VAO cua thuat toan, hien ngay tren danh sach
                  de dieu phoi vien uoc luong duoc bao nhieu xe cho mot ngay -->
-            <td class="so" th:text="${#numbers.formatDecimal(don.totalWeight, 1, 'NONE', 1, 'POINT')} + ' kg'">120.0 kg</td>
-            <td class="so" th:text="${#numbers.formatDecimal(don.totalVolume, 1, 'NONE', 3, 'POINT')} + ' m³'">1.700 m³</td>
+            <td class="num" th:text="${#numbers.formatDecimal(order.totalWeight, 1, 'NONE', 1, 'POINT')} + ' kg'">120.0 kg</td>
+            <td class="num" th:text="${#numbers.formatDecimal(order.totalVolume, 1, 'NONE', 3, 'POINT')} + ' m³'">1.700 m³</td>
 
-            <td class="so" th:text="${#numbers.formatInteger(don.totalAmount, 1, 'POINT')} + 'đ'">3.720.000đ</td>
+            <td class="num" th:text="${#numbers.formatInteger(order.totalAmount, 1, 'POINT')} + 'đ'">3.720.000đ</td>
 
             <!-- BR02-14: chi don tien mat moi phai thu, in dam khi lon hon 0 (docs/05) -->
-            <td class="so">
-                <strong th:if="${don.amountToCollect.signum() > 0}"
-                        th:text="${#numbers.formatInteger(don.amountToCollect, 1, 'POINT')} + 'đ'">3.720.000đ</strong>
-                <span th:unless="${don.amountToCollect.signum() > 0}" class="chu-phu"
-                      th:text="'0đ · ' + ${don.paymentMethod.displayName}">0đ · Công nợ</span>
+            <td class="num">
+                <strong th:if="${order.amountToCollect.signum() > 0}"
+                        th:text="${#numbers.formatInteger(order.amountToCollect, 1, 'POINT')} + 'đ'">3.720.000đ</strong>
+                <span th:unless="${order.amountToCollect.signum() > 0}" class="text-sub"
+                      th:text="'0đ · ' + ${order.paymentMethod.displayName}">0đ · Công nợ</span>
             </td>
 
             <td>
-                <span th:class="${don.status.name() == 'CANCELLED'} ? 'nhan nhan-loi'
-                               : (${don.status.name() == 'PENDING_APPROVAL'} ? 'nhan nhan-cho'
-                               : (${don.status.name() == 'DELIVERED'} ? 'nhan nhan-thanh-cong' : 'nhan nhan-mac-dinh'))"
-                      th:text="${don.status.displayName}">Chờ duyệt</span>
+                <span th:class="${order.status.name() == 'CANCELLED'} ? 'status-tag status-tag-danger'
+                               : (${order.status.name() == 'PENDING_APPROVAL'} ? 'status-tag status-tag-muted'
+                               : (${order.status.name() == 'DELIVERED'} ? 'status-tag status-tag-success' : 'status-tag status-tag-info'))"
+                      th:text="${order.status.displayName}">Chờ duyệt</span>
             </td>
 
             <td>
                 <a class="btn btn-sm btn-outline-secondary py-0"
-                   th:href="@{/orders/{id}(id=${don.id})}">Xem</a>
+                   th:href="@{/orders/{id}(id=${order.id})}">Xem</a>
             </td>
         </tr>
         </tbody>
     </table>
 
-    <div th:replace="~{fragments/pagination :: phan-trang-don(
-             trang        = ${trang},
+    <div th:replace="~{fragments/pagination :: order-pager(
+             pageResult        = ${pageResult},
              deliveryDate = ${deliveryDate},
              status       = ${status},
              customerId   = ${customerId})}"></div>

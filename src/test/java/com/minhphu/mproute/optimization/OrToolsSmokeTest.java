@@ -34,7 +34,7 @@ class OrToolsSmokeTest {
      *
      * Khoang cach giua hai diem = hieu toa do. Bang duoi day chep tay tu hinh tren.
      */
-    private static final long[][] MA_TRAN = {
+    private static final long[][] DISTANCE_MATRIX = {
             /* tu KHO */ {0, 1000, 2000, 1000, 2000},
             /* tu A   */ {1000, 0, 1000, 2000, 3000},
             /* tu B   */ {2000, 1000, 0, 3000, 4000},
@@ -43,15 +43,15 @@ class OrToolsSmokeTest {
     };
 
     // Kho khong co nhu cau. Bon khach moi nguoi 6 thung
-    private static final long[] NHU_CAU = {0, 6, 6, 6, 6};
+    private static final long[] DEMANDS = {0, 6, 6, 6, 6};
 
     // Hai xe, moi xe cho duoc 15 thung.
     // Tong nhu cau 24 > 15 nen bat buoc phai chia hai xe;
     // 6+6+6 = 18 > 15 nen moi xe chi cho duoc dung hai khach
-    private static final long[] SUC_CHUA = {15, 15};
+    private static final long[] CAPACITIES = {15, 15};
 
-    private static final int SO_XE = 2;
-    private static final int CHI_SO_KHO = 0;
+    private static final int VEHICLE_COUNT = 2;
+    private static final int DEPOT_INDEX = 0;
 
     /*
      * Dap so tinh tay:
@@ -64,76 +64,78 @@ class OrToolsSmokeTest {
      *   KHO -> B -> D -> KHO = 2000 + 4000 + 2000 = 8000
      *   Tong = 12000 m
      */
-    private static final long TONG_TOI_UU = 8000;
+    private static final long OPTIMAL_TOTAL_METERS = 8000;
 
     @Test
-    void orToolsGiaiDungBaiCvrpNhoTinhTayDuoc() {
+    void orToolsSolvesSmallCvrpToHandCalculatedOptimum() {
         Loader.loadNativeLibraries();
 
-        RoutingIndexManager quanLyChiSo = new RoutingIndexManager(MA_TRAN.length, SO_XE, CHI_SO_KHO);
-        RoutingModel moHinh = new RoutingModel(quanLyChiSo);
+        RoutingIndexManager indexManager =
+                new RoutingIndexManager(DISTANCE_MATRIX.length, VEHICLE_COUNT, DEPOT_INDEX);
+        RoutingModel model = new RoutingModel(indexManager);
 
         // Ham chi phi cung: tra thang vao ma tran da nap san trong bo nho.
         // Khong goi OSRM hay DB o day — day la vong lap nong nhat cua bo giai
-        int chiSoHamKhoangCach = moHinh.registerTransitCallback((long tuChiSo, long denChiSo) -> {
-            int tuDiem = quanLyChiSo.indexToNode(tuChiSo);
-            int denDiem = quanLyChiSo.indexToNode(denChiSo);
-            return MA_TRAN[tuDiem][denDiem];
+        int distanceCallbackIndex = model.registerTransitCallback((long fromIndex, long toIndex) -> {
+            int fromNode = indexManager.indexToNode(fromIndex);
+            int toNode = indexManager.indexToNode(toIndex);
+            return DISTANCE_MATRIX[fromNode][toNode];
         });
-        moHinh.setArcCostEvaluatorOfAllVehicles(chiSoHamKhoangCach);
+        model.setArcCostEvaluatorOfAllVehicles(distanceCallbackIndex);
 
         // Rang buoc suc chua
-        int chiSoHamNhuCau = moHinh.registerUnaryTransitCallback(
-                (long tuChiSo) -> NHU_CAU[quanLyChiSo.indexToNode(tuChiSo)]);
-        moHinh.addDimensionWithVehicleCapacity(
-                chiSoHamNhuCau,
+        int demandCallbackIndex = model.registerUnaryTransitCallback(
+                (long fromIndex) -> DEMANDS[indexManager.indexToNode(fromIndex)]);
+        model.addDimensionWithVehicleCapacity(
+                demandCallbackIndex,
                 0,             // khong cho cho phep vuot
-                SUC_CHUA,
+                CAPACITIES,
                 true,          // bat dau tich luy tu 0
-                "SucChua");
+                "Capacity");
 
-        RoutingSearchParameters thamSo = main.defaultRoutingSearchParameters()
+        RoutingSearchParameters searchParameters = main.defaultRoutingSearchParameters()
                 .toBuilder()
                 .setFirstSolutionStrategy(FirstSolutionStrategy.Value.PATH_CHEAPEST_ARC)
                 .build();
 
-        Assignment ketQua = moHinh.solveWithParameters(thamSo);
+        Assignment solution = model.solveWithParameters(searchParameters);
 
-        assertTrue(ketQua != null, "OR-Tools khong tim duoc loi giai nao");
-        assertEquals(TONG_TOI_UU, ketQua.objectiveValue(),
+        assertTrue(solution != null, "OR-Tools khong tim duoc loi giai nao");
+        assertEquals(OPTIMAL_TOTAL_METERS, solution.objectiveValue(),
                 "Tong quang duong phai bang dap so tinh tay 8000 m");
 
         // Doc lai tung tuyen de kiem hai viec: co ve kho, va khong vuot suc chua
-        long tongTuCong = 0;
-        for (int xe = 0; xe < SO_XE; xe++) {
-            List<Integer> tuyen = new ArrayList<>();
-            long taiTrongTuyen = 0;
+        long manualTotal = 0;
+        for (int vehicle = 0; vehicle < VEHICLE_COUNT; vehicle++) {
+            List<Integer> route = new ArrayList<>();
+            long routeLoad = 0;
 
-            long chiSo = moHinh.start(xe);
-            while (!moHinh.isEnd(chiSo)) {
-                int diem = quanLyChiSo.indexToNode(chiSo);
-                tuyen.add(diem);
-                taiTrongTuyen += NHU_CAU[diem];
+            long index = model.start(vehicle);
+            while (!model.isEnd(index)) {
+                int node = indexManager.indexToNode(index);
+                route.add(node);
+                routeLoad += DEMANDS[node];
 
-                long chiSoTruoc = chiSo;
-                chiSo = ketQua.value(moHinh.nextVar(chiSo));
-                tongTuCong += moHinh.getArcCostForVehicle(chiSoTruoc, chiSo, xe);
+                long previousIndex = index;
+                index = solution.value(model.nextVar(index));
+                manualTotal += model.getArcCostForVehicle(previousIndex, index, vehicle);
             }
             // isEnd() la diem ket thuc cua xe, chinh la kho
-            tuyen.add(quanLyChiSo.indexToNode(chiSo));
+            route.add(indexManager.indexToNode(index));
 
-            assertEquals(4, tuyen.size(),
+            assertEquals(4, route.size(),
                     "Moi tuyen phai la KHO -> 2 khach -> KHO, tuc 4 phan tu");
-            assertEquals(CHI_SO_KHO, tuyen.get(0), "Tuyen phai xuat phat tu kho");
-            assertEquals(CHI_SO_KHO, tuyen.get(tuyen.size() - 1),
+            assertEquals(DEPOT_INDEX, route.get(0), "Tuyen phai xuat phat tu kho");
+            assertEquals(DEPOT_INDEX, route.get(route.size() - 1),
                     "Tuyen phai ket thuc o kho — day la loi kinh dien CBR-01");
-            assertTrue(taiTrongTuyen <= SUC_CHUA[xe],
-                    "Xe " + xe + " cho " + taiTrongTuyen + " thung, vuot suc chua " + SUC_CHUA[xe]);
+            assertTrue(routeLoad <= CAPACITIES[vehicle],
+                    "Xe " + vehicle + " cho " + routeLoad + " thung, vuot suc chua "
+                            + CAPACITIES[vehicle]);
         }
 
         // Tu cong lai tung chang phai ra dung so bo giai bao — chung to
         // objectiveValue() da bao gom chang cuoi ve kho
-        assertEquals(TONG_TOI_UU, tongTuCong,
+        assertEquals(OPTIMAL_TOTAL_METERS, manualTotal,
                 "Cong tay tung chang phai khop objectiveValue()");
     }
 }

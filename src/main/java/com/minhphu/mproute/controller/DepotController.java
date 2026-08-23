@@ -29,7 +29,7 @@ public class DepotController {
 
     @GetMapping
     public String list(Model model) {
-        model.addAttribute("danhSach", depotService.findAll());
+        model.addAttribute("depots", depotService.findAll());
         return "admin/depots";
     }
 
@@ -37,7 +37,7 @@ public class DepotController {
      * Bao layout.html nap Leaflet cho man hinh nay (CN-01-05). Dat o ca ba cho tra ve
      * form: quen mot cho thi luc do ban do khong hien, ma o nhap toa do van trong.
      */
-    private static final String CO_BAN_DO = "canBanDo";
+    private static final String CO_BAN_DO = "needsMap";
 
     @PreAuthorize("hasRole('ADMIN')")
     @GetMapping("/create")
@@ -71,7 +71,7 @@ public class DepotController {
          */
         if (!Boolean.TRUE.equals(form.getActive())
                 && !depotService.hasAnotherActiveDepot(form.getId())) {
-            binding.rejectValue("active", "khoCuoiCung",
+            binding.rejectValue("active", "lastActiveDepot",
                     "Phải luôn có một kho đang hoạt động. Muốn đổi kho chính thì "
                             + "đặt kho khác làm kho chính, kho này sẽ tự tắt.");
         }
@@ -81,11 +81,11 @@ public class DepotController {
             return "admin/depot-form";
         }
 
-        boolean themMoi = (form.getId() == null);
+        boolean isNew = (form.getId() == null);
         depotService.save(form);
 
-        redirectAttributes.addFlashAttribute("thongBao",
-                themMoi ? "Đã thêm kho mới." : "Lưu dữ liệu thành công.");
+        redirectAttributes.addFlashAttribute("successMessage",
+                isNew ? "Đã thêm kho mới." : "Lưu dữ liệu thành công.");
         return "redirect:/admin/depot";
     }
 
@@ -98,9 +98,9 @@ public class DepotController {
     @PreAuthorize("hasRole('ADMIN')")
     @PostMapping("/{id}/set-active")
     public String setActive(@PathVariable Long id, RedirectAttributes redirectAttributes) {
-        var kho = depotService.setActive(id);
-        redirectAttributes.addFlashAttribute("thongBao",
-                "Đã đặt \"" + kho.getName() + "\" làm kho chính. Các kho khác đã tự chuyển sang ngừng dùng.");
+        var depot = depotService.setActive(id);
+        redirectAttributes.addFlashAttribute("successMessage",
+                "Đã đặt \"" + depot.getName() + "\" làm kho chính. Các kho khác đã tự chuyển sang ngừng dùng.");
         return "redirect:/admin/depot";
     }
 }

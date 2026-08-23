@@ -10,5 +10,5 @@ import java.math.BigDecimal;
  *
  * Khoi luong va the tich dung double (dau vao thuat toan), tien dung BigDecimal.
  */
-public record OrderTotals(double khoiLuong, double theTich, BigDecimal tienHang) {
+public record OrderTotals(double weight, double volume, BigDecimal goodsAmount) {
 }

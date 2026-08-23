@@ -98,13 +98,13 @@ public class OrderForm {
         form.setPaymentMethod(order.getPaymentMethod());
         form.setNote(order.getNote());
 
-        List<OrderItemForm> dong = new ArrayList<>();
+        List<OrderItemForm> rows = new ArrayList<>();
         for (var item : order.getItems()) {
-            dong.add(new OrderItemForm(item.getProduct().getId(), item.getBoxCount()));
+            rows.add(new OrderItemForm(item.getProduct().getId(), item.getBoxCount()));
         }
         // Them mot dong trong o cuoi de them san pham moi ma khong phai bam "Them dong"
-        dong.add(new OrderItemForm());
-        form.setItems(dong);
+        rows.add(new OrderItemForm());
+        form.setItems(rows);
         return form;
     }
 }

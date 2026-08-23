@@ -8,7 +8,7 @@
 
 <div th:fragment="content">
 
-    <div class="thanh-cong-cu d-flex justify-content-between align-items-end flex-wrap gap-2">
+    <div class="toolbar d-flex justify-content-between align-items-end flex-wrap gap-2">
 
         <!-- Tim kiem va loc. Dung GET de dia chi giu lai dieu kien loc,
              sao chep gui cho nguoi khac van ra dung ket qua -->
@@ -22,10 +22,10 @@
                 <label for="status" class="form-label mb-1 small">Trạng thái</label>
                 <select id="status" name="status" class="form-select form-select-sm" style="width: 160px;">
                     <option value="">Tất cả</option>
-                    <option th:each="tt : ${cacTrangThai}"
-                            th:value="${tt}"
-                            th:text="${tt.displayName}"
-                            th:selected="${tt == status}">Trạng thái</option>
+                    <option th:each="statusOption : ${statuses}"
+                            th:value="${statusOption}"
+                            th:text="${statusOption.displayName}"
+                            th:selected="${statusOption == status}">Trạng thái</option>
                 </select>
             </div>
             <button type="submit" class="btn btn-sm btn-outline-secondary">Tìm</button>
@@ -42,40 +42,40 @@
             <th style="width: 90px;">Mã</th>
             <th>Tên sản phẩm</th>
             <th style="width: 80px;">Đơn vị</th>
-            <th style="width: 110px;" class="so">kg/thùng</th>
-            <th style="width: 110px;" class="so">m³/thùng</th>
-            <th style="width: 120px;" class="so">Đơn giá</th>
+            <th style="width: 110px;" class="num">kg/thùng</th>
+            <th style="width: 110px;" class="num">m³/thùng</th>
+            <th style="width: 120px;" class="num">Đơn giá</th>
             <th style="width: 130px;">Trạng thái</th>
             <th style="width: 150px;">Thao tác</th>
         </tr>
         </thead>
         <tbody>
 
-        <tr th:if="${trang.empty}">
-            <td colspan="8" class="text-center chu-phu py-3">Không có sản phẩm nào phù hợp.</td>
+        <tr th:if="${pageResult.empty}">
+            <td colspan="8" class="text-center text-sub py-3">Không có sản phẩm nào phù hợp.</td>
         </tr>
 
-        <tr th:each="sp : ${trang.content}">
-            <td th:text="${sp.code}">SP001</td>
-            <td th:text="${sp.name}">Tên</td>
-            <td th:text="${sp.unit}">Thùng</td>
+        <tr th:each="product : ${pageResult.content}">
+            <td th:text="${product.code}">SP001</td>
+            <td th:text="${product.name}">Tên</td>
+            <td th:text="${product.unit}">Thùng</td>
 
             <!-- Khoi luong 1 chu so thap phan, the tich 3 chu so (docs/05-giao-dien.md) -->
-            <td class="so" th:text="${#numbers.formatDecimal(sp.weightPerBox, 1, 'NONE', 1, 'POINT')}">6.0</td>
-            <td class="so" th:text="${#numbers.formatDecimal(sp.volumePerBox, 1, 'NONE', 3, 'POINT')}">0.085</td>
+            <td class="num" th:text="${#numbers.formatDecimal(product.weightPerBox, 1, 'NONE', 1, 'POINT')}">6.0</td>
+            <td class="num" th:text="${#numbers.formatDecimal(product.volumePerBox, 1, 'NONE', 3, 'POINT')}">0.085</td>
 
             <!-- Tien: dau cham ngan nghin, khong co so le -->
-            <td class="so" th:text="${#numbers.formatInteger(sp.unitPrice, 1, 'POINT')} + 'đ'">480.000đ</td>
+            <td class="num" th:text="${#numbers.formatInteger(product.unitPrice, 1, 'POINT')} + 'đ'">480.000đ</td>
 
             <td>
-                <span th:class="${sp.status.name() == 'ACTIVE'} ? 'nhan nhan-thanh-cong' : 'nhan nhan-cho'"
-                      th:text="${sp.status.displayName}">Đang sử dụng</span>
+                <span th:class="${product.status.name() == 'ACTIVE'} ? 'status-tag status-tag-success' : 'status-tag status-tag-muted'"
+                      th:text="${product.status.displayName}">Đang sử dụng</span>
             </td>
 
             <td>
-                <span sec:authorize="!hasRole('ADMIN')" class="chu-phu small">Chỉ xem</span>
+                <span sec:authorize="!hasRole('ADMIN')" class="text-sub small">Chỉ xem</span>
                 <a class="btn btn-sm btn-outline-secondary py-0" sec:authorize="hasRole('ADMIN')"
-                   th:href="@{/admin/products/{id}/edit(id=${sp.id})}">Sửa</a>
+                   th:href="@{/admin/products/{id}/edit(id=${product.id})}">Sửa</a>
 
                 <!--
                     Khong co nut Xoa (CBR-17). San pham da nam trong don hang cu ma xoa cung
@@ -83,11 +83,11 @@
                     Dung POST chu khong dung link GET: link GET doi trang thai la ai gui
                     duong dan cho minh bam vao cung doi duoc (CSRF).
                 -->
-                <form th:action="@{/admin/products/{id}/toggle-status(id=${sp.id})}" method="post" sec:authorize="hasRole('ADMIN')"
+                <form th:action="@{/admin/products/{id}/toggle-status(id=${product.id})}" method="post" sec:authorize="hasRole('ADMIN')"
                       class="d-inline"
                       onsubmit="return confirm('Bạn có chắc chắn muốn thực hiện thao tác này?');">
                     <button type="submit" class="btn btn-sm btn-outline-secondary py-0"
-                            th:text="${sp.status.name() == 'ACTIVE'} ? 'Ngừng dùng' : 'Dùng lại'">Ngừng dùng</button>
+                            th:text="${product.status.name() == 'ACTIVE'} ? 'Ngừng dùng' : 'Dùng lại'">Ngừng dùng</button>
                 </form>
             </td>
         </tr>
@@ -95,13 +95,13 @@
     </table>
 
     <!-- Phan trang - dung chung voi cac man hinh danh muc khac -->
-    <div th:replace="~{fragments/pagination :: phan-trang(
-             trang       = ${trang},
-             duongDan    = '/admin/products',
+    <div th:replace="~{fragments/pagination :: pager(
+             pageResult       = ${pageResult},
+             basePath    = '/admin/products',
              keyword     = ${keyword},
              status      = ${status},
              role        = null,
-             tenDoiTuong = 'sản phẩm')}"></div>
+             entityLabel = 'sản phẩm')}"></div>
 
 </div>
 

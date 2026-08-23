@@ -33,31 +33,31 @@ public class OsrmDistanceCalculator implements DistanceCalculator {
      * Quy mo do an la 15-30 diem nen khong cham nguong. Vuot nguong thi ham nay tra
      * ve rong de goi ben ngoai lui ve Haversine, chu khong de OSRM tra loi kho hieu.
      */
-    private static final int SO_DIEM_TOI_DA = 100;
+    private static final int MAX_TABLE_POINTS = 100;
 
-    private final String diaChiMayChu;
+    private final String serverUrl;
     private final RestClient restClient;
 
-    public OsrmDistanceCalculator(String diaChiMayChu, int timeoutGiay) {
-        this.diaChiMayChu = diaChiMayChu;
+    public OsrmDistanceCalculator(String serverUrl, int timeoutSeconds) {
+        this.serverUrl = serverUrl;
 
         /*
          * Dat timeout la BAT BUOC. Mac dinh cua Java la cho vo han: OSRM treo giua
          * chung thi man hinh phan tuyen quay mai khong bao gio bao loi, ma dung
          * phuong an du phong Haversine thi da xong tu lau.
          */
-        SimpleClientHttpRequestFactory nhaMay = new SimpleClientHttpRequestFactory();
-        nhaMay.setConnectTimeout(Duration.ofSeconds(timeoutGiay));
-        nhaMay.setReadTimeout(Duration.ofSeconds(timeoutGiay));
+        SimpleClientHttpRequestFactory requestFactory = new SimpleClientHttpRequestFactory();
+        requestFactory.setConnectTimeout(Duration.ofSeconds(timeoutSeconds));
+        requestFactory.setReadTimeout(Duration.ofSeconds(timeoutSeconds));
 
         this.restClient = RestClient.builder()
-                .baseUrl(diaChiMayChu)
-                .requestFactory(nhaMay)
+                .baseUrl(serverUrl)
+                .requestFactory(requestFactory)
                 .build();
     }
 
     /** Ma tran khoang cach (met) va thoi gian di chuyen (giay) cua cung mot tap diem. */
-    public record BangKhoangCach(double[][] met, int[][] giay) {}
+    public record DistanceTable(double[][] meters, int[][] seconds) {}
 
     /**
      * Lay ca ma tran trong mot lan goi.
@@ -66,40 +66,40 @@ public class OsrmDistanceCalculator implements DistanceCalculator {
      *         goi ben ngoai se lui ve Haversine (CBR-11). Day KHONG phai loi
      *         chuong trinh, la truong hop da luong truoc.
      */
-    public Optional<BangKhoangCach> bangKhoangCach(List<OptimizationPoint> cacDiem) {
-        if (cacDiem == null || cacDiem.isEmpty()) {
+    public Optional<DistanceTable> fetchDistanceTable(List<OptimizationPoint> points) {
+        if (points == null || points.isEmpty()) {
             return Optional.empty();
         }
-        if (cacDiem.size() > SO_DIEM_TOI_DA) {
+        if (points.size() > MAX_TABLE_POINTS) {
             log.warn("Co {} diem, vuot gioi han {} cua OSRM Table API. Dung Haversine.",
-                    cacDiem.size(), SO_DIEM_TOI_DA);
+                    points.size(), MAX_TABLE_POINTS);
             return Optional.empty();
         }
 
-        String duongDan = "/table/v1/driving/" + chuoiToaDo(cacDiem)
+        String path = "/table/v1/driving/" + toCoordinateString(points)
                 + "?annotations=distance,duration";
 
         try {
-            TableResponse traLoi = restClient.get()
-                    .uri(duongDan)
+            TableResponse response = restClient.get()
+                    .uri(path)
                     .retrieve()
                     .body(TableResponse.class);
 
-            if (traLoi == null || !"Ok".equals(traLoi.code()) || traLoi.distances() == null) {
-                log.warn("OSRM tra ve khong hop le: {}", traLoi == null ? "null" : traLoi.code());
+            if (response == null || !"Ok".equals(response.code()) || response.distances() == null) {
+                log.warn("OSRM tra ve khong hop le: {}", response == null ? "null" : response.code());
                 return Optional.empty();
             }
 
-            return Optional.of(doiSangMang(traLoi, cacDiem.size()));
+            return Optional.of(toPrimitiveArrays(response, points.size()));
 
-        } catch (Exception loi) {
+        } catch (Exception ex) {
             /*
              * Nuot loi CO CHU DICH. OSRM khong chay la truong hop binh thuong tren may
              * chua dung Docker, va CBR-11 da co phuong an du phong. Ghi log de con biet
              * ma tran nay la xap xi chu khong phai duong di that.
              */
             log.warn("Khong goi duoc OSRM tai {}: {}. Se dung Haversine.",
-                    diaChiMayChu, loi.getMessage());
+                    serverUrl, ex.getMessage());
             return Optional.empty();
         }
     }
@@ -112,9 +112,9 @@ public class OsrmDistanceCalculator implements DistanceCalculator {
      * DistanceMatrixService, o do co Haversine dam nhiem.
      */
     @Override
-    public double khoangCach(OptimizationPoint diemA, OptimizationPoint diemB) {
-        return bangKhoangCach(List.of(diemA, diemB))
-                .map(bang -> bang.met()[0][1])
+    public double distanceBetween(OptimizationPoint from, OptimizationPoint to) {
+        return fetchDistanceTable(List.of(from, to))
+                .map(table -> table.meters()[0][1])
                 .orElse(0.0);
     }
 
@@ -124,9 +124,9 @@ public class OsrmDistanceCalculator implements DistanceCalculator {
     }
 
     /** Kiem OSRM co dang chay khong, dung de hien trang thai tren man hinh phan tuyen. */
-    public boolean dangChay() {
-        OptimizationPoint kho = OptimizationPoint.depot(20.9497, 105.8172);
-        return bangKhoangCach(List.of(kho, kho)).isPresent();
+    public boolean isAvailable() {
+        OptimizationPoint depot = OptimizationPoint.depot(20.9497, 105.8172);
+        return fetchDistanceTable(List.of(depot, depot)).isPresent();
     }
 
     // ==================== Ham rieng ====================
@@ -138,13 +138,13 @@ public class OsrmDistanceCalculator implements DistanceCalculator {
      * DAU PHAY, ma dau phay lai chinh la ky tu ngan cach lon voi lat. Khong dat
      * locale thi chuoi gui di thanh "105,8172,20,9497" — OSRM doc ra bon so.
      */
-    private String chuoiToaDo(List<OptimizationPoint> cacDiem) {
-        StringJoiner chuoi = new StringJoiner(";");
-        for (OptimizationPoint diem : cacDiem) {
-            chuoi.add(String.format(Locale.ROOT, "%.7f,%.7f",
-                    diem.getLongitude(), diem.getLatitude()));
+    private String toCoordinateString(List<OptimizationPoint> points) {
+        StringJoiner joiner = new StringJoiner(";");
+        for (OptimizationPoint point : points) {
+            joiner.add(String.format(Locale.ROOT, "%.7f,%.7f",
+                    point.getLongitude(), point.getLatitude()));
         }
-        return chuoi.toString();
+        return joiner.toString();
     }
 
     /**
@@ -154,21 +154,21 @@ public class OsrmDistanceCalculator implements DistanceCalculator {
      * co du lieu ban do). Dat NaN cho o do, DistanceMatrixService se lap bang Haversine —
      * de 0 thi thuat toan tuong hai diem trung nhau va tuyen ra sai hoan toan.
      */
-    private BangKhoangCach doiSangMang(TableResponse traLoi, int n) {
-        double[][] met = new double[n][n];
-        int[][] giay = new int[n][n];
+    private DistanceTable toPrimitiveArrays(TableResponse response, int size) {
+        double[][] meters = new double[size][size];
+        int[][] seconds = new int[size][size];
 
-        for (int i = 0; i < n; i++) {
-            for (int j = 0; j < n; j++) {
-                Double khoangCach = traLoi.distances()[i][j];
-                met[i][j] = (khoangCach == null) ? Double.NaN : khoangCach;
+        for (int i = 0; i < size; i++) {
+            for (int j = 0; j < size; j++) {
+                Double distance = response.distances()[i][j];
+                meters[i][j] = (distance == null) ? Double.NaN : distance;
 
-                if (traLoi.durations() != null && traLoi.durations()[i][j] != null) {
-                    giay[i][j] = (int) Math.round(traLoi.durations()[i][j]);
+                if (response.durations() != null && response.durations()[i][j] != null) {
+                    seconds[i][j] = (int) Math.round(response.durations()[i][j]);
                 }
             }
         }
-        return new BangKhoangCach(met, giay);
+        return new DistanceTable(meters, seconds);
     }
 
     /** Phan JSON cua OSRM ma do an dung toi. Cac truong khac bo qua. */

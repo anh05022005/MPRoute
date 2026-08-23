@@ -7,131 +7,142 @@
 
 <div th:fragment="content">
 
-    <h1 class="h5 mb-3" th:text="${form.id == null} ? 'Thêm khách hàng' : 'Sửa khách hàng'">Thêm khách hàng</h1>
+    <div class="page-title mb-3" th:text="${form.id == null} ? 'Thêm khách hàng' : 'Sửa khách hàng'">Thêm khách hàng</div>
 
-    <form th:action="@{/admin/customers/save}" th:object="${form}" method="post" style="max-width: 760px;">
+    <!--
+        Bo cuc hai cot: o nhap ben trai, ban do ben phai (docs/05-giao-dien.md).
+        Ban do phai nam CANH cac o toa do chu khong phai duoi cung — nguoi dung ghim
+        tren ban do roi phai nhin thay ngay hai o vi do / kinh do doi theo.
+        Duoi 991px thi .split tu xep thanh mot cot.
+    -->
+    <form th:action="@{/admin/customers/save}" th:object="${form}" method="post">
 
         <input type="hidden" th:field="*{id}">
 
-        <div class="row g-3">
+        <div class="split">
 
-            <div class="col-md-7">
-                <label for="name" class="form-label">Tên cửa hàng <span class="text-danger">*</span></label>
-                <input type="text" id="name" class="form-control" th:field="*{name}"
-                       th:classappend="${#fields.hasErrors('name')} ? 'is-invalid'"
-                       placeholder="Tạp hóa Bà Lan">
-                <div class="invalid-feedback" th:errors="*{name}">Lỗi</div>
+            <!-- ============ Cot trai: thong tin khach hang ============ -->
+            <div>
+                <div class="row g-3">
+
+                    <div class="col-12">
+                        <label for="name" class="form-label">Tên cửa hàng <span class="text-danger">*</span></label>
+                        <input type="text" id="name" class="form-control" th:field="*{name}"
+                               th:classappend="${#fields.hasErrors('name')} ? 'is-invalid'"
+                               placeholder="Tạp hóa Bà Lan">
+                        <div class="invalid-feedback" th:errors="*{name}">Lỗi</div>
+                    </div>
+
+                    <div class="col-sm-7">
+                        <label for="contactPerson" class="form-label">Người liên hệ</label>
+                        <input type="text" id="contactPerson" class="form-control" th:field="*{contactPerson}"
+                               th:classappend="${#fields.hasErrors('contactPerson')} ? 'is-invalid'"
+                               placeholder="Bà Lan">
+                        <div class="invalid-feedback" th:errors="*{contactPerson}">Lỗi</div>
+                    </div>
+
+                    <div class="col-sm-5">
+                        <label for="phone" class="form-label">Số điện thoại <span class="text-danger">*</span></label>
+                        <!--
+                            De type="text" chu KHONG de type="number": so dien thoai bat dau bang so 0,
+                            o nhap kieu number se cat mat so 0 dau. Cho chan that nam o BR01-08 phia may chu.
+                        -->
+                        <input type="text" id="phone" class="form-control" th:field="*{phone}"
+                               th:classappend="${#fields.hasErrors('phone')} ? 'is-invalid'"
+                               maxlength="10" inputmode="numeric" placeholder="0912345678">
+                        <div class="invalid-feedback" th:errors="*{phone}">Lỗi</div>
+                    </div>
+
+                    <div class="col-12">
+                        <label for="email" class="form-label">Email</label>
+                        <input type="text" id="email" class="form-control" th:field="*{email}"
+                               th:classappend="${#fields.hasErrors('email')} ? 'is-invalid'"
+                               placeholder="tapholaban@gmail.com">
+                        <div class="invalid-feedback" th:errors="*{email}">Lỗi</div>
+                        <div class="form-text">Dùng để gửi thông báo giờ giao dự kiến sau khi chốt tuyến.</div>
+                    </div>
+
+                    <div class="col-12">
+                        <label for="address" class="form-label">Địa chỉ giao hàng <span class="text-danger">*</span></label>
+                        <input type="text" id="address" class="form-control" th:field="*{address}"
+                               th:classappend="${#fields.hasErrors('address')} ? 'is-invalid'"
+                               placeholder="Số 12 ngõ 5 Phan Trọng Tuệ, Thanh Trì, Hà Nội">
+                        <div class="invalid-feedback" th:errors="*{address}">Lỗi</div>
+                    </div>
+
+                    <!--
+                        BR01-05 / CBR-07: toa do BAT BUOC. Chua co toa do thi khong dua diem
+                        nay vao ma tran khoang cach duoc, don cua khach se bi loai khoi
+                        danh sach cho phan tuyen.
+                    -->
+                    <div class="col-sm-6">
+                        <label for="latitude" class="form-label">Vĩ độ <span class="text-danger">*</span></label>
+                        <input type="number" step="any" id="latitude" class="form-control" th:field="*{latitude}"
+                               th:classappend="${#fields.hasErrors('latitude')} ? 'is-invalid'"
+                               placeholder="21.0031">
+                        <div class="invalid-feedback" th:errors="*{latitude}">Lỗi</div>
+                    </div>
+
+                    <div class="col-sm-6">
+                        <label for="longitude" class="form-label">Kinh độ <span class="text-danger">*</span></label>
+                        <input type="number" step="any" id="longitude" class="form-control" th:field="*{longitude}"
+                               th:classappend="${#fields.hasErrors('longitude')} ? 'is-invalid'"
+                               placeholder="105.8201">
+                        <div class="invalid-feedback" th:errors="*{longitude}">Lỗi</div>
+                    </div>
+
+                    <div class="col-sm-7">
+                        <label for="paymentMethod" class="form-label">Hình thức thanh toán <span class="text-danger">*</span></label>
+                        <select id="paymentMethod" class="form-select" th:field="*{paymentMethod}"
+                                th:classappend="${#fields.hasErrors('paymentMethod')} ? 'is-invalid'">
+                            <option th:each="paymentMethodOption : ${paymentMethods}"
+                                    th:value="${paymentMethodOption}" th:text="${paymentMethodOption.displayName}">Tiền mặt</option>
+                        </select>
+                        <div class="invalid-feedback d-block" th:if="${#fields.hasErrors('paymentMethod')}"
+                             th:errors="*{paymentMethod}">Lỗi</div>
+                    </div>
+
+                    <div class="col-sm-5">
+                        <label for="status" class="form-label">Trạng thái</label>
+                        <select id="status" class="form-select" th:field="*{status}"
+                                th:classappend="${#fields.hasErrors('status')} ? 'is-invalid'">
+                            <option th:each="statusOption : ${statuses}"
+                                    th:value="${statusOption}" th:text="${statusOption.displayName}">Trạng thái</option>
+                        </select>
+                        <div class="invalid-feedback d-block" th:if="${#fields.hasErrors('status')}"
+                             th:errors="*{status}">Lỗi</div>
+                    </div>
+
+                    <div class="col-12">
+                        <label for="deliveryNote" class="form-label">Ghi chú giao hàng</label>
+                        <textarea id="deliveryNote" class="form-control" rows="2" th:field="*{deliveryNote}"
+                                  th:classappend="${#fields.hasErrors('deliveryNote')} ? 'is-invalid'"
+                                  placeholder="Chỉ nhận buổi sáng trước 11h. Xe lớn không vào được ngõ."></textarea>
+                        <div class="invalid-feedback" th:errors="*{deliveryNote}">Lỗi</div>
+                    </div>
+                </div>
+
+                <div class="panel panel-info mt-3 small text-sub">
+                    Tọa độ là <strong>bắt buộc</strong>: thiếu tọa độ thì đơn của khách này không đưa vào
+                    phân tuyến được. Khách trong nội thành Hà Nội có vĩ độ khoảng <strong>20.9–21.1</strong>
+                    và kinh độ khoảng <strong>105.7–105.9</strong> — lệch xa hai khoảng này thường là nhập
+                    đổi chỗ hai ô.
+                    Ghi chú giao hàng được lưu và hiển thị cho điều phối viên, nhưng
+                    <strong>thuật toán chưa ràng buộc khung giờ</strong>.
+                </div>
             </div>
 
-            <div class="col-md-5">
-                <label for="contactPerson" class="form-label">Người liên hệ</label>
-                <input type="text" id="contactPerson" class="form-control" th:field="*{contactPerson}"
-                       th:classappend="${#fields.hasErrors('contactPerson')} ? 'is-invalid'"
-                       placeholder="Bà Lan">
-                <div class="invalid-feedback" th:errors="*{contactPerson}">Lỗi</div>
+            <!-- ============ Cot phai: ban do chon toa do (CN-01-05) ============ -->
+            <div>
+                <div class="section-label" style="margin-top: 0;">Vị trí trên bản đồ</div>
+                <div th:replace="~{fragments/map-picker :: map-picker}"></div>
+
+                <!-- Nut hanh dong dat duoi ban do, phia phai — theo docs/05-giao-dien.md -->
+                <div class="d-flex justify-content-end gap-2 mt-3">
+                    <a th:href="@{/admin/customers}" class="btn btn-outline-secondary">Hủy</a>
+                    <button type="submit" class="btn btn-primary">Lưu</button>
+                </div>
             </div>
-
-            <div class="col-md-4">
-                <label for="phone" class="form-label">Số điện thoại <span class="text-danger">*</span></label>
-                <!--
-                    De type="text" chu KHONG de type="number": so dien thoai bat dau bang so 0,
-                    o nhap kieu number se cat mat so 0 dau. Cho chan that nam o BR01-08 phia may chu.
-                -->
-                <input type="text" id="phone" class="form-control" th:field="*{phone}"
-                       th:classappend="${#fields.hasErrors('phone')} ? 'is-invalid'"
-                       maxlength="10" inputmode="numeric" placeholder="0912345678">
-                <div class="invalid-feedback" th:errors="*{phone}">Lỗi</div>
-            </div>
-
-            <div class="col-md-8">
-                <label for="email" class="form-label">Email</label>
-                <input type="text" id="email" class="form-control" th:field="*{email}"
-                       th:classappend="${#fields.hasErrors('email')} ? 'is-invalid'"
-                       placeholder="tapholaban@gmail.com">
-                <div class="invalid-feedback" th:errors="*{email}">Lỗi</div>
-                <div class="form-text">Dùng để gửi thông báo giờ giao dự kiến sau khi chốt tuyến.</div>
-            </div>
-
-            <div class="col-12">
-                <label for="address" class="form-label">Địa chỉ giao hàng <span class="text-danger">*</span></label>
-                <input type="text" id="address" class="form-control" th:field="*{address}"
-                       th:classappend="${#fields.hasErrors('address')} ? 'is-invalid'"
-                       placeholder="Số 12 ngõ 5 Phan Trọng Tuệ, Thanh Trì, Hà Nội">
-                <div class="invalid-feedback" th:errors="*{address}">Lỗi</div>
-            </div>
-
-            <!--
-                BR01-05 / CBR-07: toa do BAT BUOC. Chua co toa do thi khong dua diem
-                nay vao ma tran khoang cach duoc, don cua khach se bi loai khoi
-                danh sach cho phan tuyen.
-
-                Man hinh nhap tay truoc. Nut "Tim toa do" goi Nominatim va ban do
-                ghim tay lam o CN-01-05, chua co o buoc nay.
-            -->
-            <div class="col-md-4">
-                <label for="latitude" class="form-label">Vĩ độ <span class="text-danger">*</span></label>
-                <input type="number" step="any" id="latitude" class="form-control" th:field="*{latitude}"
-                       th:classappend="${#fields.hasErrors('latitude')} ? 'is-invalid'"
-                       placeholder="21.0031">
-                <div class="invalid-feedback" th:errors="*{latitude}">Lỗi</div>
-            </div>
-
-            <div class="col-md-4">
-                <label for="longitude" class="form-label">Kinh độ <span class="text-danger">*</span></label>
-                <input type="number" step="any" id="longitude" class="form-control" th:field="*{longitude}"
-                       th:classappend="${#fields.hasErrors('longitude')} ? 'is-invalid'"
-                       placeholder="105.8201">
-                <div class="invalid-feedback" th:errors="*{longitude}">Lỗi</div>
-            </div>
-
-            <div class="col-md-4">
-                <label for="paymentMethod" class="form-label">Hình thức thanh toán <span class="text-danger">*</span></label>
-                <select id="paymentMethod" class="form-select" th:field="*{paymentMethod}"
-                        th:classappend="${#fields.hasErrors('paymentMethod')} ? 'is-invalid'">
-                    <option th:each="ht : ${cacHinhThucThanhToan}"
-                            th:value="${ht}" th:text="${ht.displayName}">Tiền mặt</option>
-                </select>
-                <div class="invalid-feedback d-block" th:if="${#fields.hasErrors('paymentMethod')}"
-                     th:errors="*{paymentMethod}">Lỗi</div>
-            </div>
-
-            <div class="col-md-8">
-                <label for="deliveryNote" class="form-label">Ghi chú giao hàng</label>
-                <textarea id="deliveryNote" class="form-control" rows="2" th:field="*{deliveryNote}"
-                          th:classappend="${#fields.hasErrors('deliveryNote')} ? 'is-invalid'"
-                          placeholder="Chỉ nhận buổi sáng trước 11h. Xe lớn không vào được ngõ."></textarea>
-                <div class="invalid-feedback" th:errors="*{deliveryNote}">Lỗi</div>
-            </div>
-
-            <div class="col-md-4">
-                <label for="status" class="form-label">Trạng thái</label>
-                <select id="status" class="form-select" th:field="*{status}"
-                        th:classappend="${#fields.hasErrors('status')} ? 'is-invalid'">
-                    <option th:each="tt : ${cacTrangThai}"
-                            th:value="${tt}" th:text="${tt.displayName}">Trạng thái</option>
-                </select>
-                <div class="invalid-feedback d-block" th:if="${#fields.hasErrors('status')}"
-                     th:errors="*{status}">Lỗi</div>
-            </div>
-        </div>
-
-        <!-- CN-01-05: tim toa do bang Nominatim, hoac ghim tay tren ban do -->
-        <div class="mt-3">
-            <div th:replace="~{fragments/map-picker :: chon-toa-do}"></div>
-        </div>
-
-        <div class="khoi-thong-tin mt-3 small chu-phu">
-            Tọa độ là <strong>bắt buộc</strong>: thiếu tọa độ thì đơn của khách này không đưa vào
-            phân tuyến được. Khách trong nội thành Hà Nội có vĩ độ khoảng <strong>20.9–21.1</strong>
-            và kinh độ khoảng <strong>105.7–105.9</strong> — lệch xa hai khoảng này thường là nhập
-            đổi chỗ hai ô.
-            Ghi chú giao hàng được lưu và hiển thị cho điều phối viên, nhưng
-            <strong>thuật toán chưa ràng buộc khung giờ</strong>.
-        </div>
-
-        <div class="mt-3">
-            <button type="submit" class="btn btn-primary">Lưu</button>
-            <a th:href="@{/admin/customers}" class="btn btn-outline-secondary">Hủy</a>
         </div>
     </form>
 

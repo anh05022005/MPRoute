@@ -1,162 +1,535 @@
 /* ===================================================================
-   MPRoute - bang mau va bo cuc chung
-   Khai bao mot lan o day, moi trang deu dung lai. Xem docs/05-giao-dien.md
+   MPRoute design system
+
+   One palette, one set of components, reused by every screen.
+   Layered on top of Bootstrap 5: Bootstrap supplies grid, dropdown and
+   form plumbing; everything visible is defined here.
+
+   Reference: docs/05-giao-dien.md
    =================================================================== */
 
 :root {
-  /* Mau chinh - xanh duong */
-  --xanh-900: #0B2C4A;   /* thanh tieu de tren cung */
-  --xanh-700: #14568C;   /* thanh menu */
-  --xanh-500: #1E77BF;   /* tab dang chon, nut chinh */
-  --xanh-100: #DCEBF7;   /* nen nhat, dong duoc chon */
-  --xanh-50:  #F0F6FB;   /* nen khoi thong tin */
+  /* Primary - blue */
+  --blue-900: #0B2C4A;   /* top bar */
+  --blue-700: #14568C;   /* menu bar */
+  --blue-500: #1E77BF;   /* selected tab, primary button */
+  --blue-100: #DCEBF7;   /* light fill, selected row */
+  --blue-50:  #F0F6FB;   /* info block background */
 
-  /* Trung tinh */
-  --chu-chinh: #1C2430;
-  --chu-phu:   #5A6674;
-  --chu-mo:    #8B97A5;
-  --vien:      #DDE3E9;
-  --nen-bang:  #F2F5F8;
-  --nen-soc:   #FAFBFC;  /* ke soc dong bang */
+  /* Neutrals */
+  --text-primary: #1C2430;
+  --text-secondary:   #5A6674;
+  --text-muted:    #8B97A5;
+  --border:      #DDE3E9;
+  --surface-header:  #F2F5F8;
+  --surface-stripe:   #FAFBFC;  /* zebra striping */
 
-  /* Trang thai */
-  --thanh-cong: #1B8A5A;
-  --canh-bao:   #B7791F;
-  --loi:        #C0392B;
-  --cho-xu-ly:  #5A6674;
+  /* Status */
+  --success: #1B8A5A;
+  --warning:   #B7791F;
+  --danger:        #C0392B;
+  --pending:  #5A6674;
 
-  /* Nen nhat cua trang thai */
-  --nen-thanh-cong: #E3F4EC;
-  --nen-canh-bao:   #FCF2E0;
-  --nen-loi:        #FBE9E7;
-  --nen-cho:        #EDF0F3;
+  --success-bg: #E3F4EC;
+  --warning-bg:   #FCF2E0;
+  --danger-bg:        #FBE9E7;
+  --pending-bg:        #EDF0F3;
 
-  /* Mau phan biet tuyen tren ban do - cung do dam, khac do sang,
-     de nguoi bi mu mau do-xanh la van phan biet duoc */
-  --tuyen-1: #1E77BF;
-  --tuyen-2: #C75B39;
-  --tuyen-3: #1B8A5A;
-  --tuyen-4: #7D5BA6;
-  --tuyen-5: #B7791F;
+  /* Route colours on the map. Same darkness, different hue, so a viewer with
+     red-green colour blindness can still tell the routes apart. */
+  --route-1: #1E77BF;
+  --route-2: #C75B39;
+  --route-3: #1B8A5A;
+  --route-4: #7D5BA6;
+  --route-5: #B7791F;
 }
 
 body {
-  color: var(--chu-chinh);
+  color: var(--text-primary);
   background-color: #FFFFFF;
+  font-size: 14px;
 }
 
-/* ============ Ghi de Bootstrap ============ */
+/* ============ Bootstrap overrides ============ */
 
 .btn-primary {
-  background-color: var(--xanh-500);
-  border-color: var(--xanh-500);
+  background-color: var(--blue-500);
+  border-color: var(--blue-500);
 }
 .btn-primary:hover,
 .btn-primary:focus {
-  background-color: var(--xanh-700);
-  border-color: var(--xanh-700);
+  background-color: var(--blue-700);
+  border-color: var(--blue-700);
 }
-.table > thead {
-  background-color: var(--nen-bang);
+
+/* Full four-sided borders, grey header, zebra body. Applying this to the
+   Bootstrap .table class means every existing screen picks the look up
+   without touching a single template. */
+.table {
+  font-size: 13px;
+  border-color: var(--border);
+}
+.table > :not(caption) > * > * {
+  border: 1px solid var(--border);
+  padding: 8px 10px;
+  vertical-align: middle;
+}
+.table > thead > tr > th {
+  background-color: var(--surface-header);
+  font-weight: 600;
+  white-space: nowrap;
 }
 .table-striped > tbody > tr:nth-of-type(odd) > * {
-  background-color: var(--nen-soc);
+  background-color: var(--surface-stripe);
 }
 
-/* ============ Thanh tieu de tren cung ============ */
+.form-control, .form-select {
+  font-size: 13px;
+  border-color: var(--border);
+}
+.form-control:focus, .form-select:focus {
+  border-color: var(--blue-500);
+  box-shadow: none;
+}
+.form-label {
+  font-size: 12.5px;
+  color: var(--text-secondary);
+  margin-bottom: 4px;
+}
 
-.thanh-tieu-de {
-  background-color: var(--xanh-900);
+/* ============ Top bar ============ */
+
+.app-header {
+  background-color: var(--blue-900);
   color: #FFFFFF;
   padding: 0.5rem 1rem;
 }
-.thanh-tieu-de a {
+.app-header a {
   color: #FFFFFF;
   text-decoration: none;
 }
-.thanh-tieu-de .ten-he-thong {
+.app-header .app-name {
   font-weight: 600;
   font-size: 1.05rem;
 }
 
-/* ============ Thanh menu ============ */
+/* ============ Menu bar ============ */
 
-.thanh-menu {
-  background-color: var(--xanh-700);
+.app-nav {
+  background-color: var(--blue-700);
   padding: 0 1rem;
 }
-.thanh-menu .nav-link {
-  color: #DCEBF7;
+.app-nav .nav-link {
+  color: #C6DCEE;
   padding: 0.5rem 0.9rem;
   border-radius: 0;
+  font-size: 13.5px;
 }
-.thanh-menu .nav-link:hover {
-  background-color: var(--xanh-500);
+.app-nav .nav-link:hover {
+  background-color: var(--blue-500);
   color: #FFFFFF;
 }
-/* Muc menu cua trang dang mo */
-.thanh-menu .nav-link.dang-chon {
-  background-color: var(--xanh-500);
+.app-nav .nav-link.is-active {
+  background-color: var(--blue-500);
   color: #FFFFFF;
   font-weight: 600;
 }
 
-/* ============ Trang dang nhap ============ */
+/* ============ Login ============ */
 
-.trang-dang-nhap {
+.login-page {
   min-height: 100vh;
-  background-color: var(--xanh-50);
+  background-color: var(--blue-50);
   display: flex;
   align-items: center;
   justify-content: center;
 }
-.khung-dang-nhap {
+.login-card {
   width: 100%;
   max-width: 380px;
   background-color: #FFFFFF;
-  border: 1px solid var(--vien);
+  border: 1px solid var(--border);
   border-radius: 4px;
   padding: 1.75rem;
 }
 
-/* ============ Nhan trang thai ============ */
+/* ============ Page head ============ */
 
-.nhan {
+.breadcrumb-trail {                       /* breadcrumb */
   font-size: 12px;
+  color: var(--text-muted);
+  margin-bottom: 10px;
+}
+.breadcrumb-trail b {
+  color: var(--text-primary);
+  font-weight: 400;
+}
+.page-title {
+  font-size: 20px;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 9px;
+}
+.page-title .status-dot {             /* status dot next to the title */
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: var(--blue-500);
+  flex: none;
+}
+.page-subtitle {
+  font-size: 12.5px;
+  color: var(--text-secondary);
+  margin-top: 4px;
+}
+/* Section label: plain grey text, no underline, no wrapper box */
+.section-label {
+  font-size: 13px;
+  color: var(--text-secondary);
+  margin: 22px 0 11px;
+}
+
+/* ============ Status badges ============ */
+
+.status-tag {
+  display: inline-block;
+  font-size: 11.5px;
   padding: 2px 8px;
   border-radius: 4px;
   white-space: nowrap;
 }
-.nhan-thanh-cong { background: var(--nen-thanh-cong); color: var(--thanh-cong); }
-/* Nhan mac dinh mau xanh duong: trang thai dang dien ra binh thuong
+.status-tag-success { background: var(--success-bg); color: var(--success); }
+/* Blue is the default: something is under way and going normally
    (DELIVERING, IN_PROGRESS, IN_USE, CONFIRMED) - docs/05-giao-dien.md */
-.nhan-mac-dinh   { background: var(--xanh-100);       color: var(--xanh-700); }
-.nhan-canh-bao   { background: var(--nen-canh-bao);   color: var(--canh-bao); }
-.nhan-loi        { background: var(--nen-loi);        color: var(--loi); }
-.nhan-cho        { background: var(--nen-cho);        color: var(--cho-xu-ly); }
+.status-tag-info   { background: var(--blue-100);       color: var(--blue-700); }
+.status-tag-warning   { background: var(--warning-bg);   color: var(--warning); }
+.status-tag-danger        { background: var(--danger-bg);        color: var(--danger); }
+.status-tag-muted        { background: var(--pending-bg);        color: var(--pending); }
 
-/* ============ Thanh cong cu tren danh sach ============ */
+/* ============ List toolbar ============ */
 
-.thanh-cong-cu {
-  border-bottom: 1px solid var(--vien);
+.toolbar {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  flex-wrap: wrap;
+  border-bottom: 1px solid var(--border);
   padding-bottom: 0.75rem;
   margin-bottom: 0.75rem;
 }
+.toolbar label {
+  font-size: 12.5px;
+  color: var(--text-secondary);
+  margin-bottom: 0;
+}
+.push-right { margin-left: auto; }
 
-/* Cot so can canh phai de de doc va de so sanh theo cot */
-.so {
+/* Right-align numeric columns so they can be compared down the column */
+.num {
   text-align: right;
   font-variant-numeric: tabular-nums;
 }
+.text-sub { color: var(--text-secondary); }
+.text-faint  { color: var(--text-muted); }
 
-/* ============ Khoi thong tin ============ */
+/* ============ Boxes ============ */
 
-.khoi-thong-tin {
-  background-color: var(--xanh-50);
-  border: 1px solid var(--vien);
+.panel {
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 13px 15px;
+}
+.panel-info { background: var(--blue-50);       border-color: var(--blue-100); }
+.panel-warning { background: var(--warning-bg);  border-color: var(--warning); }
+.panel-danger   { background: var(--danger-bg);       border-color: var(--danger); }
+
+/* Legacy alias, kept so the screens built before this file render unchanged */
+.info-block {
+  background-color: var(--blue-50);
+  border: 1px solid var(--border);
   border-radius: 4px;
   padding: 1rem;
 }
-.chu-phu {
-  color: var(--chu-phu);
+
+/* Read-only field: grey fill, no border, so it reads as output not input */
+.field-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 9px 22px;
 }
+.field-grid.one-column { grid-template-columns: 1fr; }
+.field {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+}
+.field > .field-label {
+  font-size: 12.5px;
+  color: var(--text-secondary);
+  width: 110px;
+  flex: none;
+}
+.field > .field-value {
+  flex: 1;
+  background: var(--surface-header);
+  border-radius: 5px;
+  padding: 7px 10px;
+  font-size: 13px;
+}
+
+/* Metric row - the comparison figures on the routing screen live here */
+.metric-row {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+}
+.metric-row.five-up { grid-template-columns: repeat(5, 1fr); }
+.metric-row > div { padding-right: 18px; }
+.metric-row .metric-label { font-size: 12px; color: var(--text-secondary); }
+.metric-row .metric-value { font-size: 20px; font-weight: 600; margin-top: 2px; }
+
+.system-note {
+  background: var(--surface-header);
+  border-radius: 6px;
+  padding: 11px 14px;
+  font-size: 12.5px;
+  color: var(--text-secondary);
+  margin-top: 18px;
+}
+
+/* Read-back block on the order form: left blue rule, copy button */
+.readback-block {
+  border: 1px solid var(--border);
+  border-left: 3px solid var(--blue-500);
+  border-radius: 0 6px 6px 0;
+  padding: 13px 15px;
+}
+
+/* ============ Two-column split: form beside map ============ */
+
+.split {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 20px;
+}
+/* Routing screen gives the route tables a little more room than the map */
+.split.wide-right {
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1.15fr);
+}
+@media (max-width: 991px) {
+  .split,
+  .split.wide-right { grid-template-columns: 1fr; }
+  .field-grid { grid-template-columns: 1fr; }
+  .metric-row,
+  .metric-row.five-up { grid-template-columns: repeat(2, 1fr); gap: 12px 0; }
+}
+
+/* ============ Map ============ */
+
+.map-frame {
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  overflow: hidden;
+}
+.map-frame .map-canvas { height: 420px; }
+.map-legend {
+  display: flex;
+  gap: 16px;
+  flex-wrap: wrap;
+  font-size: 12px;
+  color: var(--text-secondary);
+  padding: 9px 11px;
+  border-top: 1px solid var(--border);
+}
+.legend-swatch {
+  display: inline-block;
+  width: 16px;
+  height: 3px;
+  vertical-align: 3px;
+  margin-right: 5px;
+}
+
+/* ============ Routing screen ============ */
+
+.route-heading {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13.5px;
+  font-weight: 600;
+  margin: 16px 0 7px;
+}
+.route-heading .route-swatch {
+  width: 9px;
+  height: 9px;
+  border-radius: 2px;
+}
+.route-heading .route-meta {
+  font-weight: 400;
+  color: var(--text-secondary);
+  font-size: 12.5px;
+}
+/* The final leg back to the depot gets its own always-visible row: this is the
+   on-screen proof that total distance includes the return trip (CBR-01). */
+.return-leg-row > td { color: var(--text-secondary); }
+
+/* ============ Order progress stepper ============ */
+
+.stepper {
+  display: flex;
+  margin: 14px 0 20px;
+}
+.stepper > div { flex: 1; text-align: center; }
+.stepper .stepper-row { height: 24px; display: flex; align-items: center; }
+.stepper .stepper-line { flex: 1; height: 2px; background: var(--border); }
+.stepper .stepper-line.is-done { background: #9FE1CB; }
+.stepper .stepper-dot {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  font-size: 11.5px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex: none;
+  border: 1px solid var(--border);
+  color: var(--text-muted);
+  background: #FFFFFF;
+}
+.stepper .stepper-dot.is-done { background: var(--success-bg); border-color: var(--success-bg); color: var(--success); }
+.stepper .stepper-dot.is-current  { background: var(--blue-500); border-color: var(--blue-500); color: #FFFFFF; }
+.stepper .stepper-label { font-size: 11.5px; color: var(--text-muted); margin-top: 6px; }
+.stepper .stepper-label.is-done { color: var(--text-secondary); }
+.stepper .stepper-label.is-strong  { color: var(--blue-500); }
+
+/* ============ Tracking ============ */
+
+.progress-thin {
+  height: 9px;
+  background: var(--border);
+  border-radius: 5px;
+  overflow: hidden;
+  margin-top: 5px;
+}
+.progress-thin > i {
+  display: block;
+  height: 100%;
+  background: var(--blue-500);
+}
+.progress-thin > i.has-incident { background: var(--danger); }
+
+/* Vertical timeline on the public tracking page */
+.timeline { display: flex; gap: 11px; }
+.timeline .timeline-rail {
+  width: 20px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding-top: 4px;
+}
+.timeline .timeline-dot { width: 11px; height: 11px; border-radius: 50%; flex: none; background: var(--border); }
+.timeline .timeline-dot.is-done { background: var(--success); }
+.timeline .timeline-dot.is-current  { background: var(--blue-500); }
+.timeline .stepper-line { width: 2px; flex: 1; min-height: 26px; background: var(--border); }
+.timeline .stepper-line.is-done { background: #9FE1CB; }
+
+/* ============ Reports: comparison bar chart ============ */
+
+.bar-chart {
+  display: flex;
+  align-items: flex-end;
+  gap: 14px;
+  height: 150px;
+  padding: 0 4px;
+  border-bottom: 1px solid var(--border);
+}
+.bar-chart > div {
+  flex: 1;
+  height: 100%;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  gap: 5px;
+}
+.bar-chart .bar-before,
+.bar-chart .bar-after { width: 40%; border-radius: 3px 3px 0 0; }
+.bar-chart .bar-before { background: var(--border); }
+.bar-chart .bar-after   { background: var(--blue-500); }
+.bar-labels {
+  display: flex;
+  gap: 14px;
+  padding: 6px 4px 0;
+}
+.bar-labels > div { flex: 1; text-align: center; font-size: 11.5px; color: var(--text-secondary); }
+
+/* ============ Driver screens (phone) ============ */
+
+.driver-screen {
+  max-width: 460px;
+  margin: 0 auto;
+}
+.route-card {
+  background: #FFFFFF;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  overflow: hidden;
+}
+.route-card > .route-card-head {
+  background: var(--blue-900);
+  color: #FFFFFF;
+  padding: 10px 13px;
+}
+.route-card > .route-card-head .stepper-label { font-size: 14px; font-weight: 600; }
+.route-card > .route-card-head .phu { font-size: 11.5px; color: #A9C4DC; margin-top: 2px; }
+.route-card > .route-card-summary {
+  display: flex;
+  border-bottom: 1px solid var(--border);
+}
+.route-card > .route-card-summary > div { flex: 1; padding: 9px 13px; }
+.route-card > .route-card-summary > div + div { border-left: 1px solid var(--border); }
+.route-card > .route-card-summary .metric-label { font-size: 11px; color: var(--text-secondary); }
+.route-card > .route-card-summary .metric-value { font-size: 16px; font-weight: 600; }
+
+.stop {
+  padding: 11px 13px;
+  border-bottom: 1px solid var(--border);
+}
+.stop.is-done { opacity: 0.5; }
+.stop.is-current {
+  border-left: 3px solid var(--blue-500);
+  background: var(--blue-50);
+}
+.stop .stop-title {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+  font-size: 13.5px;
+  font-weight: 600;
+}
+.stop .stop-meta {
+  font-size: 12px;
+  color: var(--text-secondary);
+  margin-top: 3px;
+  line-height: 1.6;
+}
+.stop .stop-items {
+  border: 1px solid var(--border);
+  border-radius: 5px;
+  padding: 7px 9px;
+  font-size: 12px;
+  margin: 8px 0;
+  background: #FFFFFF;
+}
+.stop .stop-amount {
+  font-size: 13px;
+  color: var(--danger);
+  font-weight: 600;
+}
+/* Buttons sit in equal-width pairs so they stay thumb-sized on a phone */
+.button-pair {
+  display: flex;
+  gap: 6px;
+  margin-top: 7px;
+}
+.button-pair > .btn { flex: 1; }

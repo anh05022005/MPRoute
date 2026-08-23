@@ -11,12 +11,12 @@
     <link rel="stylesheet" th:href="@{/css/bootstrap.min.css}">
     <link rel="stylesheet" th:href="@{/css/style.css}">
 </head>
-<body class="trang-dang-nhap">
+<body class="login-page">
 
-<div class="khung-dang-nhap">
+<div class="login-card">
 
     <h1 class="h5 mb-1">Minh Phú</h1>
-    <p class="chu-phu small mb-4">Hệ thống quản lý và tối ưu tuyến đường giao hàng</p>
+    <p class="text-sub small mb-4">Hệ thống quản lý và tối ưu tuyến đường giao hàng</p>
 
     <!--
         MSG-12. Co tinh khong noi ro sai ten dang nhap hay sai mat khau:
@@ -30,7 +30,7 @@
     <!-- MSG-13. Khoa tam 15 phut sau 5 lan sai lien tiep -->
     <div th:if="${param.locked}" class="alert alert-danger py-2 small">
         Tài khoản đã bị khóa.
-        <span class="d-block chu-phu">Vui lòng thử lại sau 15 phút hoặc liên hệ quản trị viên.</span>
+        <span class="d-block text-sub">Vui lòng thử lại sau 15 phút hoặc liên hệ quản trị viên.</span>
     </div>
 
     <div th:if="${param.logout}" class="alert alert-success py-2 small">

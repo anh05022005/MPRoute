@@ -7,7 +7,7 @@
 
 <div th:fragment="content">
 
-    <h1 class="h5 mb-3" th:text="${form.id == null} ? 'Thêm tài khoản' : 'Sửa tài khoản'">Thêm tài khoản</h1>
+    <div class="page-title mb-3" th:text="${form.id == null} ? 'Thêm tài khoản' : 'Sửa tài khoản'">Thêm tài khoản</div>
 
     <form th:action="@{/admin/users/save}" th:object="${form}" method="post" style="max-width: 640px;">
 
@@ -48,8 +48,8 @@
                 <select id="role" class="form-select" th:field="*{role}"
                         th:classappend="${#fields.hasErrors('role')} ? 'is-invalid'">
                     <option value="">— Chọn vai trò —</option>
-                    <option th:each="vt : ${cacVaiTro}"
-                            th:value="${vt}" th:text="${vt.displayName}">Vai trò</option>
+                    <option th:each="roleOption : ${roles}"
+                            th:value="${roleOption}" th:text="${roleOption.displayName}">Vai trò</option>
                 </select>
                 <div class="invalid-feedback d-block" th:if="${#fields.hasErrors('role')}"
                      th:errors="*{role}">Lỗi</div>
@@ -59,8 +59,8 @@
                 <label for="status" class="form-label">Trạng thái</label>
                 <select id="status" class="form-select" th:field="*{status}"
                         th:classappend="${#fields.hasErrors('status')} ? 'is-invalid'">
-                    <option th:each="tt : ${cacTrangThai}"
-                            th:value="${tt}" th:text="${tt.displayName}">Trạng thái</option>
+                    <option th:each="statusOption : ${statuses}"
+                            th:value="${statusOption}" th:text="${statusOption.displayName}">Trạng thái</option>
                 </select>
                 <div class="invalid-feedback d-block" th:if="${#fields.hasErrors('status')}"
                      th:errors="*{status}">Lỗi</div>
@@ -77,7 +77,7 @@
         <div th:if="${form.id == null}" class="mb-2 fw-semibold">Mật khẩu</div>
         <div th:unless="${form.id == null}" class="mb-2">
             <span class="fw-semibold">Đặt lại mật khẩu</span>
-            <span class="chu-phu small">— để trống nếu không muốn đổi mật khẩu hiện tại</span>
+            <span class="text-sub small">— để trống nếu không muốn đổi mật khẩu hiện tại</span>
         </div>
 
         <div class="row g-3">
@@ -100,7 +100,7 @@
             </div>
         </div>
 
-        <div class="khoi-thong-tin mt-3 small chu-phu">
+        <div class="info-block mt-3 small text-sub">
             Mật khẩu được băm <strong>BCrypt</strong> trước khi lưu, cơ sở dữ liệu không giữ bản gốc.
             Đặt lại mật khẩu sẽ gỡ luôn khóa tạm 15 phút nếu tài khoản đang bị khóa do nhập sai nhiều lần.
         </div>

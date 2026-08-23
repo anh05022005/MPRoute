@@ -36,8 +36,8 @@ public class SettingsController {
     private final SystemParameterService systemParameterService;
 
     /** Do vao o chon cua tham so DEFAULT_ALGORITHM. */
-    @ModelAttribute("cacThuatToan")
-    public AlgorithmType[] cacThuatToan() {
+    @ModelAttribute("algorithms")
+    public AlgorithmType[] algorithms() {
         return AlgorithmType.values();
     }
 
@@ -58,40 +58,40 @@ public class SettingsController {
          * phai goi ham kiem theo tung ma. Loi gan vao dung chi so dong de
          * o nhap nao sai thi vien do sang mau do.
          */
-        List<SettingsForm.Item> cacDong = form.getItems();
-        for (int i = 0; i < cacDong.size(); i++) {
-            SettingsForm.Item dong = cacDong.get(i);
-            String loi = systemParameterService.kiemGiaTri(dong.getCode(), dong.getValue());
-            if (loi != null) {
-                binding.rejectValue("items[" + i + "].value", "thamSoSai", loi);
+        List<SettingsForm.Item> rows = form.getItems();
+        for (int i = 0; i < rows.size(); i++) {
+            SettingsForm.Item row = rows.get(i);
+            String error = systemParameterService.validateValue(row.getCode(), row.getValue());
+            if (error != null) {
+                binding.rejectValue("items[" + i + "].value", "invalidParameter", error);
             }
         }
 
         if (binding.hasErrors()) {
             // Mo ta lay lai tu CSDL, khong dung gia tri trinh duyet gui len
-            napLaiMoTa(form);
+            reloadDescriptions(form);
             return "admin/settings";
         }
 
-        Map<String, String> giaTriMoi = new HashMap<>();
-        for (SettingsForm.Item dong : cacDong) {
-            giaTriMoi.put(dong.getCode(), dong.getValue());
+        Map<String, String> newValues = new HashMap<>();
+        for (SettingsForm.Item row : rows) {
+            newValues.put(row.getCode(), row.getValue());
         }
-        int soSua = systemParameterService.updateValues(giaTriMoi);
+        int updatedCount = systemParameterService.updateValues(newValues);
 
-        redirectAttributes.addFlashAttribute("thongBao", (soSua == 0)
+        redirectAttributes.addFlashAttribute("successMessage", (updatedCount == 0)
                 ? "Không có tham số nào thay đổi."
-                : "Đã lưu " + soSua + " tham số.");
+                : "Đã lưu " + updatedCount + " tham số.");
         return "redirect:/admin/settings";
     }
 
-    private void napLaiMoTa(SettingsForm form) {
-        Map<String, String> moTa = new HashMap<>();
-        for (SystemParameter thamSo : systemParameterService.findAllInDisplayOrder()) {
-            moTa.put(thamSo.getCode(), thamSo.getDescription());
+    private void reloadDescriptions(SettingsForm form) {
+        Map<String, String> descriptions = new HashMap<>();
+        for (SystemParameter parameter : systemParameterService.findAllInDisplayOrder()) {
+            descriptions.put(parameter.getCode(), parameter.getDescription());
         }
-        for (SettingsForm.Item dong : form.getItems()) {
-            dong.setDescription(moTa.get(dong.getCode()));
+        for (SettingsForm.Item row : form.getItems()) {
+            row.setDescription(descriptions.get(row.getCode()));
         }
     }
 }

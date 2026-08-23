@@ -54,8 +54,8 @@ public class UserService {
     public Page<User> search(String keyword, Role role, UserStatus status, Pageable pageable) {
         // O tim kiem de trong gui len chuoi rong chu khong phai null.
         // Doi ve null de cau JPQL bo qua dieu kien do
-        String tuKhoa = (keyword == null || keyword.isBlank()) ? null : keyword.trim();
-        return userRepository.search(tuKhoa, role, status, pageable);
+        String normalizedKeyword = (keyword == null || keyword.isBlank()) ? null : keyword.trim();
+        return userRepository.search(normalizedKeyword, role, status, pageable);
     }
 
     @Transactional(readOnly = true)
@@ -73,7 +73,7 @@ public class UserService {
     @Transactional(readOnly = true)
     public boolean isUsernameTaken(String username, Long excludeId) {
         return userRepository.findByUsername(username.trim().toLowerCase())
-                .filter(taiKhoan -> !taiKhoan.getId().equals(excludeId))
+                .filter(account -> !account.getId().equals(excludeId))
                 .isPresent();
     }
 
@@ -85,7 +85,7 @@ public class UserService {
         // Ha chu thuong de "Admin" va "admin" khong thanh hai tai khoan khac nhau
         user.setUsername(form.getUsername().trim().toLowerCase());
         user.setFullName(form.getFullName().trim());
-        user.setEmail(chuoiHoacNull(form.getEmail()));
+        user.setEmail(blankToNull(form.getEmail()));
         user.setRole(form.getRole());
         user.setStatus(form.getStatus());
 
@@ -104,9 +104,9 @@ public class UserService {
             log.info("Dat lai mat khau cho tai khoan {}", user.getUsername());
         }
 
-        User daLuu = userRepository.save(user);
-        log.info("Luu tai khoan {} - vai tro {}", daLuu.getUsername(), daLuu.getRole());
-        return daLuu;
+        User saved = userRepository.save(user);
+        log.info("Luu tai khoan {} - vai tro {}", saved.getUsername(), saved.getRole());
+        return saved;
     }
 
     /**
@@ -155,7 +155,7 @@ public class UserService {
     }
 
     // O nhap khong bat buoc de trong gui len chuoi rong, luu vao DB nen la NULL cho gon
-    private String chuoiHoacNull(String giaTri) {
-        return (giaTri == null || giaTri.isBlank()) ? null : giaTri.trim();
+    private String blankToNull(String value) {
+        return (value == null || value.isBlank()) ? null : value.trim();
     }
 }

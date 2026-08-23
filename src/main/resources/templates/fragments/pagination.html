@@ -3,13 +3,13 @@
     Thanh phan trang dung chung cho cac man hinh danh muc.
 
     Cach dung:
-        <div th:replace="~{fragments/pagination :: phan-trang(
-                 trang    = ${trang},
-                 duongDan = '/admin/vehicles',
-                 keyword  = ${keyword},
-                 status   = ${status},
-                 role     = null,
-                 tenDoiTuong = 'xe')}"></div>
+        <div th:replace="~{fragments/pagination :: pager(
+                 pageResult  = ${pageResult},
+                 basePath    = '/admin/vehicles',
+                 keyword     = ${keyword},
+                 status      = ${status},
+                 role        = null,
+                 entityLabel = 'xe')}"></div>
 
     Cac o loc duoc viet cung vao day thay vi nhan mot Map linh hoat, vi cac man hinh
     danh muc dung chung mot bo o loc. Viet cung thi de doc hon va sua o mot cho.
@@ -21,33 +21,33 @@
 <html lang="vi" xmlns:th="http://www.thymeleaf.org">
 <body>
 
-<div th:fragment="phan-trang(trang, duongDan, keyword, status, role, tenDoiTuong)"
+<div th:fragment="pager(pageResult, basePath, keyword, status, role, entityLabel)"
      class="d-flex justify-content-between align-items-center"
-     th:if="${trang.totalPages > 1}">
+     th:if="${pageResult.totalPages > 1}">
 
-    <span class="chu-phu small">
-        Trang <span th:text="${trang.number + 1}">1</span>/<span th:text="${trang.totalPages}">1</span>
-        — tổng <span th:text="${trang.totalElements}">0</span> <span th:text="${tenDoiTuong}">bản ghi</span>
+    <span class="text-sub small">
+        Trang <span th:text="${pageResult.number + 1}">1</span>/<span th:text="${pageResult.totalPages}">1</span>
+        — tổng <span th:text="${pageResult.totalElements}">0</span> <span th:text="${entityLabel}">bản ghi</span>
     </span>
 
     <ul class="pagination pagination-sm mb-0">
 
-        <li class="page-item" th:classappend="${trang.first} ? 'disabled'">
+        <li class="page-item" th:classappend="${pageResult.first} ? 'disabled'">
             <a class="page-link"
-               th:href="@{${duongDan}(page=${trang.number - 1}, keyword=${keyword}, status=${status}, role=${role})}">Trước</a>
+               th:href="@{${basePath}(page=${pageResult.number - 1}, keyword=${keyword}, status=${status}, role=${role})}">Trước</a>
         </li>
 
         <!-- Mang trang danh so tu 0 nhung nguoi dung dem tu 1, nen hien i + 1 -->
-        <li class="page-item" th:each="i : ${#numbers.sequence(0, trang.totalPages - 1)}"
-            th:classappend="${i == trang.number} ? 'active'">
+        <li class="page-item" th:each="i : ${#numbers.sequence(0, pageResult.totalPages - 1)}"
+            th:classappend="${i == pageResult.number} ? 'active'">
             <a class="page-link"
-               th:href="@{${duongDan}(page=${i}, keyword=${keyword}, status=${status}, role=${role})}"
+               th:href="@{${basePath}(page=${i}, keyword=${keyword}, status=${status}, role=${role})}"
                th:text="${i + 1}">1</a>
         </li>
 
-        <li class="page-item" th:classappend="${trang.last} ? 'disabled'">
+        <li class="page-item" th:classappend="${pageResult.last} ? 'disabled'">
             <a class="page-link"
-               th:href="@{${duongDan}(page=${trang.number + 1}, keyword=${keyword}, status=${status}, role=${role})}">Sau</a>
+               th:href="@{${basePath}(page=${pageResult.number + 1}, keyword=${keyword}, status=${status}, role=${role})}">Sau</a>
         </li>
     </ul>
 </div>
@@ -59,40 +59,40 @@
     la loi nguoi dung khong nhin ra ngay.
 
     Cach dung:
-        <div th:replace="~{fragments/pagination :: phan-trang-don(
-                 trang        = ${trang},
+        <div th:replace="~{fragments/pagination :: order-pager(
+                 pageResult   = ${pageResult},
                  deliveryDate = ${deliveryDate},
                  status       = ${status},
                  customerId   = ${customerId})}"></div>
 -->
-<div th:fragment="phan-trang-don(trang, deliveryDate, status, customerId)"
+<div th:fragment="order-pager(pageResult, deliveryDate, status, customerId)"
      class="d-flex justify-content-between align-items-center"
-     th:if="${trang.totalPages > 1}">
+     th:if="${pageResult.totalPages > 1}">
 
-    <span class="chu-phu small">
-        Trang <span th:text="${trang.number + 1}">1</span>/<span th:text="${trang.totalPages}">1</span>
-        — tổng <span th:text="${trang.totalElements}">0</span> đơn hàng
+    <span class="text-sub small">
+        Trang <span th:text="${pageResult.number + 1}">1</span>/<span th:text="${pageResult.totalPages}">1</span>
+        — tổng <span th:text="${pageResult.totalElements}">0</span> đơn hàng
     </span>
 
     <ul class="pagination pagination-sm mb-0">
 
-        <li class="page-item" th:classappend="${trang.first} ? 'disabled'">
+        <li class="page-item" th:classappend="${pageResult.first} ? 'disabled'">
             <a class="page-link"
-               th:href="@{/orders(page=${trang.number - 1}, deliveryDate=${deliveryDate},
+               th:href="@{/orders(page=${pageResult.number - 1}, deliveryDate=${deliveryDate},
                                   status=${status}, customerId=${customerId})}">Trước</a>
         </li>
 
-        <li class="page-item" th:each="i : ${#numbers.sequence(0, trang.totalPages - 1)}"
-            th:classappend="${i == trang.number} ? 'active'">
+        <li class="page-item" th:each="i : ${#numbers.sequence(0, pageResult.totalPages - 1)}"
+            th:classappend="${i == pageResult.number} ? 'active'">
             <a class="page-link"
                th:href="@{/orders(page=${i}, deliveryDate=${deliveryDate},
                                   status=${status}, customerId=${customerId})}"
                th:text="${i + 1}">1</a>
         </li>
 
-        <li class="page-item" th:classappend="${trang.last} ? 'disabled'">
+        <li class="page-item" th:classappend="${pageResult.last} ? 'disabled'">
             <a class="page-link"
-               th:href="@{/orders(page=${trang.number + 1}, deliveryDate=${deliveryDate},
+               th:href="@{/orders(page=${pageResult.number + 1}, deliveryDate=${deliveryDate},
                                   status=${status}, customerId=${customerId})}">Sau</a>
         </li>
     </ul>

@@ -27,13 +27,13 @@ import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 @RequiredArgsConstructor
 public class DriverController {
 
-    private static final int SO_DONG_MOI_TRANG = 15;
+    private static final int PAGE_SIZE = 15;
 
     private final DriverService driverService;
 
     /** Dung chung cho o loc tren danh sach va o chon trang thai trong form. */
-    @ModelAttribute("cacTrangThai")
-    public RecordStatus[] cacTrangThai() {
+    @ModelAttribute("statuses")
+    public RecordStatus[] statuses() {
         return RecordStatus.values();
     }
 
@@ -43,10 +43,10 @@ public class DriverController {
                        @RequestParam(defaultValue = "0") int page,
                        Model model) {
 
-        var pageable = PageRequest.of(page, SO_DONG_MOI_TRANG, Sort.by("fullName").ascending());
-        Page<Driver> trang = driverService.search(keyword, status, pageable);
+        var pageable = PageRequest.of(page, PAGE_SIZE, Sort.by("fullName").ascending());
+        Page<Driver> pageResult = driverService.search(keyword, status, pageable);
 
-        model.addAttribute("trang", trang);
+        model.addAttribute("pageResult", pageResult);
         model.addAttribute("keyword", keyword);
         model.addAttribute("status", status);
         return "admin/drivers";
@@ -56,7 +56,7 @@ public class DriverController {
     @GetMapping("/create")
     public String createForm(Model model) {
         model.addAttribute("form", new DriverForm());
-        napDanhSachChon(model, null);
+        loadSelectOptions(model, null);
         return "admin/driver-form";
     }
 
@@ -64,7 +64,7 @@ public class DriverController {
     @GetMapping("/{id}/edit")
     public String editForm(@PathVariable Long id, Model model) {
         model.addAttribute("form", DriverForm.from(driverService.getById(id)));
-        napDanhSachChon(model, id);
+        loadSelectOptions(model, id);
         return "admin/driver-form";
     }
 
@@ -83,40 +83,40 @@ public class DriverController {
         if (form.getUserId() != null) {
             // Cot user_id dat unique: khong chan o day thi MySQL nem loi trung khoa, ra trang 500
             if (driverService.isAccountTaken(form.getUserId(), form.getId())) {
-                binding.rejectValue("userId", "trungTaiKhoan",
+                binding.rejectValue("userId", "duplicateUsername",
                         "Tài khoản này đã gán cho tài xế khác");
             } else if (!driverService.isDriverAccount(form.getUserId())) {
-                binding.rejectValue("userId", "saiVaiTro",
+                binding.rejectValue("userId", "invalidRole",
                         "Tài khoản được chọn không tồn tại hoặc không phải vai trò Tài xế");
             }
         }
 
         if (binding.hasErrors()) {
             // Ve lai form thi phai do lai hai o chon, khong thi chung rong tron
-            napDanhSachChon(model, form.getId());
+            loadSelectOptions(model, form.getId());
             return "admin/driver-form";
         }
 
-        boolean themMoi = (form.getId() == null);
+        boolean isNew = (form.getId() == null);
         driverService.save(form);
 
-        redirectAttributes.addFlashAttribute("thongBao",
-                themMoi ? "Đã thêm tài xế mới." : "Lưu dữ liệu thành công.");
+        redirectAttributes.addFlashAttribute("successMessage",
+                isNew ? "Đã thêm tài xế mới." : "Lưu dữ liệu thành công.");
         return "redirect:/admin/drivers";
     }
 
     @PreAuthorize("hasRole('ADMIN')")
     @PostMapping("/{id}/toggle-status")
     public String toggleStatus(@PathVariable Long id, RedirectAttributes redirectAttributes) {
-        RecordStatus moi = driverService.toggleStatus(id);
-        redirectAttributes.addFlashAttribute("thongBao",
-                "Đã chuyển tài xế sang trạng thái: " + moi.getDisplayName() + ".");
+        RecordStatus newStatus = driverService.toggleStatus(id);
+        redirectAttributes.addFlashAttribute("successMessage",
+                "Đã chuyển tài xế sang trạng thái: " + newStatus.getDisplayName() + ".");
         return "redirect:/admin/drivers";
     }
 
     // Hai o chon phu thuoc du lieu trong CSDL nen phai nap lai moi lan tra ve form
-    private void napDanhSachChon(Model model, Long driverId) {
-        model.addAttribute("cacTaiKhoan", driverService.selectableAccounts(driverId));
-        model.addAttribute("cacXe", driverService.selectableVehicles());
+    private void loadSelectOptions(Model model, Long driverId) {
+        model.addAttribute("accounts", driverService.selectableAccounts(driverId));
+        model.addAttribute("vehicles", driverService.selectableVehicles());
     }
 }

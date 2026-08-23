@@ -18,24 +18,24 @@ package com.minhphu.mproute.service.optimization;
 public class HaversineDistanceCalculator implements DistanceCalculator {
 
     // Ban kinh trung binh cua Trai Dat, don vi met
-    private static final double BAN_KINH_TRAI_DAT = 6371000.0;
+    private static final double EARTH_RADIUS_METERS = 6371000.0;
 
-    public static final double HE_SO_QUY_DOI_MAC_DINH = 1.3;
+    public static final double DEFAULT_DETOUR_FACTOR = 1.3;
 
-    private final double heSoQuyDoi;
+    private final double detourFactor;
 
     public HaversineDistanceCalculator() {
-        this(HE_SO_QUY_DOI_MAC_DINH);
+        this(DEFAULT_DETOUR_FACTOR);
     }
 
-    public HaversineDistanceCalculator(double heSoQuyDoi) {
-        this.heSoQuyDoi = heSoQuyDoi;
+    public HaversineDistanceCalculator(double detourFactor) {
+        this.detourFactor = detourFactor;
     }
 
     @Override
-    public double khoangCach(OptimizationPoint diemA, OptimizationPoint diemB) {
-        return duongChimBay(diemA.getLatitude(), diemA.getLongitude(),
-                            diemB.getLatitude(), diemB.getLongitude()) * heSoQuyDoi;
+    public double distanceBetween(OptimizationPoint from, OptimizationPoint to) {
+        return greatCircleDistance(from.getLatitude(), from.getLongitude(),
+                                   to.getLatitude(), to.getLongitude()) * detourFactor;
     }
 
     /**
@@ -56,7 +56,7 @@ public class HaversineDistanceCalculator implements DistanceCalculator {
      * cos cua mot goc rat nho gan bang 1, phep tru hai so gan bang nhau lam mat
      * chu so co nghia. Haversine dung sin cua nua goc nen khong bi loi do.
      */
-    public static double duongChimBay(double lat1, double lon1, double lat2, double lon2) {
+    public static double greatCircleDistance(double lat1, double lon1, double lat2, double lon2) {
         double phi1 = Math.toRadians(lat1);
         double phi2 = Math.toRadians(lat2);
         double deltaPhi = Math.toRadians(lat2 - lat1);
@@ -68,11 +68,11 @@ public class HaversineDistanceCalculator implements DistanceCalculator {
 
         double c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
 
-        return BAN_KINH_TRAI_DAT * c;
+        return EARTH_RADIUS_METERS * c;
     }
 
-    public double getHeSoQuyDoi() {
-        return heSoQuyDoi;
+    public double getDetourFactor() {
+        return detourFactor;
     }
 
     @Override

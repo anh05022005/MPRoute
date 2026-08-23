@@ -31,17 +31,17 @@ import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 @RequiredArgsConstructor
 public class UserController {
 
-    private static final int SO_DONG_MOI_TRANG = 15;
+    private static final int PAGE_SIZE = 15;
 
     private final UserService userService;
 
-    @ModelAttribute("cacVaiTro")
-    public Role[] cacVaiTro() {
+    @ModelAttribute("roles")
+    public Role[] roles() {
         return Role.values();
     }
 
-    @ModelAttribute("cacTrangThai")
-    public UserStatus[] cacTrangThai() {
+    @ModelAttribute("statuses")
+    public UserStatus[] statuses() {
         return UserStatus.values();
     }
 
@@ -52,10 +52,10 @@ public class UserController {
                        @RequestParam(defaultValue = "0") int page,
                        Model model) {
 
-        var pageable = PageRequest.of(page, SO_DONG_MOI_TRANG, Sort.by("username").ascending());
-        Page<User> trang = userService.search(keyword, role, status, pageable);
+        var pageable = PageRequest.of(page, PAGE_SIZE, Sort.by("username").ascending());
+        Page<User> pageResult = userService.search(keyword, role, status, pageable);
 
-        model.addAttribute("trang", trang);
+        model.addAttribute("pageResult", pageResult);
         model.addAttribute("keyword", keyword);
         model.addAttribute("role", role);
         model.addAttribute("status", status);
@@ -77,10 +77,10 @@ public class UserController {
     @PostMapping("/save")
     public String save(@Valid @ModelAttribute("form") UserForm form,
                        BindingResult binding,
-                       @AuthenticationPrincipal CurrentUser nguoiDangDangNhap,
+                       @AuthenticationPrincipal CurrentUser currentUser,
                        RedirectAttributes redirectAttributes) {
 
-        boolean themMoi = (form.getId() == null);
+        boolean isNew = (form.getId() == null);
 
         /*
          * Bon phep kiem duoi day deu chay o PHIA MAY CHU (CBR-15).
@@ -92,20 +92,20 @@ public class UserController {
         //    nem loi trung khoa va nguoi dung nhan duoc trang 500 thay vi mot dong loi tu te
         if (form.getUsername() != null && !form.getUsername().isBlank()
                 && userService.isUsernameTaken(form.getUsername(), form.getId())) {
-            binding.rejectValue("username", "trungTen", "Tên đăng nhập này đã có người dùng");
+            binding.rejectValue("username", "duplicateName", "Tên đăng nhập này đã có người dùng");
         }
 
         // 2. Them moi thi bat buoc co mat khau. Rang buoc nay phu thuoc vao viec dang
         //    them hay dang sua nen khong dat bang annotation tren UserForm duoc
-        if (themMoi && (form.getPassword() == null || form.getPassword().isBlank())) {
-            binding.rejectValue("password", "thieuMatKhau", "Vui lòng nhập mật khẩu cho tài khoản mới");
+        if (isNew && (form.getPassword() == null || form.getPassword().isBlank())) {
+            binding.rejectValue("password", "passwordRequired", "Vui lòng nhập mật khẩu cho tài khoản mới");
         }
 
         // 3. Go lai mat khau lan hai de tu bat loi go nham — nguoi dung khong nhin thay
         //    minh dang go gi, ma go nham thi lan sau khong dang nhap duoc
         if (form.getPassword() != null && !form.getPassword().isBlank()
                 && !form.getPassword().equals(form.getConfirmPassword())) {
-            binding.rejectValue("confirmPassword", "khongKhop", "Hai lần nhập mật khẩu không giống nhau");
+            binding.rejectValue("confirmPassword", "passwordMismatch", "Hai lần nhập mật khẩu không giống nhau");
         }
 
         /*
@@ -116,8 +116,8 @@ public class UserController {
          * chac chan la ADMIN va chac chan van con ACTIVE sau thao tac. Khong co hai rao do
          * thi mot cu bam nhe co the khoa het duong vao phan quan tri, phai sua thang trong CSDL.
          */
-        if (!themMoi && form.getId().equals(nguoiDangDangNhap.getId()) && form.getRole() != Role.ADMIN) {
-            binding.rejectValue("role", "tuHaQuyen",
+        if (!isNew && form.getId().equals(currentUser.getId()) && form.getRole() != Role.ADMIN) {
+            binding.rejectValue("role", "cannotDemoteSelf",
                     "Không thể tự đổi vai trò của chính mình. Nhờ một quản trị viên khác thực hiện");
         }
 
@@ -127,26 +127,26 @@ public class UserController {
 
         userService.save(form);
 
-        redirectAttributes.addFlashAttribute("thongBao",
-                themMoi ? "Đã thêm tài khoản mới." : "Lưu dữ liệu thành công.");
+        redirectAttributes.addFlashAttribute("successMessage",
+                isNew ? "Đã thêm tài khoản mới." : "Lưu dữ liệu thành công.");
         return "redirect:/admin/users";
     }
 
     @PostMapping("/{id}/toggle-status")
     public String toggleStatus(@PathVariable Long id,
-                               @AuthenticationPrincipal CurrentUser nguoiDangDangNhap,
+                               @AuthenticationPrincipal CurrentUser currentUser,
                                RedirectAttributes redirectAttributes) {
 
         // Tu khoa tai khoan cua chinh minh la tu dang xuat va khong vao lai duoc nua
-        if (id.equals(nguoiDangDangNhap.getId())) {
-            redirectAttributes.addFlashAttribute("loi",
+        if (id.equals(currentUser.getId())) {
+            redirectAttributes.addFlashAttribute("errorMessage",
                     "Không thể tự khóa tài khoản của chính mình.");
             return "redirect:/admin/users";
         }
 
-        UserStatus moi = userService.toggleStatus(id);
-        redirectAttributes.addFlashAttribute("thongBao",
-                "Đã chuyển tài khoản sang trạng thái: " + moi.getDisplayName() + ".");
+        UserStatus newStatus = userService.toggleStatus(id);
+        redirectAttributes.addFlashAttribute("successMessage",
+                "Đã chuyển tài khoản sang trạng thái: " + newStatus.getDisplayName() + ".");
         return "redirect:/admin/users";
     }
 
@@ -154,7 +154,7 @@ public class UserController {
     @PostMapping("/{id}/clear-lock")
     public String clearTemporaryLock(@PathVariable Long id, RedirectAttributes redirectAttributes) {
         userService.clearTemporaryLock(id);
-        redirectAttributes.addFlashAttribute("thongBao",
+        redirectAttributes.addFlashAttribute("successMessage",
                 "Đã gỡ khóa tạm. Tài khoản đăng nhập lại được ngay.");
         return "redirect:/admin/users";
     }

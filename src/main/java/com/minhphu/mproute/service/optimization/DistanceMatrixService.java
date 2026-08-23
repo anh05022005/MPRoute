@@ -24,13 +24,13 @@ import java.util.Optional;
  * DAY LA LOP QUAN TRONG NHAT VE HIEU NANG CUA CA DO AN. Ly do:
  * 2-opt hoi khoang cach hang nghin lan cho mot tuyen. Neu moi lan hoi la mot request
  * HTTP toi OSRM hoac mot cau SELECT xuong MySQL thi chuong trinh treo — day chinh la
- * dieu cam so 4 trong quy uoc ky thuat. Sau khi goi napMaTran() xong, thuat toan chi
+ * dieu cam so 4 trong quy uoc ky thuat. Sau khi goi loadMatrix() xong, thuat toan chi
  * con tra matrix[i][j] tren mang hai chieu, khong dung toi mang lan CSDL nua.
  *
  * Bon buoc dung nhu dac ta docs/03-thuat-toan.md muc 4:
  *   B1 — tra bo nho dem trong bang distance_matrix theo toa do (CBR-12)
  *   B2 — con o nao thieu thi goi OSRM Table API MOT lan cho toan bo diem,
- *        OSRM chet thi lui ve Haversine va bat co dungXapXi (CBR-11, MSG-09)
+ *        OSRM chet thi lui ve Haversine va bat co approximate (CBR-11, MSG-09)
  *   B3 — DOI XUNG HOA ma tran, bat buoc, neu khong 2-opt tinh sai
  *   B4 — tra ve
  */
@@ -47,7 +47,7 @@ public class DistanceMatrixService {
      * truoc khi dung lam khoa, neu khong thi 21.00670000000001 va 21.0067 thanh hai
      * khoa khac nhau, tra bo nho dem khong bao gio trung.
      */
-    private static final int SO_CHU_SO_TOA_DO = 7;
+    private static final int COORDINATE_SCALE = 7;
 
     private final DistanceMatrixEntryRepository distanceMatrixEntryRepository;
     private final SystemParameterService systemParameterService;
@@ -55,20 +55,20 @@ public class DistanceMatrixService {
     /**
      * Ket qua mot lan nap ma tran.
      *
-     * @param met            ma tran khoang cach da doi xung hoa, don vi met
-     * @param dungXapXi      true khi co it nhat mot o phai dung Haversine (MSG-09)
-     * @param soOLayTuCache  de chung minh bo nho dem co tac dung — chay lan hai
-     *                       voi cung tap diem thi con so nay phai bang n*n - n
-     * @param soOGoiMoi      so o phai lay moi trong lan chay nay
+     * @param meters       ma tran khoang cach da doi xung hoa, don vi met
+     * @param approximate  true khi co it nhat mot o phai dung Haversine (MSG-09)
+     * @param cacheHits    de chung minh bo nho dem co tac dung — chay lan hai voi
+     *                     cung tap diem thi con so nay phai bang n*n - n
+     * @param cacheMisses  so o phai lay moi trong lan chay nay
      */
-    public record MaTranKhoangCach(double[][] met,
-                                   boolean dungXapXi,
-                                   int soOLayTuCache,
-                                   int soOGoiMoi) {
+    public record DistanceMatrix(double[][] meters,
+                                 boolean approximate,
+                                 int cacheHits,
+                                 int cacheMisses) {
 
         /** Nguon de ghi vao bang ket qua va hien ra man hinh. */
-        public DistanceSource nguon() {
-            return dungXapXi ? DistanceSource.HAVERSINE : DistanceSource.OSRM;
+        public DistanceSource source() {
+            return approximate ? DistanceSource.HAVERSINE : DistanceSource.OSRM;
         }
     }
 
@@ -79,56 +79,56 @@ public class DistanceMatrixService {
      * de goi ben ngoai khong phai tu danh so va khong the danh lech.
      */
     @Transactional
-    public MaTranKhoangCach napMaTran(List<OptimizationPoint> cacDiem) {
-        int n = cacDiem.size();
-        double[][] matrix = new double[n][n];
+    public DistanceMatrix loadMatrix(List<OptimizationPoint> points) {
+        int size = points.size();
+        double[][] matrix = new double[size][size];
 
-        for (int i = 0; i < n; i++) {
-            cacDiem.get(i).setMatrixIndex(i);
+        for (int i = 0; i < size; i++) {
+            points.get(i).setMatrixIndex(i);
         }
-        if (n > 0 && !cacDiem.get(DEPOT_INDEX).isDepot()) {
+        if (size > 0 && !points.get(DEPOT_INDEX).isDepot()) {
             log.warn("Diem o chi so 0 khong phai kho ({}). Quy uoc cua do an la kho luon dung dau.",
-                    cacDiem.get(DEPOT_INDEX).getName());
+                    points.get(DEPOT_INDEX).getName());
         }
 
         // ---------- B1: tra bo nho dem (CBR-12) ----------
-        Map<String, Double> boNhoDem = napBoNhoDem(cacDiem);
-        List<int[]> cacOConThieu = new ArrayList<>();
-        int soOLayTuCache = 0;
+        Map<String, Double> cache = loadCache(points);
+        List<int[]> missingCells = new ArrayList<>();
+        int cacheHits = 0;
 
-        for (int i = 0; i < n; i++) {
-            for (int j = 0; j < n; j++) {
+        for (int i = 0; i < size; i++) {
+            for (int j = 0; j < size; j++) {
                 if (i == j) {
                     matrix[i][j] = 0;      // di tu mot diem toi chinh no
                     continue;
                 }
-                Double daCo = boNhoDem.get(khoaCap(cacDiem.get(i), cacDiem.get(j)));
-                if (daCo != null) {
-                    matrix[i][j] = daCo;
-                    soOLayTuCache++;
+                Double cached = cache.get(cacheKeyFor(points.get(i), points.get(j)));
+                if (cached != null) {
+                    matrix[i][j] = cached;
+                    cacheHits++;
                 } else {
                     matrix[i][j] = Double.NaN;   // danh dau la con thieu
-                    cacOConThieu.add(new int[]{i, j});
+                    missingCells.add(new int[]{i, j});
                 }
             }
         }
 
         // ---------- B2: con thieu thi goi OSRM mot lan ----------
-        boolean dungXapXi = false;
-        int soOGoiMoi = cacOConThieu.size();
+        boolean approximate = false;
+        int cacheMisses = missingCells.size();
 
-        if (!cacOConThieu.isEmpty()) {
-            dungXapXi = layPhanConThieu(cacDiem, matrix, cacOConThieu);
+        if (!missingCells.isEmpty()) {
+            approximate = fillMissingCells(points, matrix, missingCells);
         }
 
         log.info("Ma tran {}x{}: {} o lay tu bo nho dem, {} o phai lay moi, nguon {}",
-                n, n, soOLayTuCache, soOGoiMoi, dungXapXi ? "Haversine (xap xi)" : "OSRM");
+                size, size, cacheHits, cacheMisses, approximate ? "Haversine (xap xi)" : "OSRM");
 
         // ---------- B3: doi xung hoa (BAT BUOC) ----------
-        doiXungHoa(matrix);
+        symmetrize(matrix);
 
         // ---------- B4 ----------
-        return new MaTranKhoangCach(matrix, dungXapXi, soOLayTuCache, soOGoiMoi);
+        return new DistanceMatrix(matrix, approximate, cacheHits, cacheMisses);
     }
 
     // ==================== B1 ====================
@@ -142,20 +142,20 @@ public class DistanceMatrixService {
      * Cau truy van loc theo toa do DIEM DAU nen co the lay ve du vai dong khong dung
      * toi — vo hai, vi buoc sau tra theo dung khoa gom ca bon toa do.
      */
-    private Map<String, Double> napBoNhoDem(List<OptimizationPoint> cacDiem) {
-        List<Double> cacViDo = cacDiem.stream().map(d -> lamTronToaDo(d.getLatitude())).toList();
-        List<Double> cacKinhDo = cacDiem.stream().map(d -> lamTronToaDo(d.getLongitude())).toList();
+    private Map<String, Double> loadCache(List<OptimizationPoint> points) {
+        List<Double> latitudes = points.stream().map(p -> roundCoordinate(p.getLatitude())).toList();
+        List<Double> longitudes = points.stream().map(p -> roundCoordinate(p.getLongitude())).toList();
 
-        List<DistanceMatrixEntry> cacDong =
-                distanceMatrixEntryRepository.findByFromLatitudeInAndFromLongitudeIn(cacViDo, cacKinhDo);
+        List<DistanceMatrixEntry> rows =
+                distanceMatrixEntryRepository.findByFromLatitudeInAndFromLongitudeIn(latitudes, longitudes);
 
-        Map<String, Double> boNhoDem = new HashMap<>();
-        for (DistanceMatrixEntry dong : cacDong) {
-            boNhoDem.put(khoa(dong.getFromLatitude(), dong.getFromLongitude(),
-                              dong.getToLatitude(), dong.getToLongitude()),
-                    dong.getDistanceMeters());
+        Map<String, Double> cache = new HashMap<>();
+        for (DistanceMatrixEntry row : rows) {
+            cache.put(cacheKey(row.getFromLatitude(), row.getFromLongitude(),
+                               row.getToLatitude(), row.getToLongitude()),
+                    row.getDistanceMeters());
         }
-        return boNhoDem;
+        return cache;
     }
 
     // ==================== B2 ====================
@@ -166,83 +166,84 @@ public class DistanceMatrixService {
      * Goi OSRM MOT lan cho TOAN BO diem chu khong phai chi cac cap con thieu:
      * Table API tinh ca ma tran trong mot lan, chia nho ra goi nhieu lan chi cham hon.
      */
-    private boolean layPhanConThieu(List<OptimizationPoint> cacDiem,
-                                    double[][] matrix,
-                                    List<int[]> cacOConThieu) {
+    private boolean fillMissingCells(List<OptimizationPoint> points,
+                                     double[][] matrix,
+                                     List<int[]> missingCells) {
 
-        Optional<OsrmDistanceCalculator.BangKhoangCach> tuOsrm = goiOsrm(cacDiem);
+        Optional<OsrmDistanceCalculator.DistanceTable> osrmTable = callOsrm(points);
 
         HaversineDistanceCalculator haversine = new HaversineDistanceCalculator(
                 systemParameterService.getDouble(SystemParameterService.HAVERSINE_FACTOR));
 
-        if (tuOsrm.isEmpty()) {
+        if (osrmTable.isEmpty()) {
             // CBR-11 + MSG-09: OSRM chet thi van phai ra ket qua, chi la xap xi
             log.warn("MSG-09: Khong ket noi duoc OSRM. Dang dung khoang cach xap xi "
-                    + "(Haversine x {}).", haversine.getHeSoQuyDoi());
+                    + "(Haversine x {}).", haversine.getDetourFactor());
 
-            for (int[] o : cacOConThieu) {
-                matrix[o[0]][o[1]] = haversine.khoangCach(cacDiem.get(o[0]), cacDiem.get(o[1]));
+            for (int[] cell : missingCells) {
+                matrix[cell[0]][cell[1]] =
+                        haversine.distanceBetween(points.get(cell[0]), points.get(cell[1]));
             }
 
             /*
              * CO Y KHONG luu gia tri Haversine vao bang distance_matrix.
              * Bang do la bo nho dem CUA OSRM. Luu so xap xi vao thi lan sau tra thay
              * "da co" roi khong bao gio goi OSRM nua — ma tran vinh vien xap xi ma
-             * khong ai biet, vi luc do co dungXapXi cung khong con bat len.
+             * khong ai biet, vi luc do co approximate cung khong con bat len.
              */
             return true;
         }
 
-        double[][] osrm = tuOsrm.get().met();
-        int[][] giay = tuOsrm.get().giay();
-        List<DistanceMatrixEntry> canLuu = new ArrayList<>();
-        boolean coONaoXapXi = false;
+        double[][] osrmMeters = osrmTable.get().meters();
+        int[][] osrmSeconds = osrmTable.get().seconds();
+        List<DistanceMatrixEntry> toSave = new ArrayList<>();
+        boolean anyApproximate = false;
 
-        for (int[] o : cacOConThieu) {
-            int i = o[0];
-            int j = o[1];
-            double met = osrm[i][j];
+        for (int[] cell : missingCells) {
+            int i = cell[0];
+            int j = cell[1];
+            double meters = osrmMeters[i][j];
 
-            if (Double.isNaN(met)) {
+            if (Double.isNaN(meters)) {
                 /*
                  * OSRM khong tim duoc duong di giua hai diem nay: thieu du lieu ban do,
                  * hoac toa do roi vao cho khong co duong. Lap bang Haversine cho rieng
                  * o do va KHONG luu vao bo nho dem, vi day khong phai so cua OSRM.
                  */
-                matrix[i][j] = haversine.khoangCach(cacDiem.get(i), cacDiem.get(j));
-                coONaoXapXi = true;
+                matrix[i][j] = haversine.distanceBetween(points.get(i), points.get(j));
+                anyApproximate = true;
                 continue;
             }
 
-            matrix[i][j] = met;
-            canLuu.add(dungBanGhi(cacDiem.get(i), cacDiem.get(j), met, giay[i][j]));
+            matrix[i][j] = meters;
+            toSave.add(newCacheEntry(points.get(i), points.get(j), meters, osrmSeconds[i][j]));
         }
 
-        if (!canLuu.isEmpty()) {
-            distanceMatrixEntryRepository.saveAll(canLuu);
-            log.info("Da luu {} o moi vao bo nho dem distance_matrix", canLuu.size());
+        if (!toSave.isEmpty()) {
+            distanceMatrixEntryRepository.saveAll(toSave);
+            log.info("Da luu {} o moi vao bo nho dem distance_matrix", toSave.size());
         }
-        return coONaoXapXi;
+        return anyApproximate;
     }
 
     /** Tao bo tinh OSRM theo tham so he thong, de doi dia chi khong phai bien dich lai. */
-    private Optional<OsrmDistanceCalculator.BangKhoangCach> goiOsrm(List<OptimizationPoint> cacDiem) {
-        String diaChi = systemParameterService.getValue(SystemParameterService.OSRM_URL);
-        int timeoutGiay = systemParameterService.getInt(SystemParameterService.OSRM_TIMEOUT);
-        return new OsrmDistanceCalculator(diaChi, timeoutGiay).bangKhoangCach(cacDiem);
+    private Optional<OsrmDistanceCalculator.DistanceTable> callOsrm(List<OptimizationPoint> points) {
+        String serverUrl = systemParameterService.getValue(SystemParameterService.OSRM_URL);
+        int timeoutSeconds = systemParameterService.getInt(SystemParameterService.OSRM_TIMEOUT);
+        return new OsrmDistanceCalculator(serverUrl, timeoutSeconds).fetchDistanceTable(points);
     }
 
-    private DistanceMatrixEntry dungBanGhi(OptimizationPoint tu, OptimizationPoint toi,
-                                           double met, int giay) {
-        DistanceMatrixEntry ban = new DistanceMatrixEntry();
-        ban.setFromLatitude(lamTronToaDo(tu.getLatitude()));
-        ban.setFromLongitude(lamTronToaDo(tu.getLongitude()));
-        ban.setToLatitude(lamTronToaDo(toi.getLatitude()));
-        ban.setToLongitude(lamTronToaDo(toi.getLongitude()));
-        ban.setDistanceMeters(met);
-        ban.setDurationSeconds(giay);
-        ban.setSource(DistanceSource.OSRM);
-        return ban;
+    private DistanceMatrixEntry newCacheEntry(OptimizationPoint from, OptimizationPoint to,
+                                              double meters, int seconds) {
+        DistanceMatrixEntry entry = new DistanceMatrixEntry();
+        entry.setFromLatitude(roundCoordinate(from.getLatitude()));
+        entry.setFromLongitude(roundCoordinate(from.getLongitude()));
+        entry.setToLatitude(roundCoordinate(to.getLatitude()));
+        entry.setToLongitude(roundCoordinate(to.getLongitude()));
+        entry.setDistanceMeters(meters);
+        entry.setDurationSeconds(seconds);
+        entry.setSource(DistanceSource.OSRM);
+        return entry;
     }
 
     // ==================== B3 ====================
@@ -263,21 +264,22 @@ public class DistanceMatrixService {
      * Cai gia phai tra la mat mot phan thong tin ve duong mot chieu — da ghi vao
      * muc han che 4.7 cua bao cao.
      */
-    private void doiXungHoa(double[][] matrix) {
-        int n = matrix.length;
-        for (int i = 0; i < n; i++) {
-            for (int j = i + 1; j < n; j++) {
-                double trungBinh = (matrix[i][j] + matrix[j][i]) / 2.0;
-                matrix[i][j] = trungBinh;
-                matrix[j][i] = trungBinh;
+    private void symmetrize(double[][] matrix) {
+        int size = matrix.length;
+        for (int i = 0; i < size; i++) {
+            for (int j = i + 1; j < size; j++) {
+                double average = (matrix[i][j] + matrix[j][i]) / 2.0;
+                matrix[i][j] = average;
+                matrix[j][i] = average;
             }
         }
     }
 
     // ==================== Ham dung chung ====================
 
-    private String khoaCap(OptimizationPoint tu, OptimizationPoint toi) {
-        return khoa(tu.getLatitude(), tu.getLongitude(), toi.getLatitude(), toi.getLongitude());
+    private String cacheKeyFor(OptimizationPoint from, OptimizationPoint to) {
+        return cacheKey(from.getLatitude(), from.getLongitude(),
+                        to.getLatitude(), to.getLongitude());
     }
 
     /**
@@ -286,15 +288,15 @@ public class DistanceMatrixService {
      * Locale.ROOT bat buoc — may cai dat tieng Viet dinh dang so thap phan bang dau
      * phay, ma dau phay lai la ky tu ngan cach trong chuoi khoa nay.
      */
-    private String khoa(double tuVi, double tuKinh, double toiVi, double toiKinh) {
+    private String cacheKey(double fromLat, double fromLon, double toLat, double toLon) {
         return String.format(Locale.ROOT, "%.7f,%.7f>%.7f,%.7f",
-                lamTronToaDo(tuVi), lamTronToaDo(tuKinh),
-                lamTronToaDo(toiVi), lamTronToaDo(toiKinh));
+                roundCoordinate(fromLat), roundCoordinate(fromLon),
+                roundCoordinate(toLat), roundCoordinate(toLon));
     }
 
-    private double lamTronToaDo(double giaTri) {
-        return BigDecimal.valueOf(giaTri)
-                .setScale(SO_CHU_SO_TOA_DO, RoundingMode.HALF_UP)
+    private double roundCoordinate(double value) {
+        return BigDecimal.valueOf(value)
+                .setScale(COORDINATE_SCALE, RoundingMode.HALF_UP)
                 .doubleValue();
     }
 }

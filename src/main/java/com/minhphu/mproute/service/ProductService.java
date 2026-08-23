@@ -25,8 +25,8 @@ public class ProductService {
     public Page<Product> search(String keyword, RecordStatus status, Pageable pageable) {
         // O tim kiem de trong gui len chuoi rong chu khong phai null.
         // Doi ve null de cau JPQL bo qua dieu kien do
-        String tuKhoa = (keyword == null || keyword.isBlank()) ? null : keyword.trim();
-        return productRepository.search(tuKhoa, status, pageable);
+        String normalizedKeyword = (keyword == null || keyword.isBlank()) ? null : keyword.trim();
+        return productRepository.search(normalizedKeyword, status, pageable);
     }
 
     @Transactional(readOnly = true)
@@ -62,9 +62,9 @@ public class ProductService {
         product.setNote(form.getNote());
         product.setStatus(form.getStatus());
 
-        Product daLuu = productRepository.save(product);
-        log.info("Luu san pham {} - {}", daLuu.getCode(), daLuu.getName());
-        return daLuu;
+        Product saved = productRepository.save(product);
+        log.info("Luu san pham {} - {}", saved.getCode(), saved.getName());
+        return saved;
     }
 
     /**
@@ -76,12 +76,12 @@ public class ProductService {
     @Transactional
     public RecordStatus toggleStatus(Long id) {
         Product product = getById(id);
-        RecordStatus moi = (product.getStatus() == RecordStatus.ACTIVE)
+        RecordStatus newStatus = (product.getStatus() == RecordStatus.ACTIVE)
                 ? RecordStatus.INACTIVE
                 : RecordStatus.ACTIVE;
-        product.setStatus(moi);
+        product.setStatus(newStatus);
         productRepository.save(product);
-        log.info("San pham {} chuyen sang trang thai {}", product.getCode(), moi);
-        return moi;
+        log.info("San pham {} chuyen sang trang thai {}", product.getCode(), newStatus);
+        return newStatus;
     }
 }

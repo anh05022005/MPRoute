@@ -23,8 +23,8 @@ public class VehicleService {
 
     @Transactional(readOnly = true)
     public Page<Vehicle> search(String keyword, VehicleStatus status, Pageable pageable) {
-        String tuKhoa = (keyword == null || keyword.isBlank()) ? null : keyword.trim();
-        return vehicleRepository.search(tuKhoa, status, pageable);
+        String normalizedKeyword = (keyword == null || keyword.isBlank()) ? null : keyword.trim();
+        return vehicleRepository.search(normalizedKeyword, status, pageable);
     }
 
     @Transactional(readOnly = true)
@@ -63,9 +63,9 @@ public class VehicleService {
             vehicle.setStatus(form.getStatus());
         }
 
-        Vehicle daLuu = vehicleRepository.save(vehicle);
-        log.info("Luu phuong tien {} - {}", daLuu.getLicensePlate(), daLuu.getVehicleType());
-        return daLuu;
+        Vehicle saved = vehicleRepository.save(vehicle);
+        log.info("Luu phuong tien {} - {}", saved.getLicensePlate(), saved.getVehicleType());
+        return saved;
     }
 
     /**
@@ -85,12 +85,12 @@ public class VehicleService {
                     "Xe " + vehicle.getLicensePlate() + " đang chạy tuyến, không đổi trạng thái được.");
         }
 
-        VehicleStatus moi = (vehicle.getStatus() == VehicleStatus.AVAILABLE)
+        VehicleStatus newStatus = (vehicle.getStatus() == VehicleStatus.AVAILABLE)
                 ? VehicleStatus.MAINTENANCE
                 : VehicleStatus.AVAILABLE;
-        vehicle.setStatus(moi);
+        vehicle.setStatus(newStatus);
         vehicleRepository.save(vehicle);
-        log.info("Phuong tien {} chuyen sang trang thai {}", vehicle.getLicensePlate(), moi);
-        return moi;
+        log.info("Phuong tien {} chuyen sang trang thai {}", vehicle.getLicensePlate(), newStatus);
+        return newStatus;
     }
 }

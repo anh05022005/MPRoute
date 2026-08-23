@@ -23,16 +23,16 @@
 
     <!--
         Leaflet chi nap o nhung man hinh co ban do (form khach hang, form kho).
-        Controller nao can thi dat model.addAttribute("canBanDo", true).
+        Controller nao can thi dat model.addAttribute("needsMap", true).
         Khong nap toan cuc vi 162 KB do la thua o 12 man hinh con lai.
     -->
-    <link th:if="${canBanDo}" rel="stylesheet" th:href="@{/css/leaflet.css}">
+    <link th:if="${needsMap}" rel="stylesheet" th:href="@{/css/leaflet.css}">
 </head>
 <body>
 
 <!-- ============ Thanh tieu de ============ -->
-<header class="thanh-tieu-de d-flex justify-content-between align-items-center">
-    <span class="ten-he-thong">Minh Phú — Quản lý giao hàng</span>
+<header class="app-header d-flex justify-content-between align-items-center">
+    <span class="app-name">Minh Phú — Quản lý giao hàng</span>
 
     <div class="d-flex align-items-center gap-3" sec:authorize="isAuthenticated()">
         <span>
@@ -51,7 +51,7 @@
 
 <!-- ============ Thanh menu, hien theo vai tro ============ -->
 <!-- Tai xe khong co menu, chi co mot man hinh duy nhat (docs/05-giao-dien.md) -->
-<nav class="thanh-menu" sec:authorize="hasAnyRole('ADMIN', 'DISPATCHER')">
+<nav class="app-nav" sec:authorize="hasAnyRole('ADMIN', 'DISPATCHER')">
     <ul class="nav">
 
         <!-- Dieu phoi vien XEM duoc danh muc nhung khong sua. Nut Them/Sua bi an trong
@@ -94,9 +94,9 @@
 <!-- ============ Vung noi dung ============ -->
 <main class="container-fluid py-3">
 
-    <!-- Vung hien thong bao. Cac Controller dat flash attribute "thongBao" hoac "loi" -->
-    <div th:if="${thongBao}" class="alert alert-success py-2" th:text="${thongBao}"></div>
-    <div th:if="${loi}" class="alert alert-danger py-2" th:text="${loi}"></div>
+    <!-- Vung hien thong bao. Cac Controller dat flash attribute "successMessage" hoac "errorMessage" -->
+    <div th:if="${successMessage}" class="alert alert-success py-2" th:text="${successMessage}"></div>
+    <div th:if="${errorMessage}" class="alert alert-danger py-2" th:text="${errorMessage}"></div>
 
     <!-- Cho nay duoc thay bang manh noi dung ma trang con truyen vao -->
     <div th:replace="${content}">Nội dung trang</div>
@@ -104,16 +104,16 @@
 
 <script th:src="@{/js/bootstrap.bundle.min.js}"></script>
 
-<!-- Thu tu quan trong: leaflet.js phai chay xong truoc thi chon-toa-do.js moi thay bien L -->
-<script th:if="${canBanDo}" th:src="@{/js/leaflet.js}"></script>
-<script th:if="${canBanDo}" th:src="@{/js/chon-toa-do.js}"></script>
+<!-- Thu tu quan trong: leaflet.js phai chay xong truoc thi location-picker.js moi thay bien L -->
+<script th:if="${needsMap}" th:src="@{/js/leaflet.js}"></script>
+<script th:if="${needsMap}" th:src="@{/js/location-picker.js}"></script>
 
 <!-- Man hinh don hang: tinh tong kg/m3/tien ngay khi go (CN-02-03) va nut sao chep
-     khoi tom tat (CN-02-06). Controller nao can thi dat model.addAttribute("canJsDonHang", true) -->
-<script th:if="${canJsDonHang}" th:src="@{/js/don-hang.js}"></script>
+     khoi tom tat (CN-02-06). Controller nao can thi dat model.addAttribute("needsOrderJs", true) -->
+<script th:if="${needsOrderJs}" th:src="@{/js/order-form.js}"></script>
 
 <!-- Man hinh phan tuyen: ve diem giao len ban do (CN-03-02).
      Can ca canBanDo de nap Leaflet truoc -->
-<script th:if="${canJsPhanTuyen}" th:src="@{/js/phan-tuyen.js}"></script>
+<script th:if="${needsRoutingJs}" th:src="@{/js/routing-map.js}"></script>
 </body>
 </html>

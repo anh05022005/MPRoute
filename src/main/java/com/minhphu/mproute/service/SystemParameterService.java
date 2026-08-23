@@ -38,7 +38,7 @@ public class SystemParameterService {
     public static final String PAGE_SIZE = "PAGE_SIZE";
     public static final String LOOKUP_RATE_LIMIT = "LOOKUP_RATE_LIMIT";
 
-    private static final Pattern GIO_PHUT = Pattern.compile("^([01]\\d|2[0-3]):[0-5]\\d$");
+    private static final Pattern HH_MM_PATTERN = Pattern.compile("^([01]\\d|2[0-3]):[0-5]\\d$");
 
     /** Mot dong trong bang tham so: ma, gia tri khoi tao, mo ta hien ra man hinh. */
     public record ParameterDefault(String code, String defaultValue, String description) {}
@@ -48,7 +48,7 @@ public class SystemParameterService {
      * Nam tham so dau anh huong THANG toi ket qua thuat toan, xep len tren.
      * Gia tri khoi tao lay tu docs/02-co-so-du-lieu.md muc 16.
      */
-    private static final List<ParameterDefault> MAC_DINH = List.of(
+    private static final List<ParameterDefault> DEFAULTS = List.of(
             new ParameterDefault(AVERAGE_SPEED, "30",
                     "Tốc độ trung bình khi tính giờ đến dự kiến (km/h)"),
             new ParameterDefault(LOADING_TIME, "15",
@@ -77,30 +77,30 @@ public class SystemParameterService {
      */
     @Transactional
     public void seedDefaults() {
-        for (ParameterDefault macDinh : MAC_DINH) {
-            if (systemParameterRepository.findByCode(macDinh.code()).isPresent()) {
+        for (ParameterDefault definition : DEFAULTS) {
+            if (systemParameterRepository.findByCode(definition.code()).isPresent()) {
                 continue;
             }
-            SystemParameter thamSo = new SystemParameter();
-            thamSo.setCode(macDinh.code());
-            thamSo.setValue(macDinh.defaultValue());
-            thamSo.setDescription(macDinh.description());
-            systemParameterRepository.save(thamSo);
-            log.info("Da tao tham so {} = {}", macDinh.code(), macDinh.defaultValue());
+            SystemParameter parameter = new SystemParameter();
+            parameter.setCode(definition.code());
+            parameter.setValue(definition.defaultValue());
+            parameter.setDescription(definition.description());
+            systemParameterRepository.save(parameter);
+            log.info("Da tao tham so {} = {}", definition.code(), definition.defaultValue());
         }
     }
 
     /** Danh sach tham so theo dung thu tu hien thi da dinh o MAC_DINH. */
     @Transactional(readOnly = true)
     public List<SystemParameter> findAllInDisplayOrder() {
-        List<String> thuTu = MAC_DINH.stream().map(ParameterDefault::code).toList();
-        List<SystemParameter> danhSach = new ArrayList<>(systemParameterRepository.findAll());
+        List<String> orderedCodes = DEFAULTS.stream().map(ParameterDefault::code).toList();
+        List<SystemParameter> parameters = new ArrayList<>(systemParameterRepository.findAll());
         // Tham so la nhung ma khong co trong MAC_DINH thi xep xuong cuoi
-        danhSach.sort(Comparator.comparingInt(ts -> {
-            int viTri = thuTu.indexOf(ts.getCode());
-            return (viTri < 0) ? Integer.MAX_VALUE : viTri;
+        parameters.sort(Comparator.comparingInt(item -> {
+            int position = orderedCodes.indexOf(item.getCode());
+            return (position < 0) ? Integer.MAX_VALUE : position;
         }));
-        return danhSach;
+        return parameters;
     }
 
     @Transactional(readOnly = true)
@@ -129,62 +129,62 @@ public class SystemParameterService {
      * khong lam chuong trinh chet, no chi lam moi ETA sai be bet ma khong bao gi ca.
      * Loi im lang kieu do kho phat hien hon nhieu so voi loi nem ngoai le.
      */
-    public String kiemGiaTri(String code, String value) {
-        String giaTri = (value == null) ? "" : value.trim();
-        if (giaTri.isEmpty()) {
+    public String validateValue(String code, String value) {
+        String trimmed = (value == null) ? "" : value.trim();
+        if (trimmed.isEmpty()) {
             return "Không được để trống";
         }
 
         return switch (code) {
-            case AVERAGE_SPEED -> kiemSoThuc(giaTri, 1, 200, "Tốc độ phải là số trong khoảng 1 đến 200 km/h");
-            case HAVERSINE_FACTOR -> kiemSoThuc(giaTri, 1, 3, "Hệ số phải là số trong khoảng 1.0 đến 3.0");
-            case LOADING_TIME -> kiemSoNguyen(giaTri, 0, 240, "Thời gian bốc dỡ phải là số nguyên từ 0 đến 240 phút");
-            case OSRM_TIMEOUT -> kiemSoNguyen(giaTri, 1, 120, "Thời gian chờ phải là số nguyên từ 1 đến 120 giây");
-            case PAGE_SIZE -> kiemSoNguyen(giaTri, 5, 200, "Số dòng mỗi trang phải là số nguyên từ 5 đến 200");
-            case LOOKUP_RATE_LIMIT -> kiemSoNguyen(giaTri, 1, 1000, "Giới hạn tra cứu phải là số nguyên từ 1 đến 1000");
+            case AVERAGE_SPEED -> validateDecimal(trimmed, 1, 200, "Tốc độ phải là số trong khoảng 1 đến 200 km/h");
+            case HAVERSINE_FACTOR -> validateDecimal(trimmed, 1, 3, "Hệ số phải là số trong khoảng 1.0 đến 3.0");
+            case LOADING_TIME -> validateInteger(trimmed, 0, 240, "Thời gian bốc dỡ phải là số nguyên từ 0 đến 240 phút");
+            case OSRM_TIMEOUT -> validateInteger(trimmed, 1, 120, "Thời gian chờ phải là số nguyên từ 1 đến 120 giây");
+            case PAGE_SIZE -> validateInteger(trimmed, 5, 200, "Số dòng mỗi trang phải là số nguyên từ 5 đến 200");
+            case LOOKUP_RATE_LIMIT -> validateInteger(trimmed, 1, 1000, "Giới hạn tra cứu phải là số nguyên từ 1 đến 1000");
 
-            case DEPARTURE_TIME -> GIO_PHUT.matcher(giaTri).matches()
+            case DEPARTURE_TIME -> HH_MM_PATTERN.matcher(trimmed).matches()
                     ? null : "Giờ xuất phát phải có dạng HH:mm, ví dụ 08:00";
 
-            case DEFAULT_ALGORITHM -> laAlgorithmTypeHopLe(giaTri)
+            case DEFAULT_ALGORITHM -> isValidAlgorithmType(trimmed)
                     ? null : "Thuật toán không hợp lệ";
 
             // Chan ca hai loi thuong gap: go thieu giao thuc, va go du dau / o cuoi
             case OSRM_URL -> {
-                if (!giaTri.startsWith("http://") && !giaTri.startsWith("https://")) {
+                if (!trimmed.startsWith("http://") && !trimmed.startsWith("https://")) {
                     yield "Địa chỉ phải bắt đầu bằng http:// hoặc https://";
                 }
-                yield giaTri.endsWith("/") ? "Địa chỉ không được kết thúc bằng dấu /" : null;
+                yield trimmed.endsWith("/") ? "Địa chỉ không được kết thúc bằng dấu /" : null;
             }
 
             default -> null;
         };
     }
 
-    private boolean laAlgorithmTypeHopLe(String giaTri) {
-        for (AlgorithmType loai : AlgorithmType.values()) {
-            if (loai.name().equals(giaTri)) {
+    private boolean isValidAlgorithmType(String trimmed) {
+        for (AlgorithmType type : AlgorithmType.values()) {
+            if (type.name().equals(trimmed)) {
                 return true;
             }
         }
         return false;
     }
 
-    private String kiemSoThuc(String giaTri, double min, double max, String thongBao) {
+    private String validateDecimal(String trimmed, double min, double max, String errorMessage) {
         try {
-            double so = Double.parseDouble(giaTri);
-            return (so < min || so > max) ? thongBao : null;
-        } catch (NumberFormatException loi) {
-            return thongBao;
+            double number = Double.parseDouble(trimmed);
+            return (number < min || number > max) ? errorMessage : null;
+        } catch (NumberFormatException ex) {
+            return errorMessage;
         }
     }
 
-    private String kiemSoNguyen(String giaTri, int min, int max, String thongBao) {
+    private String validateInteger(String trimmed, int min, int max, String errorMessage) {
         try {
-            int so = Integer.parseInt(giaTri);
-            return (so < min || so > max) ? thongBao : null;
-        } catch (NumberFormatException loi) {
-            return thongBao;
+            int number = Integer.parseInt(trimmed);
+            return (number < min || number > max) ? errorMessage : null;
+        } catch (NumberFormatException ex) {
+            return errorMessage;
         }
     }
 
@@ -194,18 +194,18 @@ public class SystemParameterService {
      * tu sinh them tham so).
      */
     @Transactional
-    public int updateValues(Map<String, String> giaTriMoi) {
-        int soSua = 0;
-        for (SystemParameter thamSo : systemParameterRepository.findAll()) {
-            String moi = giaTriMoi.get(thamSo.getCode());
-            if (moi == null || moi.trim().equals(thamSo.getValue())) {
+    public int updateValues(Map<String, String> newValues) {
+        int updatedCount = 0;
+        for (SystemParameter parameter : systemParameterRepository.findAll()) {
+            String newValue = newValues.get(parameter.getCode());
+            if (newValue == null || newValue.trim().equals(parameter.getValue())) {
                 continue;
             }
-            log.info("Doi tham so {}: {} -> {}", thamSo.getCode(), thamSo.getValue(), moi.trim());
-            thamSo.setValue(moi.trim());
-            systemParameterRepository.save(thamSo);
-            soSua++;
+            log.info("Doi tham so {}: {} -> {}", parameter.getCode(), parameter.getValue(), newValue.trim());
+            parameter.setValue(newValue.trim());
+            systemParameterRepository.save(parameter);
+            updatedCount++;
         }
-        return soSua;
+        return updatedCount;
     }
 }

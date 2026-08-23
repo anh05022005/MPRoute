@@ -34,7 +34,7 @@ import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 @RequiredArgsConstructor
 public class ProductController {
 
-    private static final int SO_DONG_MOI_TRANG = 15;
+    private static final int PAGE_SIZE = 15;
 
     private final ProductService productService;
 
@@ -43,8 +43,8 @@ public class ProductController {
      * Nho vay ca o loc tren danh sach lan o chon trong form deu dung chung mot nguon,
      * va template khong phai goi thang vao lop Java bang cu phap T(...).
      */
-    @ModelAttribute("cacTrangThai")
-    public RecordStatus[] cacTrangThai() {
+    @ModelAttribute("statuses")
+    public RecordStatus[] statuses() {
         return RecordStatus.values();
     }
 
@@ -54,10 +54,10 @@ public class ProductController {
                        @RequestParam(defaultValue = "0") int page,
                        Model model) {
 
-        var pageable = PageRequest.of(page, SO_DONG_MOI_TRANG, Sort.by("code").ascending());
-        Page<?> trang = productService.search(keyword, status, pageable);
+        var pageable = PageRequest.of(page, PAGE_SIZE, Sort.by("code").ascending());
+        Page<?> pageResult = productService.search(keyword, status, pageable);
 
-        model.addAttribute("trang", trang);
+        model.addAttribute("pageResult", pageResult);
         model.addAttribute("keyword", keyword);
         model.addAttribute("status", status);
         return "admin/products";
@@ -88,27 +88,27 @@ public class ProductController {
         // khong thi de trong ma cung bao "ma da ton tai" thi rat kho hieu
         if (!binding.hasFieldErrors("code")
                 && productService.isCodeTaken(form.getCode().trim(), form.getId())) {
-            binding.rejectValue("code", "trungMa", "Mã sản phẩm này đã tồn tại");
+            binding.rejectValue("code", "duplicateCode", "Mã sản phẩm này đã tồn tại");
         }
 
         if (binding.hasErrors()) {
             return "admin/product-form";
         }
 
-        boolean themMoi = (form.getId() == null);
+        boolean isNew = (form.getId() == null);
         productService.save(form);
 
-        redirectAttributes.addFlashAttribute("thongBao",
-                themMoi ? "Đã thêm sản phẩm mới." : "Lưu dữ liệu thành công.");
+        redirectAttributes.addFlashAttribute("successMessage",
+                isNew ? "Đã thêm sản phẩm mới." : "Lưu dữ liệu thành công.");
         return "redirect:/admin/products";
     }
 
     @PreAuthorize("hasRole('ADMIN')")
     @PostMapping("/{id}/toggle-status")
     public String toggleStatus(@PathVariable Long id, RedirectAttributes redirectAttributes) {
-        RecordStatus moi = productService.toggleStatus(id);
-        redirectAttributes.addFlashAttribute("thongBao",
-                "Đã chuyển sản phẩm sang trạng thái: " + moi.getDisplayName() + ".");
+        RecordStatus newStatus = productService.toggleStatus(id);
+        redirectAttributes.addFlashAttribute("successMessage",
+                "Đã chuyển sản phẩm sang trạng thái: " + newStatus.getDisplayName() + ".");
         return "redirect:/admin/products";
     }
 }

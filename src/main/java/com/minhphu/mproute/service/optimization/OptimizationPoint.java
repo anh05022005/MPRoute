@@ -4,6 +4,8 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 
+import java.util.Locale;
+
 /**
  * Mot diem trong bai toan phan tuyen: hoac la KHO, hoac la mot don hang can giao.
  *
@@ -47,34 +49,34 @@ public class OptimizationPoint {
 
     /** Dung cho kho. */
     public static OptimizationPoint depot(double latitude, double longitude) {
-        OptimizationPoint diem = new OptimizationPoint();
-        diem.setName("KHO");
-        diem.setLatitude(latitude);
-        diem.setLongitude(longitude);
-        diem.setDepot(true);
-        diem.setMatrixIndex(0);
-        return diem;
+        OptimizationPoint point = new OptimizationPoint();
+        point.setName("KHO");
+        point.setLatitude(latitude);
+        point.setLongitude(longitude);
+        point.setDepot(true);
+        point.setMatrixIndex(0);
+        return point;
     }
 
     /** Dung cho mot don hang can giao. */
-    public static OptimizationPoint cuaDon(Long orderId, String name,
-                                           double latitude, double longitude,
-                                           double weight, double volume) {
-        OptimizationPoint diem = new OptimizationPoint();
-        diem.setOrderId(orderId);
-        diem.setName(name);
-        diem.setLatitude(latitude);
-        diem.setLongitude(longitude);
-        diem.setWeight(weight);
-        diem.setVolume(volume);
-        return diem;
+    public static OptimizationPoint forOrder(Long orderId, String name,
+                                             double latitude, double longitude,
+                                             double weight, double volume) {
+        OptimizationPoint point = new OptimizationPoint();
+        point.setOrderId(orderId);
+        point.setName(name);
+        point.setLatitude(latitude);
+        point.setLongitude(longitude);
+        point.setWeight(weight);
+        point.setVolume(volume);
+        return point;
     }
 
     @Override
     public String toString() {
         return (depot ? "KHO" : name + "#" + orderId)
                 // Locale.ROOT de dau thap phan luon la dau cham, khong doi theo mui vung
-                + String.format(java.util.Locale.ROOT, "[%d] (%.5f, %.5f) %.1fkg %.3fm3",
+                + String.format(Locale.ROOT, "[%d] (%.5f, %.5f) %.1fkg %.3fm3",
                         matrixIndex, latitude, longitude, weight, volume);
     }
 }

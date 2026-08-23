@@ -8,7 +8,7 @@
 
 <div th:fragment="content">
 
-    <div class="thanh-cong-cu d-flex justify-content-between align-items-end flex-wrap gap-2">
+    <div class="toolbar d-flex justify-content-between align-items-end flex-wrap gap-2">
 
         <form th:action="@{/admin/customers}" method="get" class="d-flex align-items-end gap-2">
             <div>
@@ -20,10 +20,10 @@
                 <label for="status" class="form-label mb-1 small">Trạng thái</label>
                 <select id="status" name="status" class="form-select form-select-sm" style="width: 160px;">
                     <option value="">Tất cả</option>
-                    <option th:each="tt : ${cacTrangThai}"
-                            th:value="${tt}"
-                            th:text="${tt.displayName}"
-                            th:selected="${tt == status}">Trạng thái</option>
+                    <option th:each="statusOption : ${statuses}"
+                            th:value="${statusOption}"
+                            th:text="${statusOption.displayName}"
+                            th:selected="${statusOption == status}">Trạng thái</option>
                 </select>
             </div>
             <button type="submit" class="btn btn-sm btn-outline-secondary">Tìm</button>
@@ -49,72 +49,72 @@
         </thead>
         <tbody>
 
-        <tr th:if="${trang.empty}">
-            <td colspan="8" class="text-center chu-phu py-3">Không có khách hàng nào phù hợp.</td>
+        <tr th:if="${pageResult.empty}">
+            <td colspan="8" class="text-center text-sub py-3">Không có khách hàng nào phù hợp.</td>
         </tr>
 
-        <tr th:each="kh : ${trang.content}">
+        <tr th:each="customer : ${pageResult.content}">
             <td>
-                <span th:text="${kh.name}">Tạp hóa Bà Lan</span>
+                <span th:text="${customer.name}">Tạp hóa Bà Lan</span>
                 <!--
                     Ghi chu giao hang (BR01-07) hien ngay duoi ten vi day la thong tin
                     dieu phoi vien can thay truoc khi chot tuyen: "chi nhan buoi sang"
                     anh huong thang toi thu tu giao.
                 -->
-                <div th:if="${kh.deliveryNote != null}" class="small chu-phu"
-                     th:text="${kh.deliveryNote}">Chỉ nhận buổi sáng</div>
+                <div th:if="${customer.deliveryNote != null}" class="small text-sub"
+                     th:text="${customer.deliveryNote}">Chỉ nhận buổi sáng</div>
             </td>
 
             <td>
-                <span th:if="${kh.contactPerson != null}" th:text="${kh.contactPerson}">Bà Lan</span>
-                <span th:unless="${kh.contactPerson != null}" class="chu-phu small">—</span>
+                <span th:if="${customer.contactPerson != null}" th:text="${customer.contactPerson}">Bà Lan</span>
+                <span th:unless="${customer.contactPerson != null}" class="text-sub small">—</span>
             </td>
 
-            <td th:text="${kh.phone}">0912345678</td>
-            <td class="small" th:text="${kh.address}">Số 12 ngõ 5 Phan Trọng Tuệ, Thanh Trì</td>
+            <td th:text="${customer.phone}">0912345678</td>
+            <td class="small" th:text="${customer.address}">Số 12 ngõ 5 Phan Trọng Tuệ, Thanh Trì</td>
 
             <!--
                 Toa do la du lieu bat buoc (BR01-05, CBR-07). Hien ra ngay tren danh sach
                 de soat bang mat: khach o Ha Noi thi vi do khoang 20.9-21.1,
                 kinh do khoang 105.7-105.9. Lech xa la nhap sai.
             -->
-            <td class="so small" th:text="${kh.latitude} + ', ' + ${kh.longitude}">21.0000, 105.8000</td>
+            <td class="num small" th:text="${customer.latitude} + ', ' + ${customer.longitude}">21.0000, 105.8000</td>
 
-            <td class="small" th:text="${kh.paymentMethod.displayName}">Tiền mặt</td>
+            <td class="small" th:text="${customer.paymentMethod.displayName}">Tiền mặt</td>
 
             <td>
-                <span th:class="${kh.status.name() == 'ACTIVE'} ? 'nhan nhan-thanh-cong' : 'nhan nhan-cho'"
-                      th:text="${kh.status.displayName}">Đang sử dụng</span>
+                <span th:class="${customer.status.name() == 'ACTIVE'} ? 'status-tag status-tag-success' : 'status-tag status-tag-muted'"
+                      th:text="${customer.status.displayName}">Đang sử dụng</span>
             </td>
 
             <td>
-                <span sec:authorize="!hasRole('ADMIN')" class="chu-phu small">Chỉ xem</span>
+                <span sec:authorize="!hasRole('ADMIN')" class="text-sub small">Chỉ xem</span>
                 <a class="btn btn-sm btn-outline-secondary py-0" sec:authorize="hasRole('ADMIN')"
-                   th:href="@{/admin/customers/{id}/edit(id=${kh.id})}">Sửa</a>
+                   th:href="@{/admin/customers/{id}/edit(id=${customer.id})}">Sửa</a>
 
                 <!--
                     Khong co nut Xoa (CBR-17, BR01-09). Khach da tung dat don ma xoa cung
                     thi don cu mat thong tin giao cho ai. Chi ngung su dung.
                     Dung POST chu khong dung link GET de tranh CSRF.
                 -->
-                <form th:action="@{/admin/customers/{id}/toggle-status(id=${kh.id})}" method="post"
+                <form th:action="@{/admin/customers/{id}/toggle-status(id=${customer.id})}" method="post"
                       sec:authorize="hasRole('ADMIN')" class="d-inline"
                       onsubmit="return confirm('Bạn có chắc chắn muốn thực hiện thao tác này?');">
                     <button type="submit" class="btn btn-sm btn-outline-secondary py-0"
-                            th:text="${kh.status.name() == 'ACTIVE'} ? 'Ngừng dùng' : 'Dùng lại'">Ngừng dùng</button>
+                            th:text="${customer.status.name() == 'ACTIVE'} ? 'Ngừng dùng' : 'Dùng lại'">Ngừng dùng</button>
                 </form>
             </td>
         </tr>
         </tbody>
     </table>
 
-    <div th:replace="~{fragments/pagination :: phan-trang(
-             trang       = ${trang},
-             duongDan    = '/admin/customers',
+    <div th:replace="~{fragments/pagination :: pager(
+             pageResult       = ${pageResult},
+             basePath    = '/admin/customers',
              keyword     = ${keyword},
              status      = ${status},
              role        = null,
-             tenDoiTuong = 'khách hàng')}"></div>
+             entityLabel = 'khách hàng')}"></div>
 
 </div>
 
