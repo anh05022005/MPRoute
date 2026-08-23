@@ -255,7 +255,7 @@ Tuyen truoc: 30  ->  tuyen sau: 49   =>  thuc te DAI THEM 19
 
 Sai số đúng bằng tổng độ bất đối xứng của các cạnh bên trong đoạn bị đảo.
 
-Hậu quả nếu bỏ qua bước B3: test `test2OptKhongLamTangQuangDuong` **xanh khi chạy với Haversine** (vốn đối xứng sẵn) nhưng **đỏ khi chạy với OSRM thật**. Đây là loại lỗi lúc được lúc không, rất khó truy.
+Hậu quả nếu bỏ qua bước B3: test `twoOptNeverIncreasesTotalDistance` **xanh khi chạy với Haversine** (vốn đối xứng sẵn) nhưng **đỏ khi chạy với OSRM thật**. Đây là loại lỗi lúc được lúc không, rất khó truy.
 
 Đối xứng hóa bằng trung bình cộng biến giả định "khoảng cách đối xứng" thành **đúng theo cấu tạo**, và 2-opt chứng minh được là không bao giờ làm tăng quãng đường. **Ghi rõ một câu về bước này trong báo cáo** — nó cho thấy bạn hiểu điều kiện áp dụng của công thức chứ không chép công thức về dùng.
 
@@ -694,25 +694,25 @@ là dấu hiệu có lỗi, chứ không phải chuyện thuật toán yếu.
 
 | Test | Kiểm tra gì |
 |---|---|
-| `testTinhTongQuangDuongCoChangVeKho` | Tuyến 3 điểm, kiểm tổng có gồm chặng cuối |
-| `testHaversineHaiDiemBiet` | So với giá trị tính tay của hai tọa độ đã biết |
-| `testNNKhongVuotTaiTrong` | Sinh dữ liệu nặng, kiểm mọi tuyến ≤ tải trọng |
-| `testNNKhongVuotTheTich` | Sinh dữ liệu cồng kềnh, kiểm mọi tuyến ≤ thể tích |
-| `testNNGanHetDiemKhiDuSucChua` | Không sót điểm nào |
-| `testNNTraVeDiemSotKhiThieuSucChua` | Trả về danh sách chưa gán, không im lặng |
-| `test2OptKhongLamTangQuangDuong` | Sau 2-opt luôn ≤ trước 2-opt |
-| `test2OptGiuNguyenTapDiem` | Số điểm và tổng kg/m³ không đổi |
-| `testEtaDiemDauTien` | Khớp với tính tay |
-| `testCheapestInsertionChonViTriDung` | Ví dụ nhỏ tính tay được |
+| `totalDistanceIncludesReturnLegToDepot` | Tuyến 3 điểm, kiểm tổng có gồm chặng cuối |
+| `haversineMatchesHandCalculatedDistances` | So với giá trị tính tay của hai tọa độ đã biết |
+| `nearestNeighborNeverExceedsWeightCapacity` | Sinh dữ liệu nặng, kiểm mọi tuyến ≤ tải trọng |
+| `nearestNeighborNeverExceedsVolumeCapacity` | Sinh dữ liệu cồng kềnh, kiểm mọi tuyến ≤ thể tích |
+| `nearestNeighborAssignsEveryPointWhenCapacityAllows` | Không sót điểm nào |
+| `nearestNeighborReportsUnassignedPointsWhenCapacityRunsOut` | Trả về danh sách chưa gán, không im lặng |
+| `twoOptNeverIncreasesTotalDistance` | Sau 2-opt luôn ≤ trước 2-opt |
+| `twoOptPreservesPointSet` | Số điểm và tổng kg/m³ không đổi |
+| `etaOfFirstStopMatchesHandCalculation` | Khớp với tính tay |
+| `cheapestInsertionPicksCorrectPosition` | Ví dụ nhỏ tính tay được |
 
 Bốn test nữa cho bộ giải chính:
 
 | Test | Kiểm tra gì |
 |---|---|
-| `orToolsGiaiDungBaiCvrpNhoTinhTayDuoc` | Bài 4 điểm 2 xe, ra đúng 8000 m tính tay. **Đã viết, đã xanh** |
-| `testOrToolsKhongVuotCaHaiRangBuoc` | Dữ liệu vừa nặng vừa cồng kềnh, kiểm cả hai Dimension |
-| `testOrToolsBoDiemKhiThieuSucChua` | `addDisjunction` hoạt động, trả `unassignedPoints` chứ không `null` |
-| `testHaiBoGiaiCungTapDiem` | Hai bộ giải trên cùng dữ liệu phải phủ đúng tập điểm như nhau |
+| `orToolsSolvesSmallCvrpToHandCalculatedOptimum` | Bài 4 điểm 2 xe, ra đúng 8000 m tính tay. **Đã viết, đã xanh** |
+| `orToolsRespectsBothCapacityDimensions` | Dữ liệu vừa nặng vừa cồng kềnh, kiểm cả hai Dimension |
+| `orToolsDropsPointsWhenCapacityIsInsufficient` | `addDisjunction` hoạt động, trả `unassignedPoints` chứ không `null` |
+| `bothSolversCoverTheSamePointSet` | Hai bộ giải trên cùng dữ liệu phải phủ đúng tập điểm như nhau |
 
 Test cuối là test có giá trị nhất trong cả bộ: nó bắt lỗi ở **cả hai** bên. Nếu bản tự cài đặt
 sót điểm mà OR-Tools không sót, test đỏ và chỉ thẳng vào chỗ sai.

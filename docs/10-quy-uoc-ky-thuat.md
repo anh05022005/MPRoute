@@ -146,11 +146,23 @@ Ngoại lệ: giữ nguyên tiếng Anh cho các từ đã thành thuật ngữ 
 
 ### Ngôn ngữ trong code
 
-- **Comment viết tiếng Việt không dấu** — vừa tránh lỗi encoding, vừa để lúc hội đồng chỉ vào
-  một dòng thì comment ngay trên đó đã là câu trả lời sẵn.
+- **Mọi định danh viết bằng tiếng Anh, không có ngoại lệ**: tên class, method, biến cục bộ,
+  field, tên file, class CSS, biến JavaScript, tên bảng, tên cột, giá trị enum, URL.
+  `tinhTongQuangDuong()` phải là `calculateTotalDistance()`, `.thanh-tieu-de` phải là
+  `.app-header`. Đây là thứ người ngoài nhìn vào đánh giá đầu tiên.
+- **Comment viết tiếng Việt không dấu.** Định danh nói *cái gì*, comment nói *tại sao* — và
+  phần "tại sao" là thứ cần diễn đạt trôi chảy nhất, nên viết bằng tiếng mẹ đẻ là hợp lý.
+  Lúc hội đồng chỉ vào một dòng thì comment ngay trên đó đã là câu trả lời sẵn.
+- **Comment trả lời *tại sao*, không kể lại *cái gì*.** `// tang bien dem` đặt trên `i++` là rác.
+  Comment có giá trị là chỗ giải thích vì sao tổng quãng đường phải cộng thêm chặng cuối về kho,
+  hoặc vì sao phải đối xứng hóa ma trận trước khi chạy 2-opt.
+- **Commit message viết tiếng Anh** — xem mục "Quy ước Git" bên dưới.
 - **Chuỗi hiển thị ra giao diện là tiếng Việt có dấu bình thường**, vì người dùng cuối là chủ
   tạp hóa và tài xế. Mỗi enum có trường `displayName` để đổ ra giao diện — dữ liệu lưu
   `PENDING_APPROVAL`, màn hình hiện "Chờ duyệt".
+- Phần `service/optimization/` vẫn phải **giảng lại được bằng tiếng Việt khi vấn đáp**. Comment
+  tiếng Anh không cản trở việc đó — hội đồng hỏi bạn hiểu thuật toán đến đâu, không hỏi comment
+  viết bằng tiếng gì.
 
 ---
 
@@ -176,25 +188,25 @@ chắc chắn thuật toán đúng.
 
 | Test | Kiểm cái gì |
 |---|---|
-| `testTinhTongQuangDuongCoChangVeKho` | Tuyến 3 điểm, tổng phải gồm chặng cuối về kho |
-| `testHaversineHaiDiemBiet` | So với giá trị tính tay của hai tọa độ đã biết |
-| `testNNKhongVuotTaiTrong` | Sinh dữ liệu nặng, mọi tuyến ≤ tải trọng |
-| `testNNKhongVuotTheTich` | Sinh dữ liệu cồng kềnh, mọi tuyến ≤ thể tích |
-| `testNNGanHetDiemKhiDuSucChua` | Không sót điểm nào |
-| `testNNTraVeDiemSotKhiThieuSucChua` | Trả về danh sách chưa gán, không im lặng bỏ qua |
-| `test2OptKhongLamTangQuangDuong` | Sau 2-opt luôn ≤ trước 2-opt |
-| `test2OptGiuNguyenTapDiem` | Số điểm và tổng kg/m³ không đổi |
-| `testEtaDiemDauTien` | Khớp với kết quả tính tay |
-| `testCheapestInsertionChonViTriDung` | Ví dụ nhỏ tính tay được |
+| `totalDistanceIncludesReturnLegToDepot` | Tuyến 3 điểm, tổng phải gồm chặng cuối về kho |
+| `haversineMatchesHandCalculatedDistances` | So với giá trị tính tay của hai tọa độ đã biết |
+| `nearestNeighborNeverExceedsWeightCapacity` | Sinh dữ liệu nặng, mọi tuyến ≤ tải trọng |
+| `nearestNeighborNeverExceedsVolumeCapacity` | Sinh dữ liệu cồng kềnh, mọi tuyến ≤ thể tích |
+| `nearestNeighborAssignsEveryPointWhenCapacityAllows` | Không sót điểm nào |
+| `nearestNeighborReportsUnassignedPointsWhenCapacityRunsOut` | Trả về danh sách chưa gán, không im lặng bỏ qua |
+| `twoOptNeverIncreasesTotalDistance` | Sau 2-opt luôn ≤ trước 2-opt |
+| `twoOptPreservesPointSet` | Số điểm và tổng kg/m³ không đổi |
+| `etaOfFirstStopMatchesHandCalculation` | Khớp với kết quả tính tay |
+| `cheapestInsertionPicksCorrectPosition` | Ví dụ nhỏ tính tay được |
 
 Bốn test cho bộ giải chính:
 
 | Test | Kiểm cái gì |
 |---|---|
-| `orToolsGiaiDungBaiCvrpNhoTinhTayDuoc` | Bài 4 điểm 2 xe, ra đúng 8000 m tính tay. **Đã viết, đã xanh** |
-| `testOrToolsKhongVuotCaHaiRangBuoc` | Dữ liệu vừa nặng vừa cồng kềnh, kiểm cả hai Dimension |
-| `testOrToolsBoDiemKhiThieuSucChua` | `addDisjunction` chạy đúng, trả `unassignedPoints` chứ không `null` |
-| `testHaiBoGiaiCungTapDiem` | Hai bộ giải trên cùng dữ liệu phải phủ đúng tập điểm như nhau |
+| `orToolsSolvesSmallCvrpToHandCalculatedOptimum` | Bài 4 điểm 2 xe, ra đúng 8000 m tính tay. **Đã viết, đã xanh** |
+| `orToolsRespectsBothCapacityDimensions` | Dữ liệu vừa nặng vừa cồng kềnh, kiểm cả hai Dimension |
+| `orToolsDropsPointsWhenCapacityIsInsufficient` | `addDisjunction` chạy đúng, trả `unassignedPoints` chứ không `null` |
+| `bothSolversCoverTheSamePointSet` | Hai bộ giải trên cùng dữ liệu phải phủ đúng tập điểm như nhau |
 
 Cách viết:
 
@@ -264,9 +276,10 @@ Lịch sử commit sạch giúp khôi phục được khi code hỏng gần ngà
 <loai>(<pham vi>): <mo ta ngan> (<ma chuc nang>)
 ```
 
-Mô tả viết **tiếng Việt không dấu**, chữ thường sau dấu hai chấm, **không chấm cuối câu**, gói
-trong 72 ký tự. Mã chức năng để trong ngoặc ở cuối để `git log --oneline` đối chiếu thẳng được
-với `04-chuc-nang.md`.
+Mô tả viết **tiếng Anh, thể mệnh lệnh** (`add`, `fix`, `remove` — không phải `added`, `adds`),
+chữ thường sau dấu hai chấm, **không chấm cuối câu**, gói trong 72 ký tự. Mã chức năng để trong
+ngoặc ở cuối để `git log --oneline` đối chiếu thẳng được với `04-chuc-nang.md` — đây chính là
+cách các đội thật gắn commit với mã ticket.
 
 | Loại | Khi nào |
 |---|---|
@@ -286,6 +299,17 @@ trải rộng cả dự án.
 
 Phần thân commit chỉ viết khi **lý do không nhìn ra được từ diff** — trả lời "vì sao", không kể
 lại "làm gì". Chỗ này chính là câu trả lời sẵn khi hội đồng hỏi "vì sao em sửa dòng này".
+
+Ví dụ:
+
+```
+feat(routing): add distance matrix cache backed by MySQL (CN-03-05)
+fix(optimization): include final leg back to depot in total distance (CBR-01)
+refactor(order): extract capacity check into OrderService
+test(optimization): cover both capacity constraints in NearestNeighborSolver
+perf(routing): preload distance matrix before running 2-opt
+docs: update progress after finishing OSRM integration
+```
 
 Đánh tag ở các mốc sống còn: `t7-thuat-toan-chay-duoc`, `t8-phan-tuyen-tren-web`, `t11-ban-demo`.
 **Trước ngày bảo vệ, tag một bản chắc chắn chạy được** và đừng động vào nữa.

@@ -2,7 +2,7 @@
 
 > Trạng thái hiện tại của đồ án. **Giữ dưới 60 dòng.** Cập nhật sau mỗi mốc hoàn thành.
 
-**Cập nhật lần cuối:** 21/08/2026 · Kho: `github.com/anh05022005/MPRoute` (riêng tư), nhánh `main`
+**Cập nhật lần cuối:** 22/08/2026 · Kho: `github.com/anh05022005/MPRoute` (riêng tư), nhánh `main`
 
 ---
 
@@ -11,7 +11,7 @@
 | | |
 |---|---|
 | Theo kế hoạch | Tuần 6 — thuật toán giai đoạn 1 |
-| Thực tế | **Đúng tiến độ.** Xong Nhóm 0, 1, 2 và trọn tuần 5 — OSRM chạy, ma trận có bộ nhớ đệm |
+| Thực tế | **Đúng tiến độ.** Xong tuần 6 — Nearest Neighbor chạy được bằng `main()`, 6/14 test bắt buộc xanh |
 
 ```
 [x] T1  Chot de tai, hoi Minh Phu 3 cau
@@ -19,7 +19,7 @@
 [x] T3  CRUD 7 danh muc xong + tim toa do Nominatim
 [x] T4  Tao don hang, tu tinh kg/m3/tien — xong tron Nhom 2
 [x] T5  OSRM chay, ma tran co cache, ban do hien diem
-[ ] T6  NearestNeighbor chay duoc bang main(), test xanh
+[x] T6  NearestNeighbor chay duoc bang main(), test xanh
 [ ] T7  2-opt chay duoc, OR-Tools cam vao, bang so sanh 4 dong
 [ ] T8  Man hinh phan tuyen hoan chinh, ve tuyen len ban do
 [ ] T9  Man hinh tai xe, tra cuu, su co
@@ -182,7 +182,7 @@
   - **Cố ý KHÔNG lưu giá trị Haversine vào bảng `distance_matrix`.** Bảng đó là bộ nhớ đệm *của
     OSRM*; lưu số xấp xỉ vào thì lần sau tra thấy "đã có" rồi vĩnh viễn không gọi OSRM nữa, mà
     lúc đó cờ `dungXapXi` cũng không còn bật lên để ai biết
-  - **★ Test bắt buộc số 2 `testHaversineHaiDiemBiet` — đã xanh.** Một độ vĩ độ ra đúng
+  - **★ Test bắt buộc số 2 `haversineMatchesHandCalculatedDistances` — đã xanh.** Một độ vĩ độ ra đúng
     `R × π/180 = 111194,93 m`; kho → 91 Chùa Bộc ra `6455,43 m` chim bay, `8392,06 m` sau khi
     nhân hệ số 1.3. Đối chiếu độc lập bằng phép xấp xỉ mặt phẳng, lệch dưới 1 mm
   - **★ CN-03-02** — màn hình `/routing` chọn ngày, hiện đơn `APPROVED` kèm tổng kg/m³, vẽ điểm
@@ -211,6 +211,38 @@
   - Đối chiếu Haversine với đường thật trên chính cặp điểm đó: xấp xỉ ra 8 392 m, đường thật
     trung bình hai chiều 11 010 m → **hệ số 1.3 đang ước lượng THIẾU khoảng 24%** cho tuyến này.
     Chưa đổi vội, đợi có nhiều cặp điểm hơn ở tuần 8 rồi tính lại `HAVERSINE_FACTOR` bằng số liệu
+- **★ Tuần 6 — Nearest Neighbor chạy được bằng `main()`.** Mốc sống còn của đồ án đã qua.
+  - Lớp dữ liệu: `OptimizationVehicle`, `OptimizationRoute`, `RoutingResult`, interface
+    `RoutingAlgorithm` (Strategy pattern thứ hai), và `RouteDistanceCalculator`
+  - **`RouteDistanceCalculator` tách riêng một lớp, dùng `static`, để CẢ HAI bộ giải gọi
+    chung một hàm.** Mỗi bên tự tính lấy thì chỉ cần lệch một chặng là bảng so sánh chương 4
+    mất ý nghĩa
+  - `NearestNeighborSolver` nằm ở `optimization/heuristic/`, viết bằng vòng lặp `for`
+    tường minh **ánh xạ 1–1 với mã giả B1…B28** của `docs/03` — để hội đồng chỉ vào dòng nào
+    cũng đối chiếu được với tài liệu
+  - **`AlgorithmRunner` có `main()`**, chạy bằng
+    `mvnw.cmd compile exec:java -Dexec.mainClass=...AlgorithmRunner`,
+    **không cần web, không cần MySQL, không cần OSRM** (dùng Haversine)
+  - **★ Kết quả chạy khớp CHÍNH XÁC với `docs/08`** — cùng thứ tự điểm, cùng số kg, cùng đơn bị sót:
+
+    ```
+    29H-123.45  22.12 km  1455.0/1500 kg (97%)  Binh Minh -> An Phat -> Bao Chau -> Minh Anh
+    29F-555.66  18.46 km   457.5/1000 kg (46%)  Duc Loi -> Kim Ngan -> Thanh Tam
+    KHONG GAN DUOC: Sieu thi Hong Ha (727.5 kg)      Tong 40.58 km, chay het 5 ms
+    ```
+
+    Đây là **điểm nhấn demo mạnh nhất**: tổng sức chứa 3000 kg > tổng nhu cầu 2640 kg mà vẫn
+    sót một đơn, vì phân đơn cho xe là bài toán xếp thùng còn NN thì tham lam theo khoảng cách.
+    **Đừng sửa dữ liệu để giấu tình huống này đi**
+  - **6/14 test bắt buộc đã xanh:** `totalDistanceIncludesReturnLegToDepot`, `haversineMatchesHandCalculatedDistances`,
+    `nearestNeighborNeverExceedsWeightCapacity`, `nearestNeighborNeverExceedsVolumeCapacity`, `nearestNeighborAssignsEveryPointWhenCapacityAllows`,
+    `nearestNeighborReportsUnassignedPointsWhenCapacityRunsOut`. Tất cả dùng **một hình chữ nhật 4×3 km** với ma trận
+    số nguyên (đường chéo 3-4-5), cộng tay ra đáp số không cần máy tính
+  - Test tải trọng cố ý đặt một điểm **vừa đúng bằng** giới hạn 700/700 kg — cài đặt nào viết
+    nhầm `>=` thay vì `>` là test đỏ ngay
+  - Nới hai luật của hook `.claude/hooks/kiem-tra-quy-tac.js`: cho phép `System.out` trong file
+    tên `*Runner` (chính là chương trình chạy thử console mà quy tắc đã trừ ra), và chỉ soi
+    luật "chặng về kho" ở file cài đặt chứ không soi file test
 - **Sửa 405 thành 403** khi vai trò không đủ quyền gửi POST tới `/admin/**`. Nguyên nhân:
   `accessDeniedPage()` *chuyển tiếp* nên giữ nguyên method POST, mà `HomeController` khai `@GetMapping("/403")`.
   Đổi sang `@RequestMapping("/403")`
@@ -221,19 +253,17 @@ bước 12–14 (phương án B) cần hai tuyến chạy song song mới dựng
 
 ---
 
-## Việc tiếp theo — TUẦN 6, TRÁI TIM ĐỒ ÁN
+## Việc tiếp theo — TUẦN 7
 
-Xong Nhóm 2 và tuần 5. Mốc hợp lý để `/clear` trước khi bắt đầu thuật toán.
-
-1. **Chạy tay trên giấy với 5 điểm trước khi viết dòng code nào** (thứ tự bắt buộc trong `docs/03`)
-2. Viết `OptimizationVehicle`, `OptimizationRoute`, `RoutingResult` — `OptimizationPoint` có rồi
-3. Viết `NearestNeighborSolver`, kiểm **đồng thời** kg và m³, xe tải trọng lớn nhận điểm trước
-4. Viết `AlgorithmRunner` có `main()`, dữ liệu cứng 10 điểm 3 xe, **chạy không cần web,
-   không cần MySQL, không cần OSRM**
-5. Viết `calculateTotalDistance` — kiểm kỹ **chặng cuối về kho**
-6. Viết 10 test bắt buộc cho bản tự cài đặt (đã có 1/14: `testHaversineHaiDiemBiet`)
-
-**Không sang tuần 7 khi chưa chạy được `main()` và in ra tuyến hợp lệ.**
+1. **`TwoOptImprover`** — công thức bốn cạnh `delta = D[a][c] + D[b][d] - D[a][b] - D[c][d]`,
+   ngưỡng `-0.001` để tránh sai số `double`. Chạy trên chính tuyến do NN sinh ra
+2. **`NN2OptSolver`** ghép hai giai đoạn, cài `RoutingAlgorithm`
+3. **`OrToolsSolver`** ở `optimization/ortools/` — hai `Dimension` riêng cho kg và m³,
+   `addDisjunction` để bỏ điểm thay vì trả `null`, `setTimeLimit` 5 giây
+4. **`MetricsService`** — mốc A, mốc B, mức giảm, thời gian chạy
+5. Thêm 4 test: `twoOptNeverIncreasesTotalDistance`, `twoOptPreservesPointSet`,
+   `orToolsRespectsBothCapacityDimensions`, `orToolsDropsPointsWhenCapacityIsInsufficient`, `bothSolversCoverTheSamePointSet`
+6. Cho `AlgorithmRunner` in **bảng so sánh 4 dòng**: NN thuần, NN+2-opt, OR-Tools, mốc A
 
 Còn nợ một phép nghiệm thu của BR02-11: đơn `ROUTED` mới ra đúng chữ MSG-07.
 **Tuần 8 có màn hình phân tuyến hoàn chỉnh mới thử được** — hiện chỉ thử được nhánh đơn đã hủy
