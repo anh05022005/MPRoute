@@ -19,7 +19,7 @@ Lý do làm cả hai thay vì chỉ một:
 
 Nguyên tắc bắt buộc khi viết code phần này:
 
-- **Package `heuristic/` không được import OR-Tools.** Lẫn thư viện vào đó là mất ý nghĩa so sánh. Hook `.claude/hooks/kiem-tra-quy-tac.js` chặn việc này.
+- **Package `heuristic/` không được import OR-Tools.** Lẫn thư viện vào đó là mất ý nghĩa so sánh. Có hook kiểm tra tự động chặn việc này.
 - **Không gọi OSRM hay truy vấn DB bên trong vòng lặp thuật toán.** Ma trận nạp sẵn vào bộ nhớ trước. Áp dụng cho **cả hai** bộ giải — hàm chi phí của OR-Tools cũng bị gọi hàng nghìn lần.
 - Cách viết code thì bình thường — Stream API, lambda, Lombok đều dùng được.
 - **Phải giảng lại được từng bước bằng tiếng Việt.** Đây là chỗ hội đồng hỏi sâu nhất: họ chỉ vào một dòng và hỏi "dòng này làm gì". Với phần OR-Tools, câu hỏi sẽ là "em cấu hình cái gì và vì sao" — xem mục 5.

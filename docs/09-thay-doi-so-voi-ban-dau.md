@@ -72,7 +72,7 @@ lời giải tốt bao nhiêu, và vì sao kém. Câu trả lời "vì 2-opt ch�
 tuyến, không sửa được cách chia đơn cho xe" chỉ chứng minh được khi có mốc C.
 
 **Rào giữ cho việc so sánh còn ý nghĩa.** Package `optimization/heuristic/` cấm import
-OR-Tools, có hook `.claude/hooks/kiem-tra-quy-tac.js` chặn. Nếu thư viện lẫn vào đó thì hai
+OR-Tools, có hook kiểm tra tự động chặn. Nếu thư viện lẫn vào đó thì hai
 cột số không còn độc lập, và cả chương 4 mất giá trị.
 
 **Đã kiểm chứng trước khi quyết.** `OrToolsSmokeTest` chạy trên chính máy phát triển

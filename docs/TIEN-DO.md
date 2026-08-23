@@ -114,7 +114,7 @@
   **cấm import OR-Tools**, có hook chặn. Lý do và phần được/mất ghi ở `docs/09` mục **A3**.
   Đã kiểm chứng trước khi đổi kế hoạch: `OrToolsSmokeTest` giải bài CVRP 4 điểm 2 xe ra
   **đúng đáp số tính tay 8000 m** trong 1,5 s trên Windows 11 + JDK 23. Chương 4 nay có
-  **ba mốc** A/B/C thay vì hai. Đã sửa 15 file: `docs/03,06,07,09,10`, `CLAUDE.md`,
+  **ba mốc** A/B/C thay vì hai. Đã sửa 15 file: `docs/03,06,07,09,10`, 
   4 rule/agent, 3 skill, 2 hook
 - **★ CN-02-01 → CN-02-06** — danh sách và tạo đơn hàng. **Phân quyền ngược với danh mục:**
   đơn hàng là việc của điều phối viên, quản trị viên chỉ xem — kiểm 10 địa chỉ, `admin` gửi
@@ -240,7 +240,7 @@
     số nguyên (đường chéo 3-4-5), cộng tay ra đáp số không cần máy tính
   - Test tải trọng cố ý đặt một điểm **vừa đúng bằng** giới hạn 700/700 kg — cài đặt nào viết
     nhầm `>=` thay vì `>` là test đỏ ngay
-  - Nới hai luật của hook `.claude/hooks/kiem-tra-quy-tac.js`: cho phép `System.out` trong file
+  - Nới hai luật của hook kiểm tra quy tắc: cho phép `System.out` trong file
     tên `*Runner` (chính là chương trình chạy thử console mà quy tắc đã trừ ra), và chỉ soi
     luật "chặng về kho" ở file cài đặt chứ không soi file test
 - **Sửa 405 thành 403** khi vai trò không đủ quyền gửi POST tới `/admin/**`. Nguyên nhân:
