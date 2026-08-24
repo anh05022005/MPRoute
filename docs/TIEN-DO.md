@@ -11,7 +11,7 @@
 | | |
 |---|---|
 | Theo kế hoạch | Tuần 8 — gắn thuật toán vào web |
-| Thực tế | **Đúng tiến độ.** Thuật toán đã chạy trên web: bấm nút ra tuyến thật, lưu xuống CSDL, bảng chỉ số hiện trên màn hình. Còn nợ vẽ tuyến lên bản đồ (CN-03-09) và cả nhóm 4 |
+| Thực tế | **Đúng tiến độ.** Thuật toán đã chạy trên web: bấm nút ra tuyến thật, lưu xuống CSDL, bảng chỉ số và **lộ trình thật vẽ lên bản đồ**. Còn nợ cả nhóm 4 (chỉnh tay, gán tài xế, chốt kế hoạch) |
 
 ```
 [x] T1  Chot de tai, hoi Minh Phu 3 cau
@@ -309,6 +309,29 @@
     mốc A `51,02 km`, mốc B `30,96 km`, sau tối ưu `25,17 km`, giảm **50,7%** so với A và **18,7%** so với B
   - **★ CN-03-14** — đơn còn `APPROVED` trong khi đã có tuyến nháp **chính là** đơn chưa xếp được.
     Suy ra từ trạng thái nên tải lại trang vẫn còn cảnh báo, không phụ thuộc flash message
+  - **★ CN-03-09 — vẽ lộ trình thật lên bản đồ.** `RouteGeometryService` gọi **OSRM Route API**
+    (`/route/v1/driving/...?overview=full&geometries=geojson`) cho từng tuyến, kho → các điểm → **kho**.
+    Chạy thật ra **706 điểm hình dạng** cho tuyến 3 khách, đường khép kín đúng tại kho
+    `(20.94995, 105.81735)` — không phải đường thẳng nối các điểm
+    - **Đảo `[kinh độ, vĩ độ]` của GeoJSON thành `[vĩ độ, kinh độ]` của Leaflet ngay ở máy chủ.**
+      Quên đảo thì không báo lỗi gì cả, đường chỉ hiện ở giữa Somalia — lỗi im lặng kinh điển
+    - **Lớp này cố ý KHÔNG nằm trong `service/optimization/`**: nó không tham gia giải bài toán,
+      chỉ chạy sau khi tuyến đã chốt thứ tự điểm, gọi một lần cho một tuyến, **ngoài mọi vòng lặp
+      thuật toán** nên không phạm điều cấm số 4
+    - **Ghim đánh số theo màu tuyến**: số trên ghim chính là cột `#` của bảng kết quả bên cạnh,
+      đối chiếu bảng với bản đồ không phải đếm tay
+    - **Đã thử nhiều tuyến:** tạm thu nhỏ tải trọng hai xe để bắt buộc tách làm 2 tuyến →
+      `TT26082101` màu `#1E77BF`, `TT26082102` màu `#C75B39`, đường 301 và 651 điểm, ghim đánh số
+      lại từ 1 ở mỗi tuyến, chú thích màu hiện đủ hai biển số. **Đã trả lại tải trọng gốc 500/1000 kg**
+  - **★ CN-03-11 nghiệm thu trên bản đồ:** `docker stop osrm-vietnam` rồi tải lại trang →
+    đường tụt về **5 điểm** (kho + 3 khách + kho), cờ `approximate = true`, bản đồ vẽ **nét đứt**
+    và màn hình hiện đúng dòng cảnh báo. Bật lại container thì quay về 706 điểm. Cố ý vẽ khác hẳn
+    để nhìn là biết ngay, không được vẽ giống đường thật rồi để người xem tưởng nhầm
+  - **Sửa một lỗi chỉ lộ ra sau khi phân tuyến chạy được:** bản đồ trước đây vẽ ghim từ danh sách
+    đơn `APPROVED`, mà chạy xong thì đơn chuyển hết sang `ROUTED` nên **bản đồ chỉ còn mỗi cái kho**.
+    Nay tách hai khối: điểm đã có tuyến đi theo `routeLinesJson` (ghim đánh số, màu tuyến), điểm
+    chưa xếp được đi theo `mapPointsJson` (chấm xám rỗng ruột). Hai khối không bao giờ chồng nhau
+    vì đơn đã xếp thì không còn ở trạng thái `APPROVED`
   - **Phân quyền kiểm lại đủ 4 phép:** `admin` GET `/routing` ra **200 nhưng không có nút chạy**,
     POST `/routing/optimize` ra **403**; `taixe01` ra **403** cả hai. Xe `MAINTENANCE` gửi thẳng
     `vehicleIds=4` lên vẫn **bị chặn ở tầng service** chứ không chỉ ẩn khỏi ô chọn (CBR-05, CBR-15)
@@ -324,15 +347,14 @@ bước 12–14 (phương án B) cần hai tuyến chạy song song mới dựng
 
 ## Việc tiếp theo — nốt TUẦN 8
 
-1. **Vẽ tuyến lên bản đồ theo lộ trình OSRM** (CN-03-09) — phải lấy `geometry` từ OSRM Route API,
-   **không được nối thẳng tọa độ các khách với nhau**, nếu không thì đường vẽ cắt qua sông
-2. **Điều chỉnh thủ công, gán tài xế, chốt kế hoạch** (CN-04-01 → 07). Chốt tuyến là chỗ xe chuyển
+1. **Điều chỉnh thủ công, gán tài xế, chốt kế hoạch** (CN-04-01 → 07). Chốt tuyến là chỗ xe chuyển
    sang `IN_USE` (BR03-12) và tuyến sang `CONFIRMED`
-3. **Nghiệm thu CN-03-10 (MSG-08) bằng dữ liệu thật.** Code đã có và đã chặn đúng khi *không chọn xe
+2. **Nghiệm thu CN-03-10 (MSG-08) bằng dữ liệu thật.** Code đã có và đã chặn đúng khi *không chọn xe
    nào*, nhưng **chưa dựng được tình huống tổng nhu cầu > tổng sức chứa**: xe nhỏ nhất đã 500 kg /
    6 m³ trong khi 3 đơn thử chỉ 237 kg / 0,61 m³. Tạo một đơn to lúc seed dữ liệu tuần 11 rồi thử
-4. **Nghiệm thu CN-03-11 trên đường chạy mới**: tắt `osrm-vietnam` rồi bấm Chạy tối ưu, tuyến phải
-   ra `approximate_distance = 1` kèm MSG-09 và dòng cảnh báo vàng trong khối chỉ số
+3. **Nghiệm thu nhánh `approximate_distance` của chính bảng `routes`**: tắt `osrm-vietnam` rồi bấm
+   Chạy tối ưu **với tập điểm chưa có trong `distance_matrix`**. Lần thử vừa rồi chỉ chứng minh được
+   phần bản đồ vì ma trận khoảng cách của ba điểm đó đã nằm sẵn trong bộ nhớ đệm
 
 Hai việc còn nợ của tuần 7:
 - **Đo lại `HAVERSINE_FACTOR` bằng số liệu thật.** Hiện để 1.3, đo ở tuần 5 thấy đang **ước lượng
