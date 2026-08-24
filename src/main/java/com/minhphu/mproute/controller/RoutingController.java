@@ -13,6 +13,7 @@ import com.minhphu.mproute.repository.OrderRepository;
 import com.minhphu.mproute.repository.VehicleRepository;
 import com.minhphu.mproute.security.CurrentUser;
 import com.minhphu.mproute.service.DepotService;
+import com.minhphu.mproute.service.RouteGeometryService;
 import com.minhphu.mproute.service.RoutingService;
 import com.minhphu.mproute.service.optimization.DistanceMatrixService;
 import com.minhphu.mproute.service.optimization.OptimizationPoint;
@@ -59,6 +60,7 @@ public class RoutingController {
     private final DepotService depotService;
     private final DistanceMatrixService distanceMatrixService;
     private final RoutingService routingService;
+    private final RouteGeometryService routeGeometryService;
     private final ObjectMapper objectMapper;
 
     /** Mot ghim tren ban do. Chi chua thu can ve, khong day ca entity ra giao dien. */
@@ -90,7 +92,6 @@ public class RoutingController {
 
         Depot depot = findActiveDepot(model);
         model.addAttribute("depot", depot);
-        model.addAttribute("mapPointsJson", buildMapPointsJson(depot, orders));
 
         // CN-03-03: chi xe AVAILABLE moi duoc dua ra cho tich chon (CBR-05, BR03-02)
         List<Vehicle> vehicles = vehicleRepository.findByStatus(VehicleStatus.AVAILABLE);
@@ -119,6 +120,23 @@ public class RoutingController {
          */
         model.addAttribute("unassignedOrders", routes.isEmpty() ? List.of() : orders);
         model.addAttribute("metrics", routes.isEmpty() ? null : routingService.latestMetricsOf(targetDate));
+
+        /*
+         * CN-03-09 — duong di THAT cua tung tuyen, lay tu OSRM Route API.
+         *
+         * Ghim va duong di di theo hai khoi JSON khac nhau, va hai khoi nay khong bao gio
+         * chong nhau: don da xep tuyen thi trang thai la ROUTED nen khong con trong danh
+         * sach "orders" (von chi loc APPROVED). Diem da co tuyen duoc ve bang ghim DANH SO
+         * theo mau cua tuyen, diem chua xep duoc ve bang cham xam de nhin ra ngay.
+         */
+        List<RouteGeometryService.RouteLine> routeLines =
+                routeGeometryService.buildRouteLines(depot, routes);
+        model.addAttribute("routeLinesJson", toJson(routeLines, "[]"));
+        model.addAttribute("mapPointsJson", buildMapPointsJson(depot, orders));
+
+        // Mot tuyen ve bang doan thang la ca ban do dang hien duong khong co that (CBR-11)
+        model.addAttribute("approximatePath",
+                routeLines.stream().anyMatch(RouteGeometryService.RouteLine::approximate));
 
         model.addAttribute(NEEDS_MAP, true);
         model.addAttribute(NEEDS_ROUTING_JS, true);
@@ -248,10 +266,8 @@ public class RoutingController {
     }
 
     /**
-     * Dung chuoi JSON cac ghim de JavaScript ve len ban do.
-     *
-     * Dung Jackson chu khong tu noi chuoi: ten khach hang co the chua dau nhay kep
-     * ("Tap hoa "Ba Lan""), noi tay thi vo JSON va ca ban do trang.
+     * Dung chuoi JSON cac ghim RIENG LE de JavaScript ve len ban do: kho, va cac don chua
+     * duoc xep vao tuyen nao. Diem da co tuyen di theo routeLinesJson chu khong qua day.
      */
     private String buildMapPointsJson(Depot depot, List<Order> orders) {
         List<MapPoint> mapPoints = new ArrayList<>();
@@ -270,12 +286,22 @@ public class RoutingController {
                     order.getLatitude(), order.getLongitude(), false, description));
         }
 
+        return toJson(mapPoints, "[]");
+    }
+
+    /**
+     * Doi mot doi tuong sang JSON cho JavaScript doc.
+     *
+     * Dung Jackson chu khong tu noi chuoi: ten khach hang co the chua dau nhay kep
+     * ("Tap hoa "Ba Lan""), noi tay thi vo JSON va ca ban do trang.
+     */
+    private String toJson(Object value, String fallback) {
         try {
-            return objectMapper.writeValueAsString(mapPoints);
+            return objectMapper.writeValueAsString(value);
         } catch (JsonProcessingException ex) {
             // Khong de mot loi dinh dang lam hong ca man hinh: ban do rong, bang van con
             log.error("Khong dung duoc JSON cho ban do phan tuyen", ex);
-            return "[]";
+            return fallback;
         }
     }
 

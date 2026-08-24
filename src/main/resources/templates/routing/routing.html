@@ -130,13 +130,27 @@
                 <div id="routing-map" class="map-canvas"></div>
                 <div class="map-legend">
                     <span><span class="legend-swatch" style="background: var(--blue-900);"></span>Kho</span>
-                    <span><span class="legend-swatch" style="background: var(--route-1);"></span>Điểm giao</span>
-                    <span class="text-faint">Rê chuột vào ghim để xem tên khách và số thùng</span>
+                    <span th:each="route, routeStat : ${routes}">
+                        <span class="legend-swatch"
+                              th:style="'background: var(--route-' + ${routeStat.index % 5 + 1} + ');'"></span>
+                        <span th:text="${route.vehicle.licensePlate}">29H-123.45</span>
+                    </span>
+                    <span th:if="${!unassignedOrders.isEmpty() and !routes.isEmpty()}">
+                        <span class="legend-swatch" style="background: var(--text-muted);"></span>Chưa xếp tuyến
+                    </span>
+                    <span class="text-faint">Rê chuột vào ghim để xem khách và giờ dự kiến</span>
                 </div>
             </div>
             <div class="form-text">
-                Ảnh nền bản đồ lấy từ OpenStreetMap nên cần mạng. Mất mạng thì khung xám
-                nhưng số liệu bên phải vẫn đầy đủ.
+                Đường vẽ trên bản đồ là <strong>lộ trình thật lấy từ OSRM</strong>, không phải
+                đường thẳng nối các điểm. Ảnh nền lấy từ OpenStreetMap nên cần mạng — mất mạng
+                thì khung xám nhưng số liệu bên phải vẫn đầy đủ.
+            </div>
+            <!-- CN-03-11: ve bang doan thang thi phai noi ra, khong duoc de nguoi xem tuong that -->
+            <div th:if="${approximatePath}" class="form-text" style="color: var(--warning);">
+                Không lấy được lộ trình từ OSRM nên đường trên bản đồ đang là
+                <strong>đoạn thẳng nối các điểm</strong>, vẽ bằng nét đứt. Bật lại container
+                <code>osrm-vietnam</code> rồi tải lại trang.
             </div>
         </div>
 
@@ -332,6 +346,9 @@
         JavaScript doc lai bang textContent thi duoc dung chuoi goc.
     -->
     <script id="map-points-data" type="application/json" th:text="${mapPointsJson}">[]</script>
+
+    <!-- CN-03-09: mau, ghim danh so va lo trinh that cua tung tuyen -->
+    <script id="route-lines-data" type="application/json" th:text="${routeLinesJson}">[]</script>
 
 </div>
 

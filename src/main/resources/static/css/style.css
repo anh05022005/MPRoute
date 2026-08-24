@@ -373,6 +373,21 @@ body {
    on-screen proof that total distance includes the return trip (CBR-01). */
 .return-leg-row > td { color: var(--text-secondary); }
 
+/* Numbered stop pin on the map. The number is the delivery order, so the dispatcher
+   can match a row of the route table to a pin without counting (CN-03-09). */
+.route-pin {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  border: 2px solid #FFFFFF;
+  box-shadow: 0 0 3px rgba(0, 0, 0, .55);
+  color: #FFFFFF;
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 20px;
+  text-align: center;
+}
+
 /* ============ Order progress stepper ============ */
 
 .stepper {
