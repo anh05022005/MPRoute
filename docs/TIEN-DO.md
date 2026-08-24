@@ -10,8 +10,8 @@
 
 | | |
 |---|---|
-| Theo kế hoạch | Tuần 7 — thuật toán giai đoạn 2 |
-| Thực tế | **Đúng tiến độ.** Xong tuần 7 — hai bộ giải chạy song song, bảng so sánh có số, **14/14 test bắt buộc xanh** |
+| Theo kế hoạch | Tuần 8 — gắn thuật toán vào web |
+| Thực tế | **Đúng tiến độ.** Thuật toán đã chạy trên web: bấm nút ra tuyến thật, lưu xuống CSDL, bảng chỉ số hiện trên màn hình. Còn nợ vẽ tuyến lên bản đồ (CN-03-09) và cả nhóm 4 |
 
 ```
 [x] T1  Chot de tai, hoi Minh Phu 3 cau
@@ -21,7 +21,7 @@
 [x] T5  OSRM chay, ma tran co cache, ban do hien diem
 [x] T6  NearestNeighbor chay duoc bang main(), test xanh
 [x] T7  2-opt chay duoc, OR-Tools cam vao, bang so sanh 4 dong
-[ ] T8  Man hinh phan tuyen hoan chinh, ve tuyen len ban do
+[~] T8  Man hinh phan tuyen hoan chinh, ve tuyen len ban do  <- dang lam
 [ ] T9  Man hinh tai xe, tra cuu, su co
 [ ] T10 RPT-03 xong, benchmark Augerat xong, chuong 4 viet xong
 [ ] T11 Seed du lieu, chay thu 3 lan, quay video
@@ -282,6 +282,36 @@
   - `AlgorithmRunner` **in cảnh báo và tính lại cột "Giảm" riêng cho từng tập điểm** khi ba bộ
     giải không phủ cùng tập điểm. Với dữ liệu mẫu `docs/08` thì NN bỏ sót 1 điểm còn OR-Tools
     xếp đủ 8, nếu cứ đặt 40 km cạnh 51 km thì kết luận sẽ **ngược hẳn** với sự thật
+- **★ Tuần 8 — thuật toán đã chạy trên web.** Bấm nút trên `/routing` là ra tuyến thật, lưu xuống CSDL.
+  - **`RoutingService`** là lớp nối duy nhất giữa thuật toán và phần còn lại: đọc CSDL → dựng đầu
+    vào → gọi bộ giải → ghi CSDL. Nhờ ranh giới này `service/optimization/` vẫn sạch JPA, vẫn chạy
+    được bằng `main()` và vẫn chạy được benchmark Augerat ở tuần 10
+  - **Cả hàm `optimize()` nằm trong MỘT giao dịch.** Không phải chi tiết trang trí: bước B1 xóa kết
+    quả nháp cũ, mà bước B4 có thể ném lỗi thiếu sức chứa. Chung một giao dịch thì lần chạy hỏng
+    **hoàn tác cả bước xóa** — chọn thiếu xe không làm mất kết quả đang có trên màn hình
+  - **★ CN-03-06, CN-03-13** — chạy thật trên 3 đơn ngày 21/08, xe 29F-555.66, OSRM bật:
+    `TT26082101 · 25 173,7 m · 3 điểm · OR-Tools · 5 003 ms`. Ba dòng `route_stops` có `leg_distance`
+    và ETA, một dòng `optimization_results` với đủ hai mốc
+  - **Kiểm tay CBR-01 ngay trên số thật:** ba chặng cộng lại 9 265,5 + 4 557,7 + 6 113,0 = **19 936,2 m**,
+    trong khi `total_distance` = **25 173,7 m**. Chênh **5 237,5 m** chính là chặng cuối về kho.
+    Màn hình có hẳn một dòng "↩ Về kho" luôn hiện để chỉ vào lúc vấn đáp
+  - **Kiểm tay ETA khớp từng giây:** 9 265,5 m ÷ 30 km/h = 18 phút 32 giây → **08:18:32** đúng như
+    CSDL. Điểm 2 cộng thêm 1 × 15 phút bốc dỡ → **08:42:39**. Điểm 3 cộng 2 × 15 phút → **09:09:52**.
+    Đây cũng chính là **phép nghiệm thu còn nợ của CN-01-08**: đổi `AVERAGE_SPEED` là ETA đổi theo
+  - **★ CN-03-12** — chạy lại 3 lần cùng ngày: bảng `routes` vẫn đúng **1 dòng**, `route_stops` đúng
+    **3 dòng**, không nhân đôi. Đơn được trả về `APPROVED` **trước khi** xóa tuyến cũ, nếu không đơn
+    sẽ biến mất khỏi cả hai màn hình. Cả 4 lần chuyển trạng thái đều có dòng `status_history` (CBR-14)
+  - **★ CN-03-03, CN-03-04** — tích chọn xe `AVAILABLE`, tổng sức chứa cộng ngay tại chỗ và **báo đỏ
+    phần còn thiếu theo cả kg lẫn m³**. Ô chọn thuật toán ba dòng: đổi sang `NN + 2-opt` chạy lại ra
+    **cùng 25,17 km nhưng chỉ 1 ms** so với 5 003 ms của OR-Tools — bài 3 điểm 1 xe thì lời giải tối ưu
+    là hiển nhiên, chênh lệch chỉ là thời gian. Đây là chỗ demo so sánh trước hội đồng
+  - **★ CN-03-07, CN-03-08** — bảng từng tuyến kèm ETA, và khối chỉ số so sánh đặt trên cùng:
+    mốc A `51,02 km`, mốc B `30,96 km`, sau tối ưu `25,17 km`, giảm **50,7%** so với A và **18,7%** so với B
+  - **★ CN-03-14** — đơn còn `APPROVED` trong khi đã có tuyến nháp **chính là** đơn chưa xếp được.
+    Suy ra từ trạng thái nên tải lại trang vẫn còn cảnh báo, không phụ thuộc flash message
+  - **Phân quyền kiểm lại đủ 4 phép:** `admin` GET `/routing` ra **200 nhưng không có nút chạy**,
+    POST `/routing/optimize` ra **403**; `taixe01` ra **403** cả hai. Xe `MAINTENANCE` gửi thẳng
+    `vehicleIds=4` lên vẫn **bị chặn ở tầng service** chứ không chỉ ẩn khỏi ô chọn (CBR-05, CBR-15)
 - **Sửa 405 thành 403** khi vai trò không đủ quyền gửi POST tới `/admin/**`. Nguyên nhân:
   `accessDeniedPage()` *chuyển tiếp* nên giữ nguyên method POST, mà `HomeController` khai `@GetMapping("/403")`.
   Đổi sang `@RequestMapping("/403")`
@@ -292,30 +322,34 @@ bước 12–14 (phương án B) cần hai tuyến chạy song song mới dựng
 
 ---
 
-## Việc tiếp theo — TUẦN 8
+## Việc tiếp theo — nốt TUẦN 8
 
-1. **`RoutingService`** gọi solver, ghi `optimization_results` và `status_history` (CN-03-06, CN-03-13)
-2. **Màn hình phân tuyến**: chọn ngày, chọn xe, chọn thuật toán (CN-03-01, 03, 04)
-3. **Hiển thị kết quả từng tuyến + bảng chỉ số so sánh** (CN-03-07, CN-03-08) — số liệu đã có sẵn
-   ở `MetricsService`, chỉ còn đổ ra giao diện
-4. **Vẽ tuyến lên bản đồ theo lộ trình OSRM** (CN-03-09)
-5. **Xử lý thiếu sức chứa** (CN-03-10, MSG-08) và **dự phòng OSRM lỗi** (CN-03-11, MSG-09)
-6. **Điều chỉnh thủ công, gán tài xế, chốt kế hoạch** (CN-04-01 → 07)
+1. **Vẽ tuyến lên bản đồ theo lộ trình OSRM** (CN-03-09) — phải lấy `geometry` từ OSRM Route API,
+   **không được nối thẳng tọa độ các khách với nhau**, nếu không thì đường vẽ cắt qua sông
+2. **Điều chỉnh thủ công, gán tài xế, chốt kế hoạch** (CN-04-01 → 07). Chốt tuyến là chỗ xe chuyển
+   sang `IN_USE` (BR03-12) và tuyến sang `CONFIRMED`
+3. **Nghiệm thu CN-03-10 (MSG-08) bằng dữ liệu thật.** Code đã có và đã chặn đúng khi *không chọn xe
+   nào*, nhưng **chưa dựng được tình huống tổng nhu cầu > tổng sức chứa**: xe nhỏ nhất đã 500 kg /
+   6 m³ trong khi 3 đơn thử chỉ 237 kg / 0,61 m³. Tạo một đơn to lúc seed dữ liệu tuần 11 rồi thử
+4. **Nghiệm thu CN-03-11 trên đường chạy mới**: tắt `osrm-vietnam` rồi bấm Chạy tối ưu, tuyến phải
+   ra `approximate_distance = 1` kèm MSG-09 và dòng cảnh báo vàng trong khối chỉ số
 
-Hai việc còn nợ của tuần 7, cố ý để lại vì phải có màn hình phân tuyến mới thử được:
+Hai việc còn nợ của tuần 7:
 - **Đo lại `HAVERSINE_FACTOR` bằng số liệu thật.** Hiện để 1.3, đo ở tuần 5 thấy đang **ước lượng
-  thiếu ~24%** trên cặp kho → 91 Chùa Bộc. Tuần 8 có nhiều cặp điểm OSRM thật thì tính lại
-- **Ghi lại ETA điểm cuối từng tuyến** để trả lời bằng số cho câu "ghi chú *chỉ nhận buổi sáng
-  trước 11h* mà thuật toán không ràng buộc khung giờ thì sao"
+  thiếu ~24%** trên cặp kho → 91 Chùa Bộc. Nay bảng `distance_matrix` đã có nhiều cặp điểm OSRM thật
+  thì tính lại được bằng một câu truy vấn
+- ~~Ghi lại ETA điểm cuối từng tuyến~~ — **đã có số**: tuyến 3 điểm ngày 21/08 tới điểm cuối lúc
+  **09:09**, còn sớm hơn mốc "trước 11h" khá nhiều. Câu trả lời cho vấn đáp là: với quy mô hiện tại
+  của Minh Phú thì ràng buộc khung giờ chưa bị vi phạm, nên chưa đưa vào mô hình
 
 Còn nợ một phép nghiệm thu của BR02-11: đơn `ROUTED` mới ra đúng chữ MSG-07.
-**Tuần 8 có màn hình phân tuyến hoàn chỉnh mới thử được** — hiện chỉ thử được nhánh đơn đã hủy
+**Nay đã có đơn `ROUTED` thật trong CSDL** (đơn 5, 6, 7 ngày 21/08) nên thử được ngay
 
 ## Ba việc còn nợ, phải quay lại làm
 
 | Việc | Khi nào làm được | Vì sao chưa làm |
 |---|---|---|
-| **Nghiệm thu thật CN-01-08** | Tuần 8 | Tiêu chí không phải "sửa được" mà là *đổi `AVERAGE_SPEED` rồi chạy lại phân tuyến thì ETA phải đổi theo*. Màn hình phân tuyến tuần 8 mới có |
+| ~~Nghiệm thu thật CN-01-08~~ | ~~Tuần 8~~ | **Xong.** ETA của tuyến thật khớp phép tính tay tới từng giây bằng đúng ba tham số `AVERAGE_SPEED`, `LOADING_TIME`, `DEPARTURE_TIME` đọc từ bảng — đổi tham số là ETA đổi theo |
 | **Thử tay phần bản đồ CN-01-05** | Bất cứ lúc nào | Đã kiểm tự động phía máy chủ (27 phép) nhưng **chưa ai bấm thử thật**: bấm vào bản đồ để ghim, kéo ghim, chọn dòng trong danh sách nhiều kết quả. Phần JavaScript này chỉ chạy trong trình duyệt |
 | **Thử tay `don-hang.js` (CN-02-03)** | Bất cứ lúc nào | Cùng lý do: tổng kg/m³/tiền cập nhật ngay khi gõ, thêm/xóa dòng, chọn khách tự điền địa chỉ — toàn bộ chỉ chạy trong trình duyệt. Phía máy chủ đã kiểm xong, cú pháp JavaScript đã kiểm bằng `node --check`, nhưng **chưa ai gõ thử thật**. Thử luôn khối nhập lý do hủy (dùng `collapse` của Bootstrap) |
 
@@ -344,10 +378,25 @@ Còn nợ một phép nghiệm thu của BR02-11: đơn `ROUTED` mới ra đúng
 
 ## Nợ kỹ thuật
 
-- Menu trỏ tới `/routing`, `/tracking`, `/incidents`, `/reports` chưa có Controller → bấm vào ra 404.
-  `/orders` đã có. Hết tuần 5–10 là tự hết
-- Trong CSDL đang có **4 đơn thử** do lần kiểm thử `curl` tạo ra: `MP2608160001` (Đã duyệt),
-  `MP2608160002`, `MP2608160003`, `MP2608170001` (cả ba Đã hủy). Giữ lại để bấm thử giao diện;
+- Menu trỏ tới `/tracking`, `/incidents`, `/reports` chưa có Controller → bấm vào ra 404.
+  `/orders` và `/routing` đã có. Hết tuần 9–10 là tự hết
+- **`ddl-auto=update` KHÔNG cập nhật ràng buộc `CHECK` khi thêm giá trị enum.** Hibernate sinh
+  `CHECK (algorithm IN (...))` lúc **tạo bảng** rồi không bao giờ động vào nữa. Thêm `OR_TOOLS` vào
+  `AlgorithmType` từ tuần 7 nhưng mãi tuần 8 mới lộ, vì đây là lần đầu thực sự ghi bảng `routes` —
+  lỗi ra `Check constraint 'routes_chk_1' is violated` chứ không nhắc gì tới enum. Đã sửa tay hai bảng
+  `routes` và `optimization_results`:
+
+  ```sql
+  ALTER TABLE routes DROP CHECK routes_chk_1;
+  ALTER TABLE routes ADD CONSTRAINT routes_chk_1
+      CHECK (algorithm IN ('OR_TOOLS','NN','NN_2OPT','MANUAL'));
+  ```
+
+  **Lần sau thêm giá trị enum bất kỳ thì phải sửa `CHECK` tay**, hoặc xóa bảng cho Hibernate tạo lại.
+  Máy khác dựng lại CSDL từ đầu thì không gặp lỗi này — càng dễ tưởng là lỗi của riêng máy mình
+- Trong CSDL đang có **7 đơn thử** do lần kiểm thử `curl` tạo ra: `MP2608160001` (Đã duyệt),
+  `MP2608160002`, `MP2608160003`, `MP2608170001` (cả ba Đã hủy), và ba đơn ngày 21/08 nay đã
+  **Đã phân tuyến** cùng tuyến nháp `TT26082101`. Giữ lại để bấm thử giao diện;
   xóa lúc seed lại dữ liệu ở tuần 11. Ba khách thử của CN-02-10 (`#22`, `#23`, `#24`) đã chuyển
   **`INACTIVE`** nên không còn hiện trong ô chọn khách lúc tạo đơn
 - **Hai container Docker phải bật trước khi chạy ứng dụng**, cả hai đều không phải service Windows:
