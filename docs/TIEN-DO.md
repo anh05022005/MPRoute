@@ -2,7 +2,7 @@
 
 > Trạng thái hiện tại của đồ án. **Giữ dưới 60 dòng.** Cập nhật sau mỗi mốc hoàn thành.
 
-**Cập nhật lần cuối:** 22/08/2026 · Kho: `github.com/anh05022005/MPRoute` (riêng tư), nhánh `main`
+**Cập nhật lần cuối:** 24/08/2026 · Kho: `github.com/anh05022005/MPRoute` (riêng tư), nhánh `main`
 
 ---
 
@@ -10,8 +10,8 @@
 
 | | |
 |---|---|
-| Theo kế hoạch | Tuần 6 — thuật toán giai đoạn 1 |
-| Thực tế | **Đúng tiến độ.** Xong tuần 6 — Nearest Neighbor chạy được bằng `main()`, 6/14 test bắt buộc xanh |
+| Theo kế hoạch | Tuần 7 — thuật toán giai đoạn 2 |
+| Thực tế | **Đúng tiến độ.** Xong tuần 7 — hai bộ giải chạy song song, bảng so sánh có số, **14/14 test bắt buộc xanh** |
 
 ```
 [x] T1  Chot de tai, hoi Minh Phu 3 cau
@@ -20,7 +20,7 @@
 [x] T4  Tao don hang, tu tinh kg/m3/tien — xong tron Nhom 2
 [x] T5  OSRM chay, ma tran co cache, ban do hien diem
 [x] T6  NearestNeighbor chay duoc bang main(), test xanh
-[ ] T7  2-opt chay duoc, OR-Tools cam vao, bang so sanh 4 dong
+[x] T7  2-opt chay duoc, OR-Tools cam vao, bang so sanh 4 dong
 [ ] T8  Man hinh phan tuyen hoan chinh, ve tuyen len ban do
 [ ] T9  Man hinh tai xe, tra cuu, su co
 [ ] T10 RPT-03 xong, benchmark Augerat xong, chuong 4 viet xong
@@ -243,6 +243,45 @@
   - Nới hai luật của hook kiểm tra quy tắc: cho phép `System.out` trong file
     tên `*Runner` (chính là chương trình chạy thử console mà quy tắc đã trừ ra), và chỉ soi
     luật "chặng về kho" ở file cài đặt chứ không soi file test
+- **★ Tuần 7 — hai bộ giải chạy song song, bảng so sánh có số.**
+  - `TwoOptImprover` ở `optimization/heuristic/`: công thức bốn cạnh
+    `delta = D[a][c] + D[b][d] - D[a][b] - D[c][d]`, ngưỡng `-0.001` chứ không phải `< 0`
+    (sai số `double` làm vòng lặp không bao giờ dừng), chặn trên 100 vòng quét
+  - `NN2OptSolver` ghép hai giai đoạn, `EtaCalculator` tính ETA (CBR-13),
+    `CheapestInsertion` cho xử lý sự cố tuần 9
+  - `OrToolsSolver` ở `optimization/ortools/` — **hai `Dimension` riêng** tên `Weight` và
+    `Volume`, `addDisjunction` với tiền phạt `10 × ô lớn nhất`, `setTimeLimit` 5 giây.
+    Làm tròn **nhu cầu LÊN, sức chứa XUỐNG** để sai số làm tròn không tạo ra tuyến quá tải
+  - `MetricsService` — mốc A, mốc B, `reductionPercent`, `gapPercent`, hiệu suất xe.
+    **Mốc A chỉ tính trên các điểm đã được xếp tuyến**, không tính trên toàn bộ điểm đầu vào:
+    so sánh chỉ có nghĩa khi hai bên phủ đúng một tập điểm
+  - **★ 14/14 test bắt buộc đã xanh.** Tám test mới: `twoOptNeverIncreasesTotalDistance`,
+    `twoOptPreservesPointSet`, `etaOfFirstStopMatchesHandCalculation`,
+    `cheapestInsertionPicksCorrectPosition`, `orToolsRespectsBothCapacityDimensions`,
+    `orToolsDropsPointsWhenCapacityIsInsufficient`, `bothSolversCoverTheSamePointSet`
+  - **Số liệu chạy thật, 30 điểm sinh với hạt giống cố định `20260824`, 6 xe, Haversine × 1.3**
+    (`AlgorithmRunner 30`, chạy lại bao nhiêu lần cũng ra đúng bộ số này):
+
+    ```
+    Cach phan tuyen                         Diem         Km     Giam Thoi gian
+    Moc A - moi don mot chuyen khu hoi        30  511.06 km        -         -
+    Moc B - dung cach chia xe, sai thu tu     30  222.33 km    56.5%         -
+    Nearest Neighbor (giai doan 1)            30  186.21 km    63.6%      9 ms
+    NN + 2-opt tu cai dat                     30  183.87 km    64.0%    < 1 ms
+    OR-Tools (bo giai chinh)                  30  149.02 km    70.8%   6576 ms
+    ```
+
+    **NN + 2-opt còn dài hơn OR-Tools 23,4%** — nằm đúng khoảng 10–25% mà `docs/07` dự đoán.
+    Đây là con số trả lời câu "sao em không tự viết hết": em tự viết, đo được nó hơn cách
+    làm thủ công bao nhiêu **và** còn kém lời giải tốt bao nhiêu, rồi cho sản phẩm chạy
+    bằng cái tốt hơn
+  - **2-opt chỉ cải thiện thêm 1,3%** so với NN thuần. Không phải cài sai — 30 điểm chia 6 xe
+    thì mỗi tuyến chỉ 5 điểm, 2-opt gần như không còn gì để đảo. Đây chính là **hạn chế phải
+    nói thẳng khi vấn đáp**: 2-opt chỉ sắp lại thứ tự *bên trong* một tuyến, nó không bao giờ
+    chuyển được một điểm sang xe khác — OR-Tools thì làm được, và đó là toàn bộ khoảng cách 23,4%
+  - `AlgorithmRunner` **in cảnh báo và tính lại cột "Giảm" riêng cho từng tập điểm** khi ba bộ
+    giải không phủ cùng tập điểm. Với dữ liệu mẫu `docs/08` thì NN bỏ sót 1 điểm còn OR-Tools
+    xếp đủ 8, nếu cứ đặt 40 km cạnh 51 km thì kết luận sẽ **ngược hẳn** với sự thật
 - **Sửa 405 thành 403** khi vai trò không đủ quyền gửi POST tới `/admin/**`. Nguyên nhân:
   `accessDeniedPage()` *chuyển tiếp* nên giữ nguyên method POST, mà `HomeController` khai `@GetMapping("/403")`.
   Đổi sang `@RequestMapping("/403")`
@@ -253,17 +292,21 @@ bước 12–14 (phương án B) cần hai tuyến chạy song song mới dựng
 
 ---
 
-## Việc tiếp theo — TUẦN 7
+## Việc tiếp theo — TUẦN 8
 
-1. **`TwoOptImprover`** — công thức bốn cạnh `delta = D[a][c] + D[b][d] - D[a][b] - D[c][d]`,
-   ngưỡng `-0.001` để tránh sai số `double`. Chạy trên chính tuyến do NN sinh ra
-2. **`NN2OptSolver`** ghép hai giai đoạn, cài `RoutingAlgorithm`
-3. **`OrToolsSolver`** ở `optimization/ortools/` — hai `Dimension` riêng cho kg và m³,
-   `addDisjunction` để bỏ điểm thay vì trả `null`, `setTimeLimit` 5 giây
-4. **`MetricsService`** — mốc A, mốc B, mức giảm, thời gian chạy
-5. Thêm 4 test: `twoOptNeverIncreasesTotalDistance`, `twoOptPreservesPointSet`,
-   `orToolsRespectsBothCapacityDimensions`, `orToolsDropsPointsWhenCapacityIsInsufficient`, `bothSolversCoverTheSamePointSet`
-6. Cho `AlgorithmRunner` in **bảng so sánh 4 dòng**: NN thuần, NN+2-opt, OR-Tools, mốc A
+1. **`RoutingService`** gọi solver, ghi `optimization_results` và `status_history` (CN-03-06, CN-03-13)
+2. **Màn hình phân tuyến**: chọn ngày, chọn xe, chọn thuật toán (CN-03-01, 03, 04)
+3. **Hiển thị kết quả từng tuyến + bảng chỉ số so sánh** (CN-03-07, CN-03-08) — số liệu đã có sẵn
+   ở `MetricsService`, chỉ còn đổ ra giao diện
+4. **Vẽ tuyến lên bản đồ theo lộ trình OSRM** (CN-03-09)
+5. **Xử lý thiếu sức chứa** (CN-03-10, MSG-08) và **dự phòng OSRM lỗi** (CN-03-11, MSG-09)
+6. **Điều chỉnh thủ công, gán tài xế, chốt kế hoạch** (CN-04-01 → 07)
+
+Hai việc còn nợ của tuần 7, cố ý để lại vì phải có màn hình phân tuyến mới thử được:
+- **Đo lại `HAVERSINE_FACTOR` bằng số liệu thật.** Hiện để 1.3, đo ở tuần 5 thấy đang **ước lượng
+  thiếu ~24%** trên cặp kho → 91 Chùa Bộc. Tuần 8 có nhiều cặp điểm OSRM thật thì tính lại
+- **Ghi lại ETA điểm cuối từng tuyến** để trả lời bằng số cho câu "ghi chú *chỉ nhận buổi sáng
+  trước 11h* mà thuật toán không ràng buộc khung giờ thì sao"
 
 Còn nợ một phép nghiệm thu của BR02-11: đơn `ROUTED` mới ra đúng chữ MSG-07.
 **Tuần 8 có màn hình phân tuyến hoàn chỉnh mới thử được** — hiện chỉ thử được nhánh đơn đã hủy
@@ -338,9 +381,9 @@ Còn nợ một phép nghiệm thu của BR02-11: đơn `ROUTED` mới ra đúng
   hiện xám — ghim, tọa độ và nút lưu **vẫn hoạt động bình thường**, chỉ mất phần nhìn.
   Nếu ngày bảo vệ không chắc có mạng thì nên chuẩn bị ảnh chụp màn hình sẵn
 - Sau khi đăng nhập địa chỉ có đuôi `?continue` — hành vi mặc định của Spring Security 6, vô hại
-- `application.properties` chứa mật khẩu MySQL `gbao`. Hiện không sao vì kho GitHub để **riêng tư**.
-  **Nếu đổi kho sang công khai thì phải xóa dòng đó khỏi lịch sử trước** — nó nằm trong commit đầu `c55b2d3`,
-  chuyển sang riêng tư rồi công khai lại không tự xóa được
+- `application.properties` nay đọc mật khẩu MySQL từ biến môi trường `MPROUTE_DB_PASSWORD`,
+  mặc định `gbao` cho máy này. **Chuỗi `gbao` vẫn còn trong lịch sử git** ở commit đầu `c55b2d3` —
+  kho đang **riêng tư** nên không sao, nhưng đổi sang công khai thì phải xóa khỏi lịch sử trước
 - Máy này lưu sẵn thông tin đăng nhập GitHub của **hai tài khoản**. Remote cố ý ghi là
   `https://anh05022005@github.com/...` — có `anh05022005@` ở giữa thì Git mới lấy đúng tài khoản.
   Xóa phần đó đi là đẩy bằng tài khoản kia, báo lỗi 403
