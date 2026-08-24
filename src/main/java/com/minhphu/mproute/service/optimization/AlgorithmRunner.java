@@ -16,8 +16,22 @@ import java.util.Random;
  * Chay thu thuat toan bang console — KHONG can khoi dong web, KHONG can MySQL,
  * KHONG can OSRM.
  *
- *     mvnw.cmd compile exec:java -Dexec.mainClass=com.minhphu.mproute.service.optimization.AlgorithmRunner
- *     (hoac bam Run thang trong IDE)
+ * CACH CHAY — bam Run thang trong IDE la de nhat. Tu dong lenh thi lam hai buoc:
+ *
+ *     mvnw.cmd compile
+ *     mvnw.cmd dependency:build-classpath -Dmdep.outputFile=cp.txt
+ *     java -cp "target/classes;%cd%\cp.txt-noi-dung" com...AlgorithmRunner        (mac dinh 8 diem)
+ *     java -cp "..."                                 com...AlgorithmRunner 30     (sinh 30 diem)
+ *
+ * KHONG dung duoc "mvnw.cmd exec:java". exec-maven-plugin nap lop bang classloader
+ * rieng cua no, va classloader do khong tim thay thu muc tai nguyen chua thu vien
+ * native cua OR-Tools:
+ *
+ *     Resource ortools-win32-x86-64/ was not found in ClassLoader ...ExecJavaClassLoader
+ *
+ * Loi nay chi hien ra khi chay toi OrToolsSolver, tuc la sau khi da in xong phan dau,
+ * nen rat de tuong la loi thuat toan. IDE va lenh "java -cp" o tren deu chay binh thuong
+ * vi chung dung classloader chuan.
  *
  * Lop nay lam ba viec, ca ba deu can den het do an:
  *   1. Go loi nhanh o tuan 6-7: tach bach loi THUAT TOAN voi loi Spring / JPA / giao dien.
