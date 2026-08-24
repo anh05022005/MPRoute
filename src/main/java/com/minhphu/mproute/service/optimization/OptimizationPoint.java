@@ -4,6 +4,7 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 
+import java.time.LocalDateTime;
 import java.util.Locale;
 
 /**
@@ -46,6 +47,15 @@ public class OptimizationPoint {
      * DistanceMatrixService dat gia tri nay khi nap ma tran.
      */
     private int matrixIndex;
+
+    /*
+     * Gio du kien den diem nay (CBR-13), do EtaCalculator dat sau khi da co thu tu diem.
+     *
+     * De null cho toi luc do chu khong dat gia tri mac dinh: tuyen vua sinh ra ma chua
+     * tinh ETA thi man hinh phai hien "chua tinh", khong duoc hien mot gio bia ra trong
+     * khi thuc te chua tinh gio nao ca.
+     */
+    private LocalDateTime estimatedArrival;
 
     /** Dung cho kho. */
     public static OptimizationPoint depot(double latitude, double longitude) {
