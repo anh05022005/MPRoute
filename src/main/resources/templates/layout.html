@@ -115,5 +115,8 @@
 <!-- Man hinh phan tuyen: ve diem giao len ban do (CN-03-02).
      Can ca canBanDo de nap Leaflet truoc -->
 <script th:if="${needsRoutingJs}" th:src="@{/js/routing-map.js}"></script>
+
+<!-- Man hinh phan tuyen: cong suc chua cac xe da tich chon (CN-03-03). Khong can Leaflet -->
+<script th:if="${needsRoutingJs}" th:src="@{/js/routing-fleet.js}"></script>
 </body>
 </html>

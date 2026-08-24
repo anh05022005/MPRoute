@@ -4,15 +4,23 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.minhphu.mproute.entity.Depot;
 import com.minhphu.mproute.entity.Order;
+import com.minhphu.mproute.entity.Route;
+import com.minhphu.mproute.entity.Vehicle;
+import com.minhphu.mproute.entity.enums.AlgorithmType;
 import com.minhphu.mproute.entity.enums.OrderStatus;
+import com.minhphu.mproute.entity.enums.VehicleStatus;
 import com.minhphu.mproute.repository.OrderRepository;
+import com.minhphu.mproute.repository.VehicleRepository;
+import com.minhphu.mproute.security.CurrentUser;
 import com.minhphu.mproute.service.DepotService;
+import com.minhphu.mproute.service.RoutingService;
 import com.minhphu.mproute.service.optimization.DistanceMatrixService;
 import com.minhphu.mproute.service.optimization.OptimizationPoint;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -27,11 +35,11 @@ import java.util.List;
 import java.util.Locale;
 
 /**
- * SCR-09 — Man hinh phan tuyen (CN-03-01, CN-03-02, CN-03-05).
+ * SCR-09 — Man hinh phan tuyen (CN-03-01 -> CN-03-14).
  *
- * Tuan 5 moi lam ba phan dau: chon ngay, hien don APPROVED va cac diem giao len ban do,
- * va nut chuan bi ma tran khoang cach. Phan chay thuat toan (CN-03-06 tro di) lam o
- * tuan 8, sau khi thuat toan da chay duoc bang main() o tuan 6-7.
+ * Controller nay chi lam ba viec: nhan tham so tu form, goi service, do ket qua ra model.
+ * Toan bo nghiep vu phan tuyen nam o RoutingService, con thuat toan nam o
+ * service/optimization — day la ranh gioi giup thuat toan van chay duoc bang main().
  *
  * Phan quyen giong man hinh don hang: dieu phoi vien toan quyen, quan tri vien chi xem
  * (docs/01 — ma tran phan quyen).
@@ -47,8 +55,10 @@ public class RoutingController {
     private static final String NEEDS_ROUTING_JS = "needsRoutingJs";
 
     private final OrderRepository orderRepository;
+    private final VehicleRepository vehicleRepository;
     private final DepotService depotService;
     private final DistanceMatrixService distanceMatrixService;
+    private final RoutingService routingService;
     private final ObjectMapper objectMapper;
 
     /** Mot ghim tren ban do. Chi chua thu can ve, khong day ca entity ra giao dien. */
@@ -61,6 +71,7 @@ public class RoutingController {
     @GetMapping
     public String screen(@RequestParam(required = false)
                          @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate deliveryDate,
+                         @RequestParam(required = false) AlgorithmType algorithm,
                          Model model) {
 
         // Mac dinh xem ngay mai — dung ngay ma don duoc tao san (BR02-06)
@@ -81,9 +92,74 @@ public class RoutingController {
         model.addAttribute("depot", depot);
         model.addAttribute("mapPointsJson", buildMapPointsJson(depot, orders));
 
+        // CN-03-03: chi xe AVAILABLE moi duoc dua ra cho tich chon (CBR-05, BR03-02)
+        List<Vehicle> vehicles = vehicleRepository.findByStatus(VehicleStatus.AVAILABLE);
+        model.addAttribute("vehicles", vehicles);
+
+        // CN-03-04: ba bo giai, MANUAL khong phai thuat toan chay tu dong nen khong liet ke
+        model.addAttribute("algorithms",
+                List.of(AlgorithmType.OR_TOOLS, AlgorithmType.NN, AlgorithmType.NN_2OPT));
+        model.addAttribute("selectedAlgorithm",
+                (algorithm != null) ? algorithm : routingService.defaultAlgorithm());
+
+        /*
+         * CN-03-07: ket qua lan chay gan nhat lay THANG TU CSDL chu khong giu trong session.
+         * Nho vay tai lai trang, dong may roi mo lai, hay mo o tab khac deu thay dung mot
+         * ket qua — va do cung chinh la du lieu ma buoc chot ke hoach se dung.
+         */
+        List<Route> routes = routingService.draftRoutesOf(targetDate);
+        model.addAttribute("routes", routes);
+        model.addAttribute("totalRouteDistance",
+                routes.stream().mapToDouble(Route::getTotalDistance).sum());
+
+        /*
+         * CN-03-14: don con o trang thai APPROVED trong khi da co tuyen nhap chinh la don
+         * thuat toan khong xep duoc — don duoc xep da chuyen sang ROUTED. Suy ra tu trang
+         * thai nhu vay thi tai lai trang van con canh bao, khong phu thuoc flash message.
+         */
+        model.addAttribute("unassignedOrders", routes.isEmpty() ? List.of() : orders);
+        model.addAttribute("metrics", routes.isEmpty() ? null : routingService.latestMetricsOf(targetDate));
+
         model.addAttribute(NEEDS_MAP, true);
         model.addAttribute(NEEDS_ROUTING_JS, true);
         return "routing/routing";
+    }
+
+    /**
+     * CN-03-06 — chay thuat toan sinh tuyen cho ngay dang xem.
+     *
+     * Bat IllegalArgumentException va IllegalStateException de doi loi nghiep vu thanh mot
+     * dong canh bao mau do tren chinh man hinh nay. Thieu suc chua (MSG-08) hay chon phai
+     * xe dang chay la tinh huong nguoi dung xu ly duoc, khong phai su co he thong — nem ra
+     * trang 500 thi dieu phoi vien mat het lua chon vua tich.
+     */
+    @PreAuthorize("hasRole('DISPATCHER')")
+    @PostMapping("/optimize")
+    public String optimize(@RequestParam
+                           @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate deliveryDate,
+                           @RequestParam(required = false) List<Long> vehicleIds,
+                           @RequestParam(required = false) AlgorithmType algorithm,
+                           @AuthenticationPrincipal CurrentUser currentUser,
+                           RedirectAttributes redirectAttributes) {
+
+        try {
+            RoutingService.RoutingOutcome outcome =
+                    routingService.optimize(deliveryDate, vehicleIds, algorithm, currentUser.getId());
+
+            redirectAttributes.addFlashAttribute("successMessage", summaryOf(outcome));
+
+            if (outcome.hasUnassignedOrders()) {
+                // MSG-16 — tong suc chua du ma van khong xep het don (CN-03-14, BR03-13)
+                redirectAttributes.addFlashAttribute("errorMessage", String.format(
+                        "Còn %d đơn chưa xếp được vào tuyến nào. Vui lòng chọn thêm xe.",
+                        outcome.unassignedOrders().size()));
+            }
+        } catch (IllegalArgumentException | IllegalStateException ex) {
+            redirectAttributes.addFlashAttribute("errorMessage", ex.getMessage());
+        }
+
+        String algorithmParam = (algorithm != null) ? "&algorithm=" + algorithm.name() : "";
+        return "redirect:/routing?deliveryDate=" + deliveryDate + algorithmParam;
     }
 
     /**
@@ -130,6 +206,24 @@ public class RoutingController {
     }
 
     // ==================== Ham rieng ====================
+
+    /**
+     * Cau tom tat sau mot lan chay, dat ngay dau man hinh.
+     *
+     * Co y neu ca thoi gian chay (BR03-10) va muc giam so voi moc A: hai con so nay chinh
+     * la thu hoi dong hoi den dau tien, va de o day thi khong phai keo xuong bang chi so
+     * moi doc duoc.
+     */
+    private String summaryOf(RoutingService.RoutingOutcome outcome) {
+        var metrics = outcome.metrics();
+        return String.format(Locale.ROOT,
+                "Đã sinh %d tuyến bằng %s trong %d ms. Tổng %.2f km, giảm %.1f%% so với mốc A.",
+                outcome.routes().size(),
+                metrics.getAlgorithm().getDisplayName(),
+                metrics.getExecutionTimeMs(),
+                metrics.getOptimizedDistance() / 1000.0,
+                metrics.getReductionAPercent());
+    }
 
     /**
      * Doi don hang sang diem cua bai toan.
