@@ -44,7 +44,8 @@
                           + ' · ' + ${route.driver.fullName}">26/08/2026 · Nguyễn Văn Hùng</div>
         </div>
 
-        <div class="driver-progress">
+        <!-- Chay xong roi thi khoi tong ket o duoi thay cho khoi tien do nay -->
+        <div class="driver-progress" th:unless="${route.status.name() == 'COMPLETED'}">
             <div>
                 <div class="metric-label">Tiến độ</div>
                 <div class="metric-value"
@@ -153,8 +154,98 @@
                     <a class="btn btn-outline-secondary w-100"
                        th:href="'tel:' + ${stop.order.customer.phone}">Gọi khách</a>
                     <a class="btn btn-outline-secondary w-100" target="_blank" rel="noopener"
-                       th:href="'https://www.google.com/maps/dir/?api=1&destination='
+                       th:href="'https://www.google.com/maps/dir/?api=1&amp;destination='
                                 + ${stop.order.latitude} + ',' + ${stop.order.longitude}">Chỉ đường</a>
+                </div>
+
+                <!--
+                    ============ CN-05-06, CN-05-07 Da giao ============
+                    Hai o toa do an: JavaScript dien vao truoc khi gui neu trinh duyet cho phep
+                    lay vi tri (BR05-08). Khong lay duoc thi van gui duoc, chi la thieu toa do —
+                    tai xe dang dung truoc cua hang, khong the vi thieu GPS ma chan bao ket qua.
+                -->
+                <form th:action="@{/driver/my-route/stops/{id}/delivered(id=${stop.id})}"
+                      method="post" class="stop-form needs-position">
+                    <input type="hidden" name="latitude" class="position-latitude">
+                    <input type="hidden" name="longitude" class="position-longitude">
+
+                    <!-- Don phai thu tien thi hien san so tien, tai xe xac nhan hoac sua (BR05-11) -->
+                    <div th:if="${stop.order.amountToCollect.signum() > 0}" class="mb-2">
+                        <label class="form-label mb-1 small" th:for="'collected-' + ${stop.id}">
+                            Số tiền thực thu (đ)</label>
+                        <input type="number" step="1000" min="0" required
+                               class="form-control collected-amount"
+                               name="collectedAmount"
+                               th:id="'collected-' + ${stop.id}"
+                               th:value="${stop.order.amountToCollect}"
+                               th:data-expected="${stop.order.amountToCollect}">
+
+                        <!-- BR05-12: thu khac so phai thu thi bat buoc ghi ly do, may chu chan lai -->
+                        <div class="collection-note-box mt-2" hidden>
+                            <label class="form-label mb-1 small">Thu khác số phải thu — ghi rõ lý do</label>
+                            <input type="text" name="collectionNote" maxlength="500"
+                                   class="form-control collection-note"
+                                   placeholder="Ví dụ: khách trả thiếu, hẹn trả nốt ngày mai">
+                        </div>
+                    </div>
+
+                    <button type="submit" class="btn btn-primary w-100 btn-lg">Đã giao xong</button>
+                </form>
+
+                <!-- ============ CN-05-08 Giao that bai · CN-05-09 Hoan ============ -->
+                <div class="stop-actions mt-2">
+                    <button type="button" class="btn btn-outline-danger w-100"
+                            data-bs-toggle="collapse" th:attr="data-bs-target='#failed-' + ${stop.id}">
+                        Giao thất bại</button>
+                    <button type="button" class="btn btn-outline-secondary w-100"
+                            data-bs-toggle="collapse" th:attr="data-bs-target='#postpone-' + ${stop.id}">
+                        Hoãn sang ngày khác</button>
+                </div>
+
+                <div class="collapse" th:id="'failed-' + ${stop.id}">
+                    <form th:action="@{/driver/my-route/stops/{id}/failed(id=${stop.id})}"
+                          method="post" class="stop-form mt-2 needs-position">
+                        <input type="hidden" name="latitude" class="position-latitude">
+                        <input type="hidden" name="longitude" class="position-longitude">
+
+                        <label class="form-label mb-1 small">Lý do giao thất bại</label>
+                        <select name="failureReason" class="form-select failure-reason" required>
+                            <option value="" selected disabled>— Chọn lý do —</option>
+                            <option th:each="reason : ${failureReasons}"
+                                    th:value="${reason}"
+                                    th:text="${reason.displayName}">Khách không có mặt</option>
+                        </select>
+
+                        <!-- Chon "Khac" thi bat buoc mo ta, khong thi OTHER thanh thung rac (BR05-06) -->
+                        <div class="failure-note-box mt-2" hidden>
+                            <input type="text" name="failureNote" maxlength="500"
+                                   class="form-control failure-note" placeholder="Mô tả cụ thể">
+                        </div>
+
+                        <button type="submit" class="btn btn-outline-danger w-100 mt-2">
+                            Xác nhận giao thất bại</button>
+                    </form>
+                </div>
+
+                <div class="collapse" th:id="'postpone-' + ${stop.id}">
+                    <form th:action="@{/driver/my-route/stops/{id}/postpone(id=${stop.id})}"
+                          method="post" class="stop-form mt-2 needs-position">
+                        <input type="hidden" name="latitude" class="position-latitude">
+                        <input type="hidden" name="longitude" class="position-longitude">
+
+                        <label class="form-label mb-1 small">Ngày giao mới</label>
+                        <input type="date" name="newDeliveryDate" class="form-control" required
+                               th:value="${tomorrow}" th:min="${today}">
+                        <input type="text" name="note" maxlength="500" class="form-control mt-2"
+                               placeholder="Ghi chú (không bắt buộc)">
+
+                        <div class="form-text">
+                            Đơn hôm nay chuyển sang <strong>Hoãn</strong>, hệ thống tự tạo lại một
+                            đơn mới ở ngày bạn chọn.
+                        </div>
+                        <button type="submit" class="btn btn-outline-secondary w-100 mt-2">
+                            Xác nhận hoãn</button>
+                    </form>
                 </div>
             </div>
         </div>
@@ -162,6 +253,39 @@
         <div th:if="${route.status.name() == 'CONFIRMED'}" class="system-note mt-3">
             Bấm <strong>Xác nhận đã nhận hàng</strong> ở trên thì mới bắt đầu cập nhật được
             từng điểm giao (BR05-03).
+        </div>
+
+        <!--
+            ============ CN-05-10 Man hinh tong ket ============
+            Hien khi moi diem da co ket qua. Tong tien cong tu SO THUC THU o tung diem dung
+            chu khong phai so phai thu tren don — cuoi ngay doi soat quy thi phai lay so that.
+        -->
+        <div th:if="${route.status.name() == 'COMPLETED'}" class="panel panel-info mt-3">
+            <div class="section-label mb-2">Đã xong tuyến hôm nay</div>
+            <div class="metric-row">
+                <div>
+                    <div class="metric-label">Giao thành công</div>
+                    <div class="metric-value" th:text="${summary.deliveredCount()}">3</div>
+                </div>
+                <div>
+                    <div class="metric-label">Thất bại</div>
+                    <div class="metric-value" th:text="${summary.failedCount()}">0</div>
+                </div>
+                <div>
+                    <div class="metric-label">Hoãn</div>
+                    <div class="metric-value" th:text="${summary.postponedCount()}">0</div>
+                </div>
+            </div>
+            <div class="mt-2">
+                Tổng tiền đã thu:
+                <strong th:text="${#numbers.formatInteger(summary.collectedAmount(), 0, 'POINT')} + 'đ'">5.400.000đ</strong>
+            </div>
+            <div class="text-sub small mt-1"
+                 th:if="${route.completedAt != null}"
+                 th:text="'Hoàn thành lúc ' + ${#temporals.format(route.completedAt, 'HH:mm')}
+                          + ' · xe ' + ${route.vehicle.licensePlate} + ' đã về trạng thái Sẵn sàng'">
+                Hoàn thành lúc 16:20 · xe 29H-123.45 đã về trạng thái Sẵn sàng
+            </div>
         </div>
     </div>
 </div>

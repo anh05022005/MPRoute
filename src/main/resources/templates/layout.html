@@ -121,5 +121,8 @@
 
 <!-- Man hinh phan tuyen: keo tha chinh tay tuyen (CN-04-01 -> CN-04-05). Khong can Leaflet -->
 <script th:if="${needsRoutingJs}" th:src="@{/js/routing-arrange.js}"></script>
+
+<!-- Man hinh tai xe: lay toa do GPS va mo cac o bat buoc nhap (CN-05-06 -> CN-05-09) -->
+<script th:if="${needsDriverJs}" th:src="@{/js/driver-route.js}"></script>
 </body>
 </html>
