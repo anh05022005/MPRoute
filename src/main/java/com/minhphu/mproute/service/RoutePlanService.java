@@ -61,6 +61,7 @@ public class RoutePlanService {
     private final NotificationRepository notificationRepository;
     private final StatusHistoryService statusHistoryService;
     private final RoutingService routingService;
+    private final CustomerNotificationService customerNotificationService;
 
     // ==================== Doc ====================
 
@@ -316,7 +317,10 @@ public class RoutePlanService {
     // ==================== CN-04-07 chot ke hoach ====================
 
     /** So tuyen da chot va so thong bao da gui, de bao lai cho dieu phoi vien. */
-    public record ConfirmResult(int routeCount, int notifiedDriverCount) {}
+    public record ConfirmResult(int routeCount,
+                                int notifiedDriverCount,
+                                int mailedCustomerCount,
+                                int customersWithoutMailCount) {}
 
     /**
      * Chot toan bo ke hoach cua mot ngay (CN-04-07, BR04-08).
@@ -361,6 +365,9 @@ public class RoutePlanService {
         }
 
         int notified = 0;
+        int mailed = 0;
+        int withoutMail = 0;
+        int mailErrors = 0;
         for (Route route : draftRoutes) {
             route.setStatus(RouteStatus.CONFIRMED);
             routeRepository.save(route);
@@ -384,11 +391,25 @@ public class RoutePlanService {
                     route.getCode(), deliveryDate.format(DAY_MONTH_YEAR), route.getStops().size()))) {
                 notified++;
             }
+
+            /*
+             * CN-04-08, BR04-11 — bao gio giao du kien cho khach ngay khi chot.
+             *
+             * Goi trong CUNG giao dich chot tuyen: lan chay hong thi cac dong thong bao cung
+             * hoan tac theo. Bao cho khach mot lich giao ma tuyen lai khong ton tai la tinh
+             * huong te nhat, vi khach se cho ca ngay.
+             */
+            CustomerNotificationService.MailResult mail =
+                    customerNotificationService.notifyRouteConfirmed(route);
+            mailed += mail.sentCount();
+            withoutMail += mail.missingEmailCount();
+            mailErrors += mail.errorCount();
         }
 
-        log.info("Chot ke hoach ngay {}: {} tuyen sang CONFIRMED, {} tai xe nhan thong bao",
-                deliveryDate, draftRoutes.size(), notified);
-        return new ConfirmResult(draftRoutes.size(), notified);
+        log.info("Chot ke hoach ngay {}: {} tuyen sang CONFIRMED, {} tai xe nhan thong bao, "
+                        + "{} thu da gui, {} khach khong nhan duoc thu, {} thu loi",
+                deliveryDate, draftRoutes.size(), notified, mailed, withoutMail, mailErrors);
+        return new ConfirmResult(draftRoutes.size(), notified, mailed, withoutMail + mailErrors);
     }
 
     // ==================== CN-04-09 huy tuyen ====================

@@ -345,9 +345,18 @@ public class RoutingController {
         try {
             RoutePlanService.ConfirmResult result =
                     routePlanService.confirmPlan(deliveryDate, currentUser.getId());
-            redirectAttributes.addFlashAttribute("successMessage", String.format(
-                    "Đã chốt %d tuyến. Xe chuyển sang trạng thái Đang chạy, %d tài xế nhận được thông báo.",
-                    result.routeCount(), result.notifiedDriverCount()));
+
+            String message = String.format(
+                    "Đã chốt %d tuyến. Xe chuyển sang trạng thái Đang chạy, %d tài xế nhận được thông báo. "
+                            + "Đã gửi email báo giờ giao cho %d khách.",
+                    result.routeCount(), result.notifiedDriverCount(), result.mailedCustomerCount());
+
+            // BR04-12 — neu ro so khach khong nhan duoc thu de dieu phoi vien con chu dong goi dien
+            if (result.customersWithoutMailCount() > 0) {
+                message += String.format(" Còn %d khách chưa báo được bằng email, cần gọi điện.",
+                        result.customersWithoutMailCount());
+            }
+            redirectAttributes.addFlashAttribute("successMessage", message);
         } catch (IllegalArgumentException | IllegalStateException ex) {
             redirectAttributes.addFlashAttribute("errorMessage", ex.getMessage());
         }

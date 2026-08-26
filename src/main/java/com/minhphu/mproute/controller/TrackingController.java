@@ -8,6 +8,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
@@ -39,6 +40,21 @@ public class TrackingController {
     @GetMapping
     public String form() {
         return "track";
+    }
+
+    /**
+     * Tra cuu thang mot ma don — duong dat trong email bao gio giao (BR04-11, CN-04-08).
+     *
+     * Day la duong DUY NHAT cua trang tra cuu dung GET, va chi nhan MA DON chu khong nhan so
+     * dien thoai. Ma don di trong thu gui rieng cho chinh khach do nen dat len thanh dia chi
+     * la chap nhan duoc; so dien thoai thi khong, vi no la thu tra duoc ra nhieu don va de
+     * do tuan tu.
+     */
+    @GetMapping("/{code}")
+    public String lookupByCode(@PathVariable String code,
+                               HttpServletRequest request,
+                               Model model) {
+        return lookup(code, request, model);
     }
 
     /** CN-07-02 — tra theo ma don hoac so dien thoai. */
