@@ -11,7 +11,7 @@
 | | |
 |---|---|
 | Theo kế hoạch | Tuần 9 — tài xế, tra cứu, sự cố |
-| Thực tế | **Đúng tiến độ.** Tuần 8 xong trọn. Tuần 9: **xong cả Nhóm 5 (CN-05-01 → 10)** — một đơn hàng nay đi được trọn vòng đời từ lúc tạo tới lúc tài xế giao xong và tuyến tự hoàn thành. Còn tra cứu công khai, email ETA, sự cố |
+| Thực tế | **Đúng tiến độ.** Tuần 8 xong trọn. Tuần 9: **xong trọn Nhóm 5 (CN-05-01 → 11)** — một đơn hàng nay đi được trọn vòng đời từ lúc tạo tới lúc tài xế giao xong và tuyến tự hoàn thành. Còn tra cứu công khai, email ETA, sự cố |
 
 ```
 [x] T1  Chot de tai, hoi Minh Phu 3 cau
@@ -461,6 +461,16 @@ bước 12–14 (phương án B) cần hai tuyến chạy song song mới dựng
   - **Định dạng tiền dùng `DecimalFormatSymbols` đặt tay** chứ không dựa vào locale của máy: máy
     cài tiếng Anh ra `5,000,000đ`, máy tiếng Việt ra `5.000.000đ` — cùng một dòng code mà hai máy
     hai kết quả là loại lỗi chỉ lộ ra khi đổi máy, đúng lúc sắp bảo vệ
+- **★ CN-05-11 — lịch sử tuyến đã chạy.** Sang ngày 27/08 thì tuyến hôm qua tự rơi vào lịch sử:
+  `26/08/2026 · TT26082602 · 29H-123.45 · 31,1 km · 1/3 thành công · 1 thất bại · 1 hoãn ·
+  đã thu 5.000.000đ`
+  - **Lọc theo `driver.id` ngay trong câu truy vấn** chứ không lấy hết rồi lọc trong Java —
+    chỗ chặn chắc nhất là ở tầng dữ liệu (BR05-01). Kiểm chứng: `taixe03` mở lịch sử thấy
+    **0 tuyến** và không thấy `TT26082602`; `admin` gõ `/driver/history` ra **403**
+  - **Bỏ tuyến đã hủy** khỏi lịch sử: tuyến đó không được chạy ngày nào, mà sau khi hủy thì các
+    điểm dừng cũng đã bị xóa nên hiện ra chỉ là một dòng `0/0` vô nghĩa
+  - Ba con số để **tách bạch** chứ không gộp thành `3/3`: giao thất bại và hoãn là hai việc khác
+    hẳn nhau, gộp lại thì cuối tháng không đối chiếu được với báo cáo của điều phối
 
 ---
 
@@ -470,8 +480,7 @@ bước 12–14 (phương án B) cần hai tuyến chạy song song mới dựng
    xe, khách khác cùng tuyến; và BR07-09 giới hạn 20 lần/phút/IP
 2. **Gửi email ETA sau khi chốt tuyến** (CN-04-08) — món cuối còn thiếu của Nhóm 4.
    Khách không có email vẫn ghi `notifications` với `NOT_SENT` (BR04-12)
-3. **CN-05-11 lịch sử tuyến đã chạy** — món cuối còn thiếu của Nhóm 5, nhỏ
-4. **Xử lý sự cố** (CN-06) — nếu đuối thì cắt cả nhóm, đưa vào Hướng phát triển.
+3. **Xử lý sự cố** (CN-06) — nếu đuối thì cắt cả nhóm, đưa vào Hướng phát triển.
    `CheapestInsertion` đã viết sẵn từ tuần 7 nên phương án B không tốn nhiều
 
 Còn nợ của tuần 8, làm được lúc nào cũng được:
