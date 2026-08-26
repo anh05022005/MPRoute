@@ -11,7 +11,7 @@
 | | |
 |---|---|
 | Theo kế hoạch | Tuần 8 — gắn thuật toán vào web |
-| Thực tế | **Đúng tiến độ.** Vòng đời một tuyến đã chạy trọn: chạy thuật toán → vẽ lộ trình thật lên bản đồ → gán tài xế → chốt kế hoạch → hủy tuyến. Còn nợ phần kéo thả chỉnh tay (CN-04-01 → 05) |
+| Thực tế | **Xong tuần 8.** Vòng đời một tuyến chạy trọn: chạy thuật toán → vẽ lộ trình thật lên bản đồ → kéo thả chỉnh tay → gán tài xế → chốt kế hoạch → hủy tuyến. Cả Nhóm 3 và Nhóm 4 (trừ CN-04-08 email, để tuần 9) |
 
 ```
 [x] T1  Chot de tai, hoi Minh Phu 3 cau
@@ -21,7 +21,7 @@
 [x] T5  OSRM chay, ma tran co cache, ban do hien diem
 [x] T6  NearestNeighbor chay duoc bang main(), test xanh
 [x] T7  2-opt chay duoc, OR-Tools cam vao, bang so sanh 4 dong
-[~] T8  Man hinh phan tuyen hoan chinh, ve tuyen len ban do  <- dang lam
+[x] T8  Man hinh phan tuyen hoan chinh, ve tuyen len ban do
 [ ] T9  Man hinh tai xe, tra cuu, su co
 [ ] T10 RPT-03 xong, benchmark Augerat xong, chuong 4 viet xong
 [ ] T11 Seed du lieu, chay thu 3 lan, quay video
@@ -355,6 +355,43 @@
       hiện nữa, bản ghi vẫn nằm trong CSDL cho báo cáo
     - Nút Chốt kế hoạch bị khóa kèm **câu giải thích vì sao**; máy chủ vẫn chặn lại bằng đúng ba
       điều kiện đó, ẩn nút chỉ để người dùng khỏi mất công (CBR-15)
+  - **★ CN-04-01 → CN-04-05 — kéo thả chỉnh tay.** Kéo dòng khách để đổi thứ tự trong tuyến,
+    hoặc kéo sang bảng của tuyến khác; km, kg, m³ và ETA đổi **ngay lúc kéo** (BR04-03).
+    - **Trình duyệt chỉ gửi lên THỨ TỰ ĐƠN** — không gửi km, không gửi kg, không gửi ETA.
+      Máy chủ tính lại bằng đúng `RouteDistanceCalculator` và `EtaCalculator` của thuật toán
+      rồi mới ghi xuống. Tin con số của trình duyệt là mở đường cho bất kỳ ai sửa JavaScript
+      cũng ghi được một tuyến 0 km vào báo cáo chương 4
+    - **Công thức trong `routing-arrange.js` phải giống hệt bản Java, kể cả chặng cuối về kho.**
+      Quên chặng đó thì con số xem trước luôn ngắn hơn con số thật, và người dùng thấy km
+      "nhảy" một cái mỗi lần bấm Lưu
+    - **Kiểm chứng bằng số tính tay:** tuyến 3 điểm, kéo về thứ tự nhận đơn `5 → 6 → 7` ra
+      **30 956,8 m**, đúng bằng con số tính tay từ ma trận **và đúng bằng mốc B** trong bảng
+      chỉ số — ba đường tính độc lập (JavaScript, Java, `MetricsService.baselineB`) cho cùng
+      một số. ETA khớp từng giây: 11 009,6 m ÷ 30 km/h = 22 phút 1 giây → **08:22:01**
+    - **★ CN-04-02** chuyển đơn giữa hai tuyến: cả hai tuyến tính lại kg, m³, km, ETA và cùng
+      được đánh dấu `MANUAL`
+    - **★ CN-04-03** kéo hết đơn sang xe nhỏ → chặn ở tầng service kèm **MSG-14**:
+      *"Tuyến TT26082104 vượt quá tải trọng cho phép của xe 29F-555.66: 237.3 kg so với 200 kg"*.
+      Giao diện tô đỏ tiêu đề tuyến và khóa nút Lưu/Chốt, nhưng đó chỉ là tiện nghi
+    - **Hai kiểu hỏng do kéo thả đều bị chặn:** làm mất một đơn → *"danh sách đơn không khớp"*;
+      một đơn nằm ở cả hai tuyến → *"có đơn bị lặp lại"*. Đây là loại lỗi không ai phát hiện
+      ra cho tới lúc khách gọi đến hỏi, nên phải chặn ở máy chủ
+    - **★ CN-04-04** đặt hai con số cạnh nhau: thuật toán tìm ra `25,17 km`, phương án hiện tại
+      `30,96 km`, chênh lệch `Dài hơn 5,78 km`. Đổ sẵn từ máy chủ chứ không để trống chờ
+      JavaScript — tắt JavaScript thì ô này vẫn phải đúng
+    - **★ CN-04-05** khôi phục: chạy lại đúng bộ giải đã ghi trong bảng chỉ số, trên đúng đội xe
+      đang giữ tuyến. Ra lại **25 173,7 m** và `algorithm` về `OR_TOOLS`
+  - **Sửa hai lỗi thật lộ ra khi chạy thử, cả hai đều sẽ hỏng ngay trong buổi demo:**
+    - **Hủy tuyến xong thì đơn không bao giờ phân tuyến lại được.** Cột `route_stops.order_id`
+      đặt `UNIQUE` trên toàn bảng để giữ CBR-02, mà hủy tuyến chỉ đổi trạng thái chứ không xóa
+      các điểm dừng — lần chạy sau đâm thẳng vào ràng buộc đó và chết với
+      `Duplicate entry ... for key route_stops`. Nay hủy tuyến **xóa luôn các điểm dừng**: ý của
+      CBR-02 là một đơn nằm trên tối đa một tuyến *đang sống*, mà chính vòng lặp ngay trên đó vừa
+      trả đơn về hàng chờ. Không mất dấu vết vì lần hủy đã có trong `status_history` kèm lý do —
+      và giữ lại còn sinh lỗi khác: trang tra cứu sẽ trả ETA của một tuyến đã hủy
+    - **Spring tự tách chuỗi có dấu phẩy khi bind vào `List<String>`**, nên `orderIdsCsv=5,6,7`
+      của một tuyến biến thành ba phần tử và hai danh sách song song lệch nhau ngay. Đổi sang
+      ngăn cách bằng dấu gạch ngang. Lỗi này không báo gì rõ ràng, chỉ ra "dữ liệu không hợp lệ"
   - **Nhập nốt 2 tài xế còn thiếu theo `docs/08`** (Lê Văn Nam, Phạm Văn Tú) — trước đó danh mục
     chỉ có 1 người nên không thử được CBR-06. Nhập qua chính màn hình danh mục, kiểm `HEX(full_name)`
     khớp UTF-8. Tiện thể nghiệm thu lại rào của CN-01-03: gán nhầm tài khoản `dieuphoi` cho tài xế
@@ -372,16 +409,23 @@ bước 12–14 (phương án B) cần hai tuyến chạy song song mới dựng
 
 ---
 
-## Việc tiếp theo — nốt TUẦN 8
+## Việc tiếp theo — TUẦN 9
 
-1. **Kéo thả chỉnh tay** (CN-04-01 → 05): đổi thứ tự điểm trong tuyến, chuyển đơn giữa hai tuyến,
-   cảnh báo vượt sức chứa (MSG-14), hiện song song quãng đường tự động và chỉnh tay, nút khôi phục.
-   Đây là phần JavaScript nặng nhất của đồ án — **nếu đuối thì đây là chỗ cắt trước tiên**, vì
-   CN-04-06/07/09 đã xong nên vòng đời tuyến vẫn chạy trọn mà không cần kéo thả
-2. **Nghiệm thu CN-03-10 (MSG-08) bằng dữ liệu thật.** Code đã có và đã chặn đúng khi *không chọn xe
+1. **Màn hình tài xế** (CN-05-01 → 10) — responsive từ 360px, tài xế chỉ thấy tuyến của chính
+   mình (BR05-01, kiểm ở tầng service). Đã có sẵn tuyến `CONFIRMED` thật trong CSDL để bấm thử
+2. **Trang tra cứu công khai** (CN-07-01 → 06) — nhớ BR07-04 không được lộ giá trị đơn, biển số
+   xe, khách khác cùng tuyến; và BR07-09 giới hạn 20 lần/phút/IP
+3. **Gửi email ETA sau khi chốt tuyến** (CN-04-08) — món cuối còn thiếu của Nhóm 4.
+   Khách không có email vẫn ghi `notifications` với `NOT_SENT` (BR04-12)
+4. **Xử lý sự cố** (CN-06) — nếu đuối thì cắt cả nhóm, đưa vào Hướng phát triển.
+   `CheapestInsertion` đã viết sẵn từ tuần 7 nên phương án B không tốn nhiều
+
+Còn nợ của tuần 8, làm được lúc nào cũng được:
+
+1. **Nghiệm thu CN-03-10 (MSG-08) bằng dữ liệu thật.** Code đã có và đã chặn đúng khi *không chọn xe
    nào*, nhưng **chưa dựng được tình huống tổng nhu cầu > tổng sức chứa**: xe nhỏ nhất đã 500 kg /
    6 m³ trong khi 3 đơn thử chỉ 237 kg / 0,61 m³. Tạo một đơn to lúc seed dữ liệu tuần 11 rồi thử
-3. **Nghiệm thu nhánh `approximate_distance` của chính bảng `routes`**: tắt `osrm-vietnam` rồi bấm
+2. **Nghiệm thu nhánh `approximate_distance` của chính bảng `routes`**: tắt `osrm-vietnam` rồi bấm
    Chạy tối ưu **với tập điểm chưa có trong `distance_matrix`**. Lần thử vừa rồi chỉ chứng minh được
    phần bản đồ vì ma trận khoảng cách của ba điểm đó đã nằm sẵn trong bộ nhớ đệm
 
