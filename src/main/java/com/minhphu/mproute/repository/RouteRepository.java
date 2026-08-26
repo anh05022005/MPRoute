@@ -52,5 +52,30 @@ public interface RouteRepository extends JpaRepository<Route, Long> {
     // Kiem tai xe da duoc gan tuyen nao trong ngay chua (CBR-06)
     boolean existsByDriverIdAndDeliveryDate(Long driverId, LocalDate deliveryDate);
 
+    /**
+     * Lich su cac tuyen tai xe da chay, moi nhat truoc (CN-05-11).
+     *
+     * Loc theo driver.id ngay trong cau truy van chu khong lay het roi loc trong Java:
+     * tai xe chi duoc thay tuyen cua chinh minh, va cho chan chac nhat la o tang du lieu
+     * (BR05-01).
+     *
+     * Bo tuyen da huy: tuyen do khong duoc chay ngay nao ca, va sau khi huy thi cac diem
+     * dung cung da bi xoa nen hien ra chi la mot dong 0/0 vo nghia.
+     *
+     * JOIN FETCH stops vi moi dong deu can dem so diem giao thanh cong — khong nap san thi
+     * moi tuyen sinh them mot cau SELECT rieng (van de N+1).
+     */
+    @Query("""
+            SELECT r FROM Route r
+            JOIN FETCH r.vehicle
+            LEFT JOIN FETCH r.stops
+            WHERE r.driver.id = :driverId
+              AND r.deliveryDate < :beforeDate
+              AND r.status <> com.minhphu.mproute.entity.enums.RouteStatus.CANCELLED
+            ORDER BY r.deliveryDate DESC
+            """)
+    List<Route> findHistoryOfDriver(@Param("driverId") Long driverId,
+                                    @Param("beforeDate") LocalDate beforeDate);
+
     long countByDeliveryDate(LocalDate deliveryDate);
 }

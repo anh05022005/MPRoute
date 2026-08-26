@@ -14,6 +14,13 @@
 
 <div th:fragment="content" class="driver-screen">
 
+    <div class="toolbar">
+        <div class="section-label mb-0">Tuyến hôm nay</div>
+        <!-- CN-05-11 — man hinh lich su, tai xe mo luc ranh chu khong phai luc dang chay -->
+        <a class="btn btn-sm btn-outline-secondary push-right" th:href="@{/driver/history}">
+            Lịch sử tuyến</a>
+    </div>
+
     <!-- Tai khoan vai tro DRIVER nhung chua duoc gan vao ho so tai xe nao -->
     <div th:if="${driverProfileMissing}" class="panel panel-warning">
         Tài khoản của bạn chưa được gắn với hồ sơ tài xế nào. Báo cho điều phối viên để được

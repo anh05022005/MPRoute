@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<!--
+    CN-05-11 — Lich su cac tuyen tai xe da chay.
+
+    Man hinh nay tai xe mo ra luc ranh chu khong phai luc dang chay, nen khong can rut gon
+    nhu SCR-12: hien du ca ba con so ket qua de doi chieu voi so quy cuoi thang.
+-->
+<html lang="vi"
+      xmlns:th="http://www.thymeleaf.org"
+      th:replace="~{layout :: main('Lịch sử tuyến', ~{::content})}">
+<body>
+
+<div th:fragment="content" class="driver-screen">
+
+    <div class="toolbar">
+        <div class="section-label mb-0">Các tuyến đã chạy</div>
+        <a class="btn btn-sm btn-outline-secondary push-right" th:href="@{/driver/my-route}">
+            Về tuyến hôm nay</a>
+    </div>
+
+    <div th:if="${history.isEmpty()}" class="panel">
+        <div class="text-sub small">
+            Bạn chưa chạy tuyến nào trong những ngày trước. Tuyến của hôm nay không hiện ở đây —
+            xem ở màn hình <strong>Tuyến hôm nay</strong>.
+        </div>
+    </div>
+
+    <div th:each="entry : ${history}" class="stop-card">
+        <div class="stop-card-title">
+            <span th:text="${#temporals.format(entry.route().deliveryDate, 'dd/MM/yyyy')}">26/08/2026</span>
+            <span class="status-tag"
+                  th:classappend="${entry.route().status.name() == 'COMPLETED'} ? 'status-tag-success' : 'status-tag-muted'"
+                  th:text="${entry.route().status.displayName}">Hoàn thành</span>
+        </div>
+
+        <div class="small text-sub"
+             th:text="${entry.route().code} + ' · ' + ${entry.route().vehicle.licensePlate}
+                      + ' · ' + ${#numbers.formatDecimal(entry.route().totalDistance / 1000, 1, 'POINT', 1, 'COMMA')} + ' km'">
+            TT26082602 · 29H-123.45 · 31,1 km
+        </div>
+
+        <!--
+            Ba con so tach bach chu khong gop thanh "3/3": giao that bai va hoan la hai viec
+            khac han nhau, gop lai thi cuoi thang khong doi chieu duoc voi bao cao cua dieu phoi.
+        -->
+        <div class="metric-row mt-2">
+            <div>
+                <div class="metric-label">Thành công</div>
+                <div class="metric-value" style="font-size: 17px;"
+                     th:text="${entry.summary().deliveredCount()} + ' / ' + ${entry.route().stops.size()}">1 / 3</div>
+            </div>
+            <div>
+                <div class="metric-label">Thất bại</div>
+                <div class="metric-value" style="font-size: 17px;"
+                     th:text="${entry.summary().failedCount()}">1</div>
+            </div>
+            <div>
+                <div class="metric-label">Hoãn</div>
+                <div class="metric-value" style="font-size: 17px;"
+                     th:text="${entry.summary().postponedCount()}">1</div>
+            </div>
+            <div>
+                <div class="metric-label">Tiền đã thu</div>
+                <div class="metric-value" style="font-size: 17px;"
+                     th:text="${#numbers.formatInteger(entry.summary().collectedAmount(), 0, 'POINT')} + 'đ'">5.000.000đ</div>
+            </div>
+        </div>
+    </div>
+
+</div>
+
+</body>
+</html>

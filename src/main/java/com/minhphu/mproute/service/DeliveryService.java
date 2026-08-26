@@ -35,6 +35,7 @@ import java.text.DecimalFormatSymbols;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
 import java.util.Optional;
@@ -398,6 +399,33 @@ public class DeliveryService {
 
         log.info("Tuyen {} hoan thanh luc {}, xe {} ve san sang",
                 route.getCode(), route.getCompletedAt(), vehicle.getLicensePlate());
+    }
+
+    /** Mot dong trong lich su: tuyen da chay kem con so ket qua cua no (CN-05-11). */
+    public record RouteHistoryEntry(Route route, RouteSummary summary) {}
+
+    /**
+     * CN-05-11 — cac tuyen tai xe da chay nhung ngay truoc.
+     *
+     * Di theo dung chieu cua BR05-01 giong moi duong khac cua man hinh tai xe: tu tai khoan
+     * dang dang nhap ra ho so tai xe roi moi ra danh sach tuyen. Khong nhan driverId tu ben
+     * ngoai, nen khong co cach nao xem duoc lich su cua nguoi khac.
+     *
+     * "Ngay truoc" tinh theo dong ho ung dung, khong dung CURDATE() — cung ly do nhu
+     * todayRouteOf(): MySQL o may nay chay trong WSL nen dong ho lech 7 tieng.
+     */
+    @Transactional(readOnly = true)
+    public List<RouteHistoryEntry> historyOf(Long userId) {
+        Optional<Driver> driver = driverOf(userId);
+        if (driver.isEmpty()) {
+            return List.of();
+        }
+
+        List<RouteHistoryEntry> history = new ArrayList<>();
+        for (Route route : routeRepository.findHistoryOfDriver(driver.get().getId(), LocalDate.now())) {
+            history.add(new RouteHistoryEntry(route, summaryOf(route)));
+        }
+        return history;
     }
 
     /** Tong ket mot tuyen da chay xong, hien ra man hinh cuoi ngay (CN-05-10). */

@@ -49,6 +49,13 @@ public class DeliveryController {
         return "driver/my-route";
     }
 
+    /** CN-05-11 — cac tuyen tai xe da chay nhung ngay truoc. */
+    @GetMapping("/history")
+    public String history(@AuthenticationPrincipal CurrentUser currentUser, Model model) {
+        model.addAttribute("history", deliveryService.historyOf(currentUser.getId()));
+        return "driver/history";
+    }
+
     /** CN-05-02 — xac nhan da nhan hang, tuyen chuyen sang Dang chay (BR05-03). */
     @PostMapping("/my-route/pickup")
     public String confirmPickup(@AuthenticationPrincipal CurrentUser currentUser,
