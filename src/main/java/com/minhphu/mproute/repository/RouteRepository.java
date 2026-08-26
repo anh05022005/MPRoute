@@ -7,6 +7,7 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
 import java.time.LocalDate;
+import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
 
@@ -20,21 +21,29 @@ public interface RouteRepository extends JpaRepository<Route, Long> {
     List<Route> findByDeliveryDateAndStatus(LocalDate deliveryDate, RouteStatus status);
 
     /**
-     * Cac tuyen kem san diem dung, don va khach — dung cho bang ket qua phan tuyen (CN-03-07).
+     * Cac tuyen kem san diem dung, don, khach, xe va tai xe — dung cho bang ket qua phan tuyen
+     * (CN-03-07) va cho khoi gan tai xe (CN-04-06).
      *
-     * JOIN FETCH vi bang ket qua hien ten khach o TUNG diem dung: khong nap san thi moi
-     * diem dung sinh them mot cau SELECT rieng (van de N+1), ba tuyen 30 diem la 30 cau.
+     * JOIN FETCH vi bang ket qua hien ten khach o TUNG diem dung: khong nap san thi moi diem
+     * dung sinh them mot cau SELECT rieng (van de N+1), ba tuyen 30 diem la 30 cau.
+     *
+     * Nhan mot DANH SACH trang thai chu khong phai mot trang thai: man hinh phai hien ca tuyen
+     * nhap lan tuyen da chot, neu khong thi bam Chot ke hoach xong la ca bang bien mat.
+     *
+     * Chi mot quan he tap hop duoc FETCH (r.stops). Them mot cai nua, vi du o.items, la
+     * Hibernate nem MultipleBagFetchException ngay luc khoi dong.
      */
     @Query("""
             SELECT r FROM Route r
             JOIN FETCH r.vehicle
+            LEFT JOIN FETCH r.driver
             LEFT JOIN FETCH r.stops s
             LEFT JOIN FETCH s.order o
             LEFT JOIN FETCH o.customer
-            WHERE r.deliveryDate = :deliveryDate AND r.status = :status
+            WHERE r.deliveryDate = :deliveryDate AND r.status IN :statuses
             """)
-    List<Route> findWithStopsByDeliveryDateAndStatus(@Param("deliveryDate") LocalDate deliveryDate,
-                                                     @Param("status") RouteStatus status);
+    List<Route> findWithStopsByDeliveryDateAndStatusIn(@Param("deliveryDate") LocalDate deliveryDate,
+                                                       @Param("statuses") Collection<RouteStatus> statuses);
 
     // Tai xe chi thay tuyen cua chinh minh trong ngay hien tai (BR05-01).
     // Loc o tang du lieu chu khong chi an tren giao dien

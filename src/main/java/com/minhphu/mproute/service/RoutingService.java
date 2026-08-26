@@ -559,10 +559,16 @@ public class RoutingService {
         return ordersById;
     }
 
-    /** Cac tuyen nhap cua mot ngay kem san diem dung, de man hinh do ra bang ket qua. */
+    /**
+     * Cac tuyen con dang song cua mot ngay (nhap va da chot), kem san diem dung.
+     *
+     * Sap theo ma tuyen de thu tu tren man hinh khong doi giua hai lan tai trang — ma tuyen
+     * gan lien voi mau ve tren ban do, thu tu nhay thi mau cung nhay theo.
+     */
     @Transactional(readOnly = true)
-    public List<Route> draftRoutesOf(LocalDate deliveryDate) {
-        List<Route> routes = routeRepository.findWithStopsByDeliveryDateAndStatus(deliveryDate, RouteStatus.DRAFT);
+    public List<Route> visibleRoutesOf(LocalDate deliveryDate) {
+        List<Route> routes = routeRepository.findWithStopsByDeliveryDateAndStatusIn(
+                deliveryDate, List.of(RouteStatus.DRAFT, RouteStatus.CONFIRMED));
         routes.sort(Comparator.comparing(Route::getCode));
         return routes;
     }

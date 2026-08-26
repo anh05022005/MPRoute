@@ -3,17 +3,20 @@ package com.minhphu.mproute.controller;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.minhphu.mproute.entity.Depot;
+import com.minhphu.mproute.entity.Driver;
 import com.minhphu.mproute.entity.Order;
 import com.minhphu.mproute.entity.Route;
 import com.minhphu.mproute.entity.Vehicle;
 import com.minhphu.mproute.entity.enums.AlgorithmType;
 import com.minhphu.mproute.entity.enums.OrderStatus;
+import com.minhphu.mproute.entity.enums.RouteStatus;
 import com.minhphu.mproute.entity.enums.VehicleStatus;
 import com.minhphu.mproute.repository.OrderRepository;
 import com.minhphu.mproute.repository.VehicleRepository;
 import com.minhphu.mproute.security.CurrentUser;
 import com.minhphu.mproute.service.DepotService;
 import com.minhphu.mproute.service.RouteGeometryService;
+import com.minhphu.mproute.service.RoutePlanService;
 import com.minhphu.mproute.service.RoutingService;
 import com.minhphu.mproute.service.optimization.DistanceMatrixService;
 import com.minhphu.mproute.service.optimization.OptimizationPoint;
@@ -25,6 +28,7 @@ import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
@@ -32,8 +36,10 @@ import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
 import java.time.LocalDate;
 import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
 
 /**
  * SCR-09 — Man hinh phan tuyen (CN-03-01 -> CN-03-14).
@@ -60,6 +66,7 @@ public class RoutingController {
     private final DepotService depotService;
     private final DistanceMatrixService distanceMatrixService;
     private final RoutingService routingService;
+    private final RoutePlanService routePlanService;
     private final RouteGeometryService routeGeometryService;
     private final ObjectMapper objectMapper;
 
@@ -108,10 +115,29 @@ public class RoutingController {
          * Nho vay tai lai trang, dong may roi mo lai, hay mo o tab khac deu thay dung mot
          * ket qua — va do cung chinh la du lieu ma buoc chot ke hoach se dung.
          */
-        List<Route> routes = routingService.draftRoutesOf(targetDate);
+        List<Route> routes = routingService.visibleRoutesOf(targetDate);
         model.addAttribute("routes", routes);
         model.addAttribute("totalRouteDistance",
                 routes.stream().mapToDouble(Route::getTotalDistance).sum());
+
+        /*
+         * CN-04-06 — o chon tai xe cua tung tuyen. Danh sach tinh RIENG cho tung tuyen chu
+         * khong dung chung mot danh sach: nguoi da nhan tuyen khac trong ngay phai bien mat
+         * khoi o chon cua cac tuyen con lai (BR04-07), nhung van phai con trong o chon cua
+         * chinh tuyen ho dang giu, neu khong thi mo ra thay trong nhu chua gan ai.
+         */
+        Map<Long, List<Driver>> driverOptions = new LinkedHashMap<>();
+        for (Route route : routes) {
+            driverOptions.put(route.getId(), routePlanService.selectableDriversFor(targetDate, route));
+        }
+        model.addAttribute("driverOptions", driverOptions);
+
+        // CN-04-07: chi chot duoc khi con tuyen nhap, moi tuyen co tai xe, va khong sot don nao
+        boolean hasDraft = routes.stream().anyMatch(route -> route.getStatus() == RouteStatus.DRAFT);
+        boolean everyDraftHasDriver = routes.stream()
+                .filter(route -> route.getStatus() == RouteStatus.DRAFT)
+                .allMatch(route -> route.getDriver() != null);
+        model.addAttribute("canConfirmPlan", hasDraft && everyDraftHasDriver && orders.isEmpty());
 
         /*
          * CN-03-14: don con o trang thai APPROVED trong khi da co tuyen nhap chinh la don
@@ -220,6 +246,67 @@ public class RoutingController {
                             + "Tuyến sinh ra từ ma trận này sẽ được đánh dấu là xấp xỉ.");
         }
         redirectAttributes.addFlashAttribute("successMessage", message);
+        return "redirect:/routing?deliveryDate=" + deliveryDate;
+    }
+
+    /** CN-04-06 — gan tai xe cho mot tuyen nhap. */
+    @PreAuthorize("hasRole('DISPATCHER')")
+    @PostMapping("/routes/{routeId}/driver")
+    public String assignDriver(@PathVariable Long routeId,
+                               @RequestParam Long driverId,
+                               @RequestParam
+                               @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate deliveryDate,
+                               RedirectAttributes redirectAttributes) {
+
+        try {
+            var route = routePlanService.assignDriver(routeId, driverId);
+            redirectAttributes.addFlashAttribute("successMessage", String.format(
+                    "Đã giao tuyến %s cho tài xế %s.",
+                    route.getCode(), route.getDriver().getFullName()));
+        } catch (IllegalArgumentException | IllegalStateException ex) {
+            redirectAttributes.addFlashAttribute("errorMessage", ex.getMessage());
+        }
+        return "redirect:/routing?deliveryDate=" + deliveryDate;
+    }
+
+    /** CN-04-07 — chot ke hoach cua ca ngay. */
+    @PreAuthorize("hasRole('DISPATCHER')")
+    @PostMapping("/confirm")
+    public String confirmPlan(@RequestParam
+                              @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate deliveryDate,
+                              @AuthenticationPrincipal CurrentUser currentUser,
+                              RedirectAttributes redirectAttributes) {
+
+        try {
+            RoutePlanService.ConfirmResult result =
+                    routePlanService.confirmPlan(deliveryDate, currentUser.getId());
+            redirectAttributes.addFlashAttribute("successMessage", String.format(
+                    "Đã chốt %d tuyến. Xe chuyển sang trạng thái Đang chạy, %d tài xế nhận được thông báo.",
+                    result.routeCount(), result.notifiedDriverCount()));
+        } catch (IllegalArgumentException | IllegalStateException ex) {
+            redirectAttributes.addFlashAttribute("errorMessage", ex.getMessage());
+        }
+        return "redirect:/routing?deliveryDate=" + deliveryDate;
+    }
+
+    /** CN-04-09 — huy mot tuyen, tra don ve cho phan tuyen va tra xe ve san sang. */
+    @PreAuthorize("hasRole('DISPATCHER')")
+    @PostMapping("/routes/{routeId}/cancel")
+    public String cancelRoute(@PathVariable Long routeId,
+                              @RequestParam(required = false) String reason,
+                              @RequestParam
+                              @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate deliveryDate,
+                              @AuthenticationPrincipal CurrentUser currentUser,
+                              RedirectAttributes redirectAttributes) {
+
+        try {
+            var route = routePlanService.cancelRoute(routeId, reason, currentUser.getId());
+            redirectAttributes.addFlashAttribute("successMessage", String.format(
+                    "Đã hủy tuyến %s. Các đơn của tuyến này quay lại danh sách chờ phân tuyến.",
+                    route.getCode()));
+        } catch (IllegalArgumentException | IllegalStateException ex) {
+            redirectAttributes.addFlashAttribute("errorMessage", ex.getMessage());
+        }
         return "redirect:/routing?deliveryDate=" + deliveryDate;
     }
 
