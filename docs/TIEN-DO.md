@@ -11,7 +11,7 @@
 | | |
 |---|---|
 | Theo kế hoạch | Tuần 9 — tài xế, tra cứu, sự cố |
-| Thực tế | **Đúng tiến độ.** Tuần 8 xong trọn. Tuần 9: **xong trọn Nhóm 5 (CN-05-01 → 11)** — một đơn hàng nay đi được trọn vòng đời từ lúc tạo tới lúc tài xế giao xong và tuyến tự hoàn thành. Còn tra cứu công khai, email ETA, sự cố |
+| Thực tế | **Đúng tiến độ.** Tuần 8 xong trọn. Tuần 9: **xong Nhóm 5 (CN-05-01 → 11) và Nhóm 7 (CN-07-01 → 07)** — đơn hàng đi trọn vòng đời, và khách tra cứu được từ ngoài. Còn email ETA và nhóm sự cố |
 
 ```
 [x] T1  Chot de tai, hoi Minh Phu 3 cau
@@ -471,17 +471,50 @@ bước 12–14 (phương án B) cần hai tuyến chạy song song mới dựng
     điểm dừng cũng đã bị xóa nên hiện ra chỉ là một dòng `0/0` vô nghĩa
   - Ba con số để **tách bạch** chứ không gộp thành `3/3`: giao thất bại và hoãn là hai việc khác
     hẳn nhau, gộp lại thì cuối tháng không đối chiếu được với báo cáo của điều phối
+- **★ CN-07-01 → CN-07-07 — trang tra cứu công khai `/track`.** Đây là **đường duy nhất của hệ
+  thống mở cho người chưa đăng nhập**, nên viết theo một nguyên tắc khác hẳn các màn hình còn lại.
+  - **Không bao giờ trả entity `Order` ra ngoài.** `TrackingService` đổi sang record `TrackedOrder`
+    chỉ chứa đúng những trường được phép hiện. Nếu trả `Order` rồi để template tự chọn thì ngày mai
+    thêm một dòng `th:text` là lộ giá trị đơn mà không ai phát hiện — **cắt ở tầng dữ liệu thì
+    template có sửa cũng không lộ được, vì trong tay nó không còn số tiền nào cả**
+  - **Kiểm BR07-04 bằng cách quét chính HTML trả về:** không có giá trị đơn, không có biển số xe,
+    không có mã tuyến, không có tên khách khác cùng tuyến. Bốn thứ bị cấm, quét sạch cả bốn
+  - **★ CN-07-04** hành trình lấy từ `status_history` nhưng **chỉ lấy thời điểm và tên trạng thái,
+    bỏ cột `note`**: ghi chú là văn bản nội bộ, nó chứa những thứ như `Phan tuyen TT26082101` —
+    mã tuyến và cách làm việc bên trong không phải việc của khách
+  - **★ CN-07-05** chạy thật hai đơn cạnh nhau: đơn `DELIVERING` hiện *"Đơn đang trên đường giao.
+    Tài xế Lê Văn Nam — 0987654322"*, đơn `DELIVERED` **không hiện gì**. Cắt ở tầng service chứ
+    không để template tự ẩn — đơn giao xong hôm qua mà vẫn trả về SĐT tài xế thì ai biết mã đơn
+    cũng gọi thẳng cho anh ta được, mà đó là thông tin cá nhân của nhân viên
+  - **★ CN-07-06** sai mã đơn và SĐT chưa có đơn nào đều ra **cùng một câu MSG-11**. Tách hai câu
+    là biến trang này thành công cụ dò xem số điện thoại nào từng mua hàng của Minh Phú (BR07-08)
+  - **★ CN-07-07** chạy 25 lần liên tiếp → **bị chặn đúng ở lần thứ 21**, sang phút sau tra lại
+    được ngay. Hạn mức đọc từ tham số `LOOKUP_RATE_LIMIT` nên đổi được ở màn hình cài đặt
+  - **Dùng POST chứ không phải GET** cho ô tra cứu: ô nhập là **số điện thoại của khách**, để GET
+    thì số đó nằm trong lịch sử trình duyệt (có thể là máy ở quán net) và trong log truy cập của
+    máy chủ. Đổi lại là bấm F5 sẽ hỏi gửi lại — chấp nhận được
+  - **Comment của `track.html` viết dạng `<!--/* */-->`** để Thymeleaf gỡ khỏi kết quả trả về.
+    Các màn hình khác chỉ người trong công ty xem nên không sao, riêng trang này ai cũng mở được
+    và bấm xem mã nguồn. Kiểm chứng: **0 dòng ghi chú nội bộ trong HTML trả về**
+  - **`LookupRateLimiter` đếm trong bộ nhớ**, khóa là `IP@phút` nên sang phút mới là tự có bộ đếm
+    mới, không phải dọn gì. Có chặn trên 10.000 địa chỉ rồi dọn sạch — không có chặn đó thì một
+    đợt quét từ hàng chục nghìn IP làm hết bộ nhớ đúng bằng cái mà nó định chặn
+- **Sửa một chỗ bỏ sót của tuần 9:** đơn **chưa bao giờ đi qua trạng thái `DELIVERING`**, nhảy
+  thẳng `ROUTED → DELIVERED`, lệch với luồng trạng thái ở `docs/01`. Nay tài xế bấm nhận hàng thì
+  mọi đơn của tuyến chuyển sang `DELIVERING` và điểm kế tiếp chuyển sang `DELIVERING`. **Không có
+  chặng này thì CN-07-05 vô nghĩa** — không lúc nào đơn ở đúng trạng thái để hiện tài xế
 
 ---
 
 ## Việc tiếp theo — TUẦN 9
 
-1. **Trang tra cứu công khai** (CN-07-01 → 06) — nhớ BR07-04 không được lộ giá trị đơn, biển số
-   xe, khách khác cùng tuyến; và BR07-09 giới hạn 20 lần/phút/IP
-2. **Gửi email ETA sau khi chốt tuyến** (CN-04-08) — món cuối còn thiếu của Nhóm 4.
+1. **Gửi email ETA sau khi chốt tuyến** (CN-04-08) — món cuối còn thiếu của Nhóm 4.
    Khách không có email vẫn ghi `notifications` với `NOT_SENT` (BR04-12)
-3. **Xử lý sự cố** (CN-06) — nếu đuối thì cắt cả nhóm, đưa vào Hướng phát triển.
+2. **Xử lý sự cố** (CN-06) — nếu đuối thì cắt cả nhóm, đưa vào Hướng phát triển.
    `CheapestInsertion` đã viết sẵn từ tuần 7 nên phương án B không tốn nhiều
+3. **Nghiệm thu BR07-03** — tra bằng SĐT chỉ hiện đơn 30 ngày gần nhất. Code đã lọc đúng nhưng
+   **chưa thử được**: CSDL chưa có đơn nào cũ hơn 30 ngày. Thử luôn khi seed dữ liệu 10 ngày
+   trước ở tuần 11
 
 Còn nợ của tuần 8, làm được lúc nào cũng được:
 
