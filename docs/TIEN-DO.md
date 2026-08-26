@@ -11,7 +11,7 @@
 | | |
 |---|---|
 | Theo kế hoạch | Tuần 9 — tài xế, tra cứu, sự cố |
-| Thực tế | **Đúng tiến độ.** Tuần 8 xong trọn: chạy thuật toán → vẽ lộ trình thật → kéo thả chỉnh tay → gán tài xế → chốt → hủy tuyến. Tuần 9 đang làm: màn hình tài xế đã xem được tuyến và xác nhận nhận hàng (CN-05-01 → 05) |
+| Thực tế | **Đúng tiến độ.** Tuần 8 xong trọn. Tuần 9: **xong cả Nhóm 5 (CN-05-01 → 10)** — một đơn hàng nay đi được trọn vòng đời từ lúc tạo tới lúc tài xế giao xong và tuyến tự hoàn thành. Còn tra cứu công khai, email ETA, sự cố |
 
 ```
 [x] T1  Chot de tai, hoi Minh Phu 3 cau
@@ -436,19 +436,41 @@ bước 12–14 (phương án B) cần hai tuyến chạy song song mới dựng
     31,11 km giao cho Lê Văn Nam, hai đơn có `amount_to_collect > 0` để tuần này demo nhập tiền
   - Tiện thể nghiệm thu lại **BR02-08**: tạo đơn mà sửa địa chỉ giao nhưng giữ nguyên tọa độ của
     khách thì **bị chặn** — đúng như thiết kế, và đây là lần đầu chạm vào nhánh đó từ ngoài
+- **★ CN-05-06 → CN-05-10: tài xế cập nhật kết quả giao.** Chạy thật trọn một tuyến 3 điểm,
+  mỗi điểm một kết cục khác nhau để chạm hết các nhánh:
+  - **★ CN-05-06, CN-05-07** điểm 1 giao thành công, thu **5.000.000đ** trong khi phải thu
+    5.400.000đ kèm lý do → đơn `DELIVERED`, ghi `actual_arrival` và **tọa độ GPS** (BR05-08),
+    có **NTF-09** báo điều phối (BR05-12)
+  - **★ CN-05-08** điểm 2 thất bại `CUSTOMER_ABSENT` → đơn `FAILED`, thanh toán giữ `UNPAID`
+    (BR05-13), có **NTF-03**
+  - **★ CN-05-09** điểm 3 hoãn sang 28/08 → đơn `POSTPONED` và hệ thống **tự tạo đơn mới
+    `MP2608280001` ở ngày mới với trạng thái `APPROVED`**, có **NTF-06**
+  - **★ CN-05-10** điểm cuối xong → tuyến tự `COMPLETED`, ghi `completed_at`, **xe
+    29H-123.45 về `AVAILABLE`** (BR05-09), màn hình đổi sang khối tổng kết `1/1/1` và
+    `Tổng tiền đã thu 5.000.000đ`
+  - **Bốn nhánh chặn đều thử ở tầng service:** nhảy cóc sang điểm 3 → *"Phải cập nhật theo đúng
+    thứ tự. Điểm đang tới lượt là điểm 1"* (BR05-05); đơn phải thu mà không nhập tiền (BR05-11);
+    thu khác số phải thu mà không ghi lý do (BR05-12); chọn lý do `OTHER` mà không mô tả (BR05-06);
+    hoãn về ngày quá khứ (BR05-07). Giao diện có mở/ẩn ô tương ứng nhưng đó chỉ là tiện nghi
+  - **Tọa độ GPS lấy MỘT LẦN lúc mở trang** chứ không lúc bấm nút: trình duyệt hỏi quyền bằng một
+    hộp thoại, bắt tài xế chờ đúng lúc đang vội là hỏng thao tác. **Thiếu tọa độ không chặn việc
+    cập nhật** — điện thoại có thể đang trong hầm, mà tài xế thì vẫn đang đứng trước cửa hàng
+  - **Hoãn thì tạo đơn MỚI chứ không đổi ngày của đơn cũ.** Đổi ngày là mất dấu vết lần giao hụt:
+    RPT-02 không còn thấy lần hoãn nào, và điểm dừng của tuyến hôm nay trỏ tới một đơn có ngày
+    giao khác hẳn
+  - **Định dạng tiền dùng `DecimalFormatSymbols` đặt tay** chứ không dựa vào locale của máy: máy
+    cài tiếng Anh ra `5,000,000đ`, máy tiếng Việt ra `5.000.000đ` — cùng một dòng code mà hai máy
+    hai kết quả là loại lỗi chỉ lộ ra khi đổi máy, đúng lúc sắp bảo vệ
 
 ---
 
 ## Việc tiếp theo — TUẦN 9
 
-1. **Cập nhật kết quả giao** (CN-05-06 → 10): đã giao, nhập tiền thu (BR05-11, BR05-12), giao
-   thất bại (BR05-06), hoãn (BR05-07), và điểm cuối xong thì tuyến tự `COMPLETED` + xe về
-   `AVAILABLE` (BR05-09). Mọi cập nhật ghi kèm thời điểm và tọa độ GPS nếu trình duyệt cho phép
-   (BR05-08). Tuyến `TT26082602` đang `IN_PROGRESS` sẵn trong CSDL để bấm thử
-2. **Trang tra cứu công khai** (CN-07-01 → 06) — nhớ BR07-04 không được lộ giá trị đơn, biển số
+1. **Trang tra cứu công khai** (CN-07-01 → 06) — nhớ BR07-04 không được lộ giá trị đơn, biển số
    xe, khách khác cùng tuyến; và BR07-09 giới hạn 20 lần/phút/IP
-3. **Gửi email ETA sau khi chốt tuyến** (CN-04-08) — món cuối còn thiếu của Nhóm 4.
+2. **Gửi email ETA sau khi chốt tuyến** (CN-04-08) — món cuối còn thiếu của Nhóm 4.
    Khách không có email vẫn ghi `notifications` với `NOT_SENT` (BR04-12)
+3. **CN-05-11 lịch sử tuyến đã chạy** — món cuối còn thiếu của Nhóm 5, nhỏ
 4. **Xử lý sự cố** (CN-06) — nếu đuối thì cắt cả nhóm, đưa vào Hướng phát triển.
    `CheapestInsertion` đã viết sẵn từ tuần 7 nên phương án B không tốn nhiều
 
@@ -500,6 +522,7 @@ Còn nợ một phép nghiệm thu của BR02-11: đơn `ROUTED` mới ra đúng
 | NN để sót đơn dù tổng sức chứa đủ | Tuần 8, lần đầu chạy trên dữ liệu mẫu | **Cố ý giữ.** Là điểm nhấn demo bước 5a và câu trả lời vấn đáp mạnh nhất. Kịch bản ở `docs/08` |
 | Trạng thái xe là cờ toàn cục, không theo ngày | Chỉ lộ nếu thử chốt tuyến cho hai ngày liên tiếp | Sửa đúng phải đổi CBR-05 và tầng service. Đã ghi vào hạn chế `docs/07` 4.7 |
 | Ghi chú "chỉ nhận buổi sáng trước 11h" mà thuật toán không ràng buộc khung giờ | Tuần 8 khi nhìn ETA thật | Giữ vì phản ánh khảo sát thật. Cần chạy thử và **ghi lại ETA điểm cuối từng tuyến** để trả lời bằng số |
+| **Thu thiếu tiền mà đơn vẫn sang `PAID`** | Tuần 9, đơn `MP2608260002` thu 5.000.000đ trong khi phải thu 5.400.000đ | `docs/01` chỉ có BR05-14 cho đơn công nợ, **không có luật nào cho việc thu thiếu**. Tự nghĩ ra luật là thêm phạm vi ngoài `docs/04`. Số thực thu vẫn nằm ở `route_stops.collected_amount`, lý do nằm ở `collection_note`, và điều phối đã nhận NTF-09 — nên không mất dữ liệu, chỉ là cột `payment_status` chưa phản ánh. **Nếu hội đồng hỏi thì trả lời đúng như vậy**; muốn sửa thì thêm một luật vào `docs/01` trước |
 
 ---
 
