@@ -10,8 +10,8 @@
 
 | | |
 |---|---|
-| Theo kế hoạch | Tuần 8 — gắn thuật toán vào web |
-| Thực tế | **Xong tuần 8.** Vòng đời một tuyến chạy trọn: chạy thuật toán → vẽ lộ trình thật lên bản đồ → kéo thả chỉnh tay → gán tài xế → chốt kế hoạch → hủy tuyến. Cả Nhóm 3 và Nhóm 4 (trừ CN-04-08 email, để tuần 9) |
+| Theo kế hoạch | Tuần 9 — tài xế, tra cứu, sự cố |
+| Thực tế | **Đúng tiến độ.** Tuần 8 xong trọn: chạy thuật toán → vẽ lộ trình thật → kéo thả chỉnh tay → gán tài xế → chốt → hủy tuyến. Tuần 9 đang làm: màn hình tài xế đã xem được tuyến và xác nhận nhận hàng (CN-05-01 → 05) |
 
 ```
 [x] T1  Chot de tai, hoi Minh Phu 3 cau
@@ -22,7 +22,7 @@
 [x] T6  NearestNeighbor chay duoc bang main(), test xanh
 [x] T7  2-opt chay duoc, OR-Tools cam vao, bang so sanh 4 dong
 [x] T8  Man hinh phan tuyen hoan chinh, ve tuyen len ban do
-[ ] T9  Man hinh tai xe, tra cuu, su co
+[~] T9  Man hinh tai xe, tra cuu, su co  <- dang lam
 [ ] T10 RPT-03 xong, benchmark Augerat xong, chuong 4 viet xong
 [ ] T11 Seed du lieu, chay thu 3 lan, quay video
 [ ] T12 Bao cao hoan chinh, slide, luyen van dap
@@ -409,10 +409,42 @@ bước 12–14 (phương án B) cần hai tuyến chạy song song mới dựng
 
 ---
 
+- **★ Tuần 9 — CN-05-01 → CN-05-05: màn hình tài xế xem được tuyến của mình.**
+  - **BR05-01 chặn theo chiều ngược lại, đó là điểm mấu chốt:** không endpoint nào của
+    `/driver/**` nhận `routeId` từ bên ngoài. Luôn đi từ **tài khoản đang đăng nhập → hồ sơ tài
+    xế → tuyến của hôm nay**, nên **không tồn tại đường nào** trỏ tới tuyến của tài xế khác, kể
+    cả khi đoán đúng id. Chặn kiểu này chắc hơn hẳn kiểu nhận id rồi mới đi kiểm chủ sở hữu
+  - **Ngày lấy từ đồng hồ ứng dụng chứ không phải `CURDATE()`** — MySQL chạy trong WSL nên đồng
+    hồ là UTC, lệch 7 tiếng: dùng `CURDATE()` thì từ 0h đến 7h sáng tài xế mở điện thoại ra
+    không thấy tuyến nào
+  - **Tuyến `DRAFT` cố ý không hiện cho tài xế.** Kế hoạch chưa chốt thì điều phối viên còn chạy
+    lại thuật toán được; tài xế nhìn thấy rồi đi giao trước là giao theo một kế hoạch sắp bị xóa
+  - **★ CN-05-02** xác nhận nhận hàng → tuyến `IN_PROGRESS`, ghi `departed_at`, có dòng
+    `status_history`. Bấm lần hai bị chặn. `departed_at` chính là mốc để đối chiếu với ETA khi
+    đo độ chính xác của mô hình ở chương 4
+  - **★ CN-05-03** đúng **một** điểm được làm nổi bật (viền trái đậm), điểm đã xong mờ đi, điểm
+    chưa tới hiện rút gọn. Trước khi bấm nhận hàng thì **không điểm nào** được làm nổi bật —
+    đúng BR05-03, chưa rời kho thì chưa có việc gì để làm
+  - **★ CN-05-04** hiện địa chỉ, người liên hệ, SĐT, danh sách hàng phải dỡ, ghi chú giao hàng,
+    ETA và **số tiền phải thu in đậm**. Chạy thật: `5.400.000đ`, `Nước rửa tay 500ml x 12`
+  - **★ CN-05-05** nút Gọi dùng `tel:0912345003`, nút Chỉ đường mở Google Maps bằng **tọa độ**
+    `20.92279,105.84235` chứ không bằng địa chỉ — địa chỉ ở Hà Nội trả về không đúng số nhà
+    (xem nợ kỹ thuật bên dưới), còn tọa độ thì luôn đúng chỗ đã ghim lúc tạo đơn
+  - **Phân quyền kiểm 4 phép:** `taixe02` gõ `/routing` và `/orders` đều **403**; `dieuphoi` gõ
+    `/driver/my-route` và POST `/driver/my-route/pickup` đều **403**. Tài xế không có thanh menu
+  - **Đã dựng dữ liệu thật cho hôm nay** theo kịch bản `docs/08`: 3 đơn, tuyến `TT26082602`
+    31,11 km giao cho Lê Văn Nam, hai đơn có `amount_to_collect > 0` để tuần này demo nhập tiền
+  - Tiện thể nghiệm thu lại **BR02-08**: tạo đơn mà sửa địa chỉ giao nhưng giữ nguyên tọa độ của
+    khách thì **bị chặn** — đúng như thiết kế, và đây là lần đầu chạm vào nhánh đó từ ngoài
+
+---
+
 ## Việc tiếp theo — TUẦN 9
 
-1. **Màn hình tài xế** (CN-05-01 → 10) — responsive từ 360px, tài xế chỉ thấy tuyến của chính
-   mình (BR05-01, kiểm ở tầng service). Đã có sẵn tuyến `CONFIRMED` thật trong CSDL để bấm thử
+1. **Cập nhật kết quả giao** (CN-05-06 → 10): đã giao, nhập tiền thu (BR05-11, BR05-12), giao
+   thất bại (BR05-06), hoãn (BR05-07), và điểm cuối xong thì tuyến tự `COMPLETED` + xe về
+   `AVAILABLE` (BR05-09). Mọi cập nhật ghi kèm thời điểm và tọa độ GPS nếu trình duyệt cho phép
+   (BR05-08). Tuyến `TT26082602` đang `IN_PROGRESS` sẵn trong CSDL để bấm thử
 2. **Trang tra cứu công khai** (CN-07-01 → 06) — nhớ BR07-04 không được lộ giá trị đơn, biển số
    xe, khách khác cùng tuyến; và BR07-09 giới hạn 20 lần/phút/IP
 3. **Gửi email ETA sau khi chốt tuyến** (CN-04-08) — món cuối còn thiếu của Nhóm 4.
@@ -489,10 +521,11 @@ Còn nợ một phép nghiệm thu của BR02-11: đơn `ROUTED` mới ra đúng
 
   **Lần sau thêm giá trị enum bất kỳ thì phải sửa `CHECK` tay**, hoặc xóa bảng cho Hibernate tạo lại.
   Máy khác dựng lại CSDL từ đầu thì không gặp lỗi này — càng dễ tưởng là lỗi của riêng máy mình
-- **Mật khẩu tài khoản `dieuphoi` đã bị đổi khỏi giá trị `dieuphoi123` của `DataSeeder`.**
+- **Mật khẩu `dieuphoi` và `taixe01` đã bị đổi khỏi giá trị mặc định của `DataSeeder`.**
   `seedUser()` chỉ tạo khi thiếu chứ không ghi đè, nên khởi động lại không đưa về mặc định.
-  `docs/08` vẫn ghi `dieuphoi123` — **trước ngày bảo vệ phải đưa về đúng tài liệu**, hoặc sửa
-  `docs/08`. Ba tài khoản còn lại vẫn đúng mật khẩu mặc định
+  `docs/08` vẫn ghi `dieuphoi123` và `taixe123` — **trước ngày bảo vệ phải đưa về đúng tài liệu**,
+  hoặc sửa `docs/08`. `admin`, `taixe02`, `taixe03` vẫn đúng mật khẩu mặc định.
+  Kịch bản demo đọc mật khẩu từ `docs/08`, lệch là hỏng ngay bước đăng nhập đầu tiên
 - Trong CSDL đang có **8 đơn thử** do các lần kiểm thử tạo ra. Ngày 21/08 hiện có tuyến
   `TT26082101` **đã chốt** (xe 29H-123.45 đang `IN_USE`, tài xế Nguyễn Văn Hùng) và 2 đơn quay
   lại hàng chờ sau khi hủy `TT26082102`. Hủy nốt tuyến đó là xe về `AVAILABLE`. Giữ lại để bấm thử;
