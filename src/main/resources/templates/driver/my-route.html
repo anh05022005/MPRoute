@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<!--
+    SCR-12 — Man hinh tai xe tren dien thoai (CN-05-01 -> CN-05-05).
+
+    NGUYEN TAC: tai xe dang ngoi tren xe, khong co thoi gian doc ca danh sach.
+    Luon chi lam noi bat DUNG MOT diem dang xu ly; diem da xong mo di, diem chua toi
+    hien rut gon. Chieu rong toi thieu ho tro la 360px.
+-->
+<html lang="vi"
+      xmlns:th="http://www.thymeleaf.org"
+      xmlns:sec="http://www.thymeleaf.org/extras/spring-security"
+      th:replace="~{layout :: main('Tuyến của tôi', ~{::content})}">
+<body>
+
+<div th:fragment="content" class="driver-screen">
+
+    <!-- Tai khoan vai tro DRIVER nhung chua duoc gan vao ho so tai xe nao -->
+    <div th:if="${driverProfileMissing}" class="panel panel-warning">
+        Tài khoản của bạn chưa được gắn với hồ sơ tài xế nào. Báo cho điều phối viên để được
+        cập nhật danh mục tài xế.
+    </div>
+
+    <div th:if="${route == null and !driverProfileMissing}" class="panel">
+        <div class="section-label mb-1">Hôm nay bạn chưa có tuyến</div>
+        <div class="text-sub small">
+            Điều phối viên chưa chốt kế hoạch giao hàng cho hôm nay, hoặc hôm nay bạn không
+            được xếp tuyến. Tải lại trang sau ít phút.
+        </div>
+    </div>
+
+    <div th:if="${route != null}">
+
+        <!-- ============ CN-05-01 Tuyen hom nay ============ -->
+        <div class="driver-header">
+            <div class="driver-route-code">
+                <span th:text="${route.code} + ' — ' + ${route.vehicle.licensePlate}">TT26082601 — 29H-123.45</span>
+                <span class="status-tag"
+                      th:classappend="${route.status.name() == 'IN_PROGRESS'} ? 'status-tag-info'
+                                      : (${route.status.name() == 'COMPLETED'} ? 'status-tag-success' : 'status-tag-muted')"
+                      th:text="${route.status.displayName}">Đã chốt</span>
+            </div>
+            <div class="text-sub small"
+                 th:text="${#temporals.format(route.deliveryDate, 'dd/MM/yyyy')}
+                          + ' · ' + ${route.driver.fullName}">26/08/2026 · Nguyễn Văn Hùng</div>
+        </div>
+
+        <div class="driver-progress">
+            <div>
+                <div class="metric-label">Tiến độ</div>
+                <div class="metric-value"
+                     th:text="${finishedStopCount} + ' / ' + ${route.stops.size()} + ' điểm'">1 / 3 điểm</div>
+            </div>
+            <div>
+                <div class="metric-label">Còn lại</div>
+                <!-- Quang duong luu bang MET, chia 1000 khi hien (quy uoc docs/05) -->
+                <div class="metric-value"
+                     th:text="${#numbers.formatDecimal(remainingMeters / 1000, 1, 'POINT', 1, 'COMMA')} + ' km'">24,3 km</div>
+            </div>
+        </div>
+
+        <!--
+            ============ CN-05-02 Xac nhan nhan hang ============
+            BR05-03: chua bam nut nay thi khong cap nhat duoc diem giao nao. Cai chot do phan
+            biet "tuyen da len ke hoach" voi "xe da roi kho", va departed_at chinh la moc de
+            doi chieu voi ETA khi do do chinh xac cua mo hinh o chuong 4.
+        -->
+        <form th:if="${route.status.name() == 'CONFIRMED'}"
+              th:action="@{/driver/my-route/pickup}" method="post" class="mb-3">
+            <button type="submit" class="btn btn-primary w-100 btn-lg">Xác nhận đã nhận hàng</button>
+            <div class="form-text">
+                Bấm khi đã xếp đủ hàng lên xe. Chưa bấm thì chưa cập nhật được điểm giao nào.
+            </div>
+        </form>
+
+        <div th:if="${route.departedAt != null}" class="text-sub small mb-3"
+             th:text="'Xuất phát lúc ' + ${#temporals.format(route.departedAt, 'HH:mm')}">Xuất phát lúc 08:05</div>
+
+        <!-- ============ CN-05-03 Danh sach diem giao theo thu tu ============ -->
+        <div th:each="stop : ${route.stops}"
+             class="stop-card"
+             th:classappend="${currentStop != null and stop.id == currentStop.id} ? 'is-current'
+                             : (${stop.status.name() == 'PENDING' or stop.status.name() == 'DELIVERING'} ? '' : 'is-done')">
+
+            <div class="stop-card-title">
+                <span th:text="${stop.sequence} + '. ' + ${stop.order.customer.name}">2. Siêu thị Hồng Hà</span>
+                <span class="status-tag"
+                      th:classappend="${stop.status.name() == 'DELIVERED'} ? 'status-tag-success'
+                                      : (${stop.status.name() == 'FAILED'} ? 'status-tag-danger'
+                                      : (${stop.status.name() == 'POSTPONED'} ? 'status-tag-warning' : 'status-tag-muted'))"
+                      th:text="${stop.status.displayName}">Chờ giao</span>
+            </div>
+
+            <!-- Diem chua toi luot: hien RUT GON, chi so thung va gio du kien -->
+            <div th:unless="${currentStop != null and stop.id == currentStop.id}" class="small text-sub">
+                <span th:text="${#aggregates.sum(stop.order.items.![boxCount])} + ' thùng'">45 thùng</span>
+                <span th:if="${stop.actualArrival != null}"
+                      th:text="' · ' + ${#temporals.format(stop.actualArrival, 'HH:mm')}"> · 08:32</span>
+                <span th:if="${stop.actualArrival == null and stop.estimatedArrival != null}"
+                      th:text="' · dự kiến ' + ${#temporals.format(stop.estimatedArrival, 'HH:mm')}"> · dự kiến 09:20</span>
+            </div>
+
+            <!-- ============ CN-05-04 Chi tiet diem dang xu ly ============ -->
+            <div th:if="${currentStop != null and stop.id == currentStop.id}">
+
+                <div class="stop-address" th:text="${stop.order.deliveryAddress}">Số 8 Thái Hà, Đống Đa</div>
+
+                <div class="small">
+                    <span th:text="${stop.order.customer.contactPerson} ?: ${stop.order.customer.name}">Trần Thị Bình</span>
+                    <span th:text="' · ' + ${stop.order.customer.phone}"> · 0912345678</span>
+                </div>
+
+                <div class="small text-sub mt-1">
+                    <span th:text="${stop.order.code}">MP2608260001</span>
+                    <span th:text="' · ' + ${#aggregates.sum(stop.order.items.![boxCount])} + ' thùng'"> · 45 thùng</span>
+                    <span th:if="${stop.estimatedArrival != null}"
+                          th:text="' · dự kiến ' + ${#temporals.format(stop.estimatedArrival, 'HH:mm')}"> · dự kiến 09:20</span>
+                </div>
+
+                <!-- Danh sach hang phai do xuong, de tai xe dem thung ngay tren xe -->
+                <div class="stop-items">
+                    <div th:each="item : ${stop.order.items}">
+                        <span th:text="${item.product.name}">Nước giặt 3.5L</span>
+                        <span class="push-right" th:text="'x ' + ${item.boxCount}">x 30</span>
+                    </div>
+                </div>
+
+                <!-- Ghi chu giao hang cua khach, vi du "chi nhan buoi sang truoc 11h" -->
+                <div th:if="${stop.order.customer.deliveryNote != null}" class="stop-note"
+                     th:text="${stop.order.customer.deliveryNote}">Chỉ nhận buổi sáng trước 11h</div>
+                <div th:if="${stop.order.note != null}" class="stop-note"
+                     th:text="${stop.order.note}">Gọi trước khi đến</div>
+
+                <!--
+                    SO TIEN PHAI THU IN DAM khi lon hon 0 (docs/05). Day la con so tai xe de
+                    quen nhat va cung la con so gay tranh cai voi khach nhieu nhat.
+                -->
+                <div class="stop-amount">
+                    Phải thu:
+                    <strong th:if="${stop.order.amountToCollect.signum() > 0}"
+                            th:text="${#numbers.formatInteger(stop.order.amountToCollect, 0, 'POINT')} + 'đ'">2.200.000đ</strong>
+                    <span th:if="${stop.order.amountToCollect.signum() == 0}"
+                          th:text="'0đ (' + ${stop.order.paymentMethod.displayName} + ')'">0đ (Công nợ)</span>
+                </div>
+
+                <!--
+                    ============ CN-05-05 Goi va chi duong ============
+                    tel: mo thang ung dung goi cua dien thoai.
+                    Chi duong mo Google Maps bang TOA DO chu khong bang dia chi: dia chi
+                    o Ha Noi tra ve khong dung so nha (xem docs/09), con toa do thi luon dung
+                    dung cho da ghim tren ban do luc tao don.
+                -->
+                <div class="stop-actions">
+                    <a class="btn btn-outline-secondary w-100"
+                       th:href="'tel:' + ${stop.order.customer.phone}">Gọi khách</a>
+                    <a class="btn btn-outline-secondary w-100" target="_blank" rel="noopener"
+                       th:href="'https://www.google.com/maps/dir/?api=1&destination='
+                                + ${stop.order.latitude} + ',' + ${stop.order.longitude}">Chỉ đường</a>
+                </div>
+            </div>
+        </div>
+
+        <div th:if="${route.status.name() == 'CONFIRMED'}" class="system-note mt-3">
+            Bấm <strong>Xác nhận đã nhận hàng</strong> ở trên thì mới bắt đầu cập nhật được
+            từng điểm giao (BR05-03).
+        </div>
+    </div>
+</div>
+
+</body>
+</html>

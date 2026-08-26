@@ -410,6 +410,91 @@ body {
   text-align: center;
 }
 
+/* ============ SCR-12 driver screen (phone, 360px and up) ============ */
+
+/* The driver holds the phone one-handed on a moving vehicle: everything is one
+   column, tap targets stay large, and only one stop is ever highlighted. */
+.driver-screen { max-width: 560px; margin: 0 auto; }
+
+.driver-header { margin-bottom: 12px; }
+.driver-route-code {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 16px;
+  font-weight: 600;
+}
+.driver-progress {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  background: var(--blue-50);
+  border: 1px solid var(--blue-100);
+  border-radius: 6px;
+  padding: 11px 13px;
+  margin-bottom: 14px;
+}
+
+.stop-card {
+  border: 1px solid var(--border);
+  border-left: 3px solid var(--border);
+  border-radius: 0 6px 6px 0;
+  padding: 11px 13px;
+  margin-bottom: 10px;
+}
+/* Exactly one card carries this: the stop the driver is on right now (BR05-04) */
+.stop-card.is-current {
+  border-left-color: var(--blue-500);
+  border-left-width: 4px;
+  background: #FFFFFF;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, .08);
+}
+/* Finished stops fade back so the eye skips them */
+.stop-card.is-done { opacity: 0.55; }
+
+.stop-card-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 600;
+  margin-bottom: 3px;
+}
+.stop-address { margin: 6px 0 3px; }
+.stop-items {
+  background: var(--surface-stripe);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  padding: 7px 10px;
+  margin: 9px 0;
+  font-size: 13px;
+}
+.stop-items > div { display: flex; }
+.stop-note {
+  background: var(--warning-bg);
+  color: var(--warning);
+  border-radius: 4px;
+  padding: 6px 9px;
+  font-size: 12.5px;
+  margin-bottom: 8px;
+}
+.stop-amount { margin: 8px 0 10px; }
+.stop-amount strong { font-size: 17px; }
+
+.stop-actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+
+/* On a phone the top bar has to stack, otherwise the logout button falls off the edge */
+@media (max-width: 575px) {
+  .app-header {
+    flex-direction: column;
+    align-items: flex-start !important;
+    gap: 7px;
+  }
+}
+
 /* ============ Order progress stepper ============ */
 
 .stepper {
