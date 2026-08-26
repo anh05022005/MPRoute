@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<!--/*
+    SCR-13 — Trang tra cuu cong khai (CN-07-01 -> CN-07-07).
+
+    Trang nay nguoi CHUA DANG NHAP xem duoc, nen moi bieu thuc trong day chi duoc dung toi
+    record TrackedOrder — mot doi tuong da duoc TrackingService cat bot san. Trong tay template
+    khong co entity Order nao ca, nen khong the lo gia tri don hang hay bien so xe du co vo y
+    them mot dong th:text (BR07-04).
+
+    MOI COMMENT CUA FILE NAY VIET DANG <!--/* */--> chu khong phai <!-- -->. Dang nay Thymeleaf
+    go bo khoi ket qua tra ve, dang thuong thi gui thang ra trinh duyet. Cac man hinh khac chi
+    nguoi trong cong ty xem nen khong quan trong, rieng trang nay thi bat ky ai cung mo duoc va
+    bam xem ma nguon — khong co ly do gi de ho doc duoc ghi chu noi bo cua he thong.
+*/-->
+<html lang="vi"
+      xmlns:th="http://www.thymeleaf.org"
+      th:replace="~{layout :: main('Tra cứu đơn hàng', ~{::content})}">
+<body>
+
+<div th:fragment="content" class="driver-screen">
+
+    <div class="section-label">Tra cứu đơn hàng</div>
+
+    <form th:action="@{/track}" method="post" class="panel mb-3">
+        <label for="query" class="form-label mb-1 small">Mã đơn hoặc số điện thoại</label>
+        <div class="d-flex gap-2">
+            <input type="text" id="query" name="query" class="form-control"
+                   maxlength="30" required autofocus
+                   placeholder="MP2608260002 hoặc 0912345678"
+                   th:value="${query}">
+            <button type="submit" class="btn btn-primary">Tra cứu</button>
+        </div>
+        <div class="form-text">
+            Tra bằng số điện thoại sẽ hiện các đơn trong <strong>30 ngày</strong> gần nhất.
+        </div>
+    </form>
+
+    <!--/*
+        MSG-11 — mot cau chung chung cho moi truong hop khong ra ket qua (BR07-08).
+        Khong noi ro la sai ma don hay so dien thoai chua co don nao.
+    */-->
+    <div th:if="${notFound}" class="panel panel-warning mb-3">
+        Không tìm thấy đơn hàng phù hợp. Vui lòng kiểm tra lại mã đơn hoặc số điện thoại,
+        hoặc gọi cho Minh Phú để được hỗ trợ.
+    </div>
+
+    <div th:if="${orders != null and !orders.isEmpty()}">
+        <div class="text-sub small mb-2"
+             th:text="'Tìm thấy ' + ${orders.size()} + ' đơn hàng'">Tìm thấy 1 đơn hàng</div>
+
+        <div th:each="order : ${orders}" class="stop-card mb-3">
+
+            <!--/* ============ CN-07-03 Thong tin don ============ */-->
+            <div class="stop-card-title">
+                <span th:text="${order.code()}">MP2608260002</span>
+                <span class="status-tag"
+                      th:classappend="${order.status().name() == 'DELIVERED'} ? 'status-tag-success'
+                                      : (${order.status().name() == 'DELIVERING'} ? 'status-tag-info'
+                                      : (${order.status().name() == 'FAILED' or order.status().name() == 'CANCELLED'} ? 'status-tag-danger'
+                                      : (${order.status().name() == 'POSTPONED'} ? 'status-tag-warning' : 'status-tag-muted')))"
+                      th:text="${order.status().displayName}">Đang giao</span>
+            </div>
+
+            <div class="field-grid mt-2">
+                <div class="field">
+                    <div class="field-label">Khách hàng</div>
+                    <div class="field-value" th:text="${order.customerName()}">Cửa hàng Bảo Châu</div>
+                </div>
+                <div class="field">
+                    <div class="field-label">Ngày giao</div>
+                    <div class="field-value"
+                         th:text="${#temporals.format(order.deliveryDate(), 'dd/MM/yyyy')}">26/08/2026</div>
+                </div>
+                <div class="field">
+                    <div class="field-label">Địa chỉ giao</div>
+                    <div class="field-value" th:text="${order.deliveryAddress()}">15 Kim Giang</div>
+                </div>
+                <div class="field">
+                    <div class="field-label">Số thùng</div>
+                    <div class="field-value" th:text="${order.boxCount()} + ' thùng'">12 thùng</div>
+                </div>
+                <div class="field" th:if="${order.actualArrival() != null}">
+                    <div class="field-label">Đã giao lúc</div>
+                    <div class="field-value"
+                         th:text="${#temporals.format(order.actualArrival(), 'HH:mm dd/MM/yyyy')}">09:12 26/08/2026</div>
+                </div>
+                <!--/* BR07-07 — gio du kien moi nhat, chi hien khi don chua giao xong */-->
+                <div class="field" th:if="${order.actualArrival() == null and order.estimatedArrival() != null}">
+                    <div class="field-label">Dự kiến giao lúc</div>
+                    <div class="field-value"
+                         th:text="${#temporals.format(order.estimatedArrival(), 'HH:mm dd/MM/yyyy')}">08:12 26/08/2026</div>
+                </div>
+            </div>
+
+            <!--/*
+                ============ CN-07-05 Thong tin tai xe ============
+                TrackingService chi dat hai truong nay khi don DANG GIAO (BR07-05); luc khac
+                chung la null nen dong duoi day khong hien. Viec cat nam o tang service chu
+                khong o day.
+            */-->
+            <div th:if="${order.driverName() != null}" class="stop-note mt-2"
+                 style="background: var(--blue-50); color: var(--blue-700);">
+                Đơn đang trên đường giao. Tài xế
+                <strong th:text="${order.driverName()}">Lê Văn Nam</strong> —
+                <a th:href="'tel:' + ${order.driverPhone()}" th:text="${order.driverPhone()}">0987654322</a>
+            </div>
+
+            <!--/* ============ CN-07-04 Hanh trinh don hang ============ */-->
+            <div th:if="${!order.journey().isEmpty()}" class="mt-3">
+                <div class="section-label mb-1">Hành trình đơn hàng</div>
+                <table class="table table-sm table-striped mb-0">
+                    <tbody>
+                    <tr th:each="step : ${order.journey()}">
+                        <td style="width: 150px;"
+                            th:text="${#temporals.format(step.changedAt(), 'HH:mm dd/MM/yyyy')}">08:05 26/08/2026</td>
+                        <td th:text="${step.statusDisplay()}">Đang giao</td>
+                    </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <div class="system-note">
+        Trang này chỉ hiển thị thông tin đơn hàng của chính bạn. Mọi thắc mắc khác vui lòng
+        liên hệ Công ty Minh Phú.
+    </div>
+
+</div>
+
+</body>
+</html>
