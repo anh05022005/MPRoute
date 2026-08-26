@@ -134,6 +134,24 @@ public class DeliveryService {
                 RouteStatus.CONFIRMED.name(), RouteStatus.IN_PROGRESS.name(),
                 userId, "Tai xe xac nhan nhan hang");
 
+        /*
+         * Hang da len xe thi don chuyen sang DELIVERING — dung luong trang thai o docs/01:
+         * ROUTED -> DELIVERING -> DELIVERED. Bo qua chang nay thi trang tra cuu cong khai
+         * khong bao gio biet don dang tren duong, ma do chinh la luc khach hay goi den hoi
+         * nhat, va cung la luc duy nhat duoc phep hien ten va SDT tai xe (BR07-05).
+         */
+        for (RouteStop stop : route.getStops()) {
+            Order order = stop.getOrder();
+            if (order.getStatus() == OrderStatus.ROUTED) {
+                order.setStatus(OrderStatus.DELIVERING);
+                orderRepository.save(order);
+                statusHistoryService.recordChange(EntityType.ORDER, order.getId(),
+                        OrderStatus.ROUTED.name(), OrderStatus.DELIVERING.name(),
+                        userId, "Tai xe da nhan hang, dang tren duong giao");
+            }
+        }
+        markNextStopAsInProgress(route);
+
         log.info("Tuyen {} chuyen sang IN_PROGRESS luc {}", route.getCode(), route.getDepartedAt());
         return route;
     }
@@ -221,12 +239,14 @@ public class DeliveryService {
         stop.setStatus(StopStatus.DELIVERED);
         recordArrival(stop, latitude, longitude);
 
+        String previousStatus = order.getStatus().name();
         order.setStatus(OrderStatus.DELIVERED);
         order.setPaymentStatus(paymentStatusAfterDelivery(order));
         orderRepository.save(order);
         statusHistoryService.recordChange(EntityType.ORDER, order.getId(),
-                OrderStatus.ROUTED.name(), OrderStatus.DELIVERED.name(), userId, "Tai xe giao thanh cong");
+                previousStatus, OrderStatus.DELIVERED.name(), userId, "Tai xe giao thanh cong");
 
+        markNextStopAsInProgress(stop.getRoute());
         finishRouteIfDone(stop.getRoute(), userId);
         return stop;
     }
@@ -272,11 +292,12 @@ public class DeliveryService {
         recordArrival(stop, latitude, longitude);
 
         // BR05-13: don that bai thi tien van chua thu, giu nguyen UNPAID
+        String previousStatus = order.getStatus().name();
         order.setStatus(OrderStatus.FAILED);
         order.setPaymentStatus(PaymentStatus.UNPAID);
         orderRepository.save(order);
         statusHistoryService.recordChange(EntityType.ORDER, order.getId(),
-                OrderStatus.ROUTED.name(), OrderStatus.FAILED.name(), userId,
+                previousStatus, OrderStatus.FAILED.name(), userId,
                 "Giao that bai: " + reason.getDisplayName());
 
         // NTF-03 — dieu phoi phai biet ngay de con goi lai cho khach trong ngay
@@ -284,6 +305,7 @@ public class DeliveryService {
                 order.getCode(), order.getCustomer().getName(), reason.getDisplayName(),
                 (note == null || note.isBlank()) ? "" : " " + note.trim()));
 
+        markNextStopAsInProgress(stop.getRoute());
         finishRouteIfDone(stop.getRoute(), userId);
         return stop;
     }
@@ -315,11 +337,12 @@ public class DeliveryService {
         recordArrival(stop, latitude, longitude);
 
         // BR05-13: hoan thi tien cung chua thu
+        String previousStatus = order.getStatus().name();
         order.setStatus(OrderStatus.POSTPONED);
         order.setPaymentStatus(PaymentStatus.UNPAID);
         orderRepository.save(order);
         statusHistoryService.recordChange(EntityType.ORDER, order.getId(),
-                OrderStatus.ROUTED.name(), OrderStatus.POSTPONED.name(), userId,
+                previousStatus, OrderStatus.POSTPONED.name(), userId,
                 "Hoan sang ngay " + newDeliveryDate);
 
         Order reissued = reissueForNewDate(order, newDeliveryDate, userId);
@@ -329,6 +352,7 @@ public class DeliveryService {
                 order.getCode(), order.getCustomer().getName(),
                 newDeliveryDate.format(DAY_MONTH_YEAR), reissued.getCode()));
 
+        markNextStopAsInProgress(stop.getRoute());
         finishRouteIfDone(stop.getRoute(), userId);
         return stop;
     }
@@ -376,6 +400,26 @@ public class DeliveryService {
      * khong con tuyen nao dang giu no, ma man hinh phan tuyen chi liet ke xe AVAILABLE nen
      * hom sau khong ai dua no vao ke hoach duoc nua.
      */
+    /**
+     * Danh dau diem ke tiep la DELIVERING — diem tai xe dang tren duong toi.
+     *
+     * Nho co trang thai nay ma trang tra cuu phan biet duoc "don da len xe" voi "xe dang toi
+     * cho toi": chi diem dang DELIVERING moi la diem sap den. Khong co no thi ca ba diem cua
+     * tuyen trong giong het nhau tu ben ngoai nhin vao.
+     */
+    private void markNextStopAsInProgress(Route route) {
+        for (RouteStop stop : route.getStops()) {
+            if (stop.getStatus() == StopStatus.DELIVERING) {
+                return;   // da co diem dang xu ly roi
+            }
+            if (stop.getStatus() == StopStatus.PENDING) {
+                stop.setStatus(StopStatus.DELIVERING);
+                routeStopRepository.save(stop);
+                return;
+            }
+        }
+    }
+
     private void finishRouteIfDone(Route route, Long userId) {
         boolean stillWorking = route.getStops().stream()
                 .anyMatch(stop -> stop.getStatus() == StopStatus.PENDING
