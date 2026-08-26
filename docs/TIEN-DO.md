@@ -499,6 +499,35 @@ bước 12–14 (phương án B) cần hai tuyến chạy song song mới dựng
   - **`LookupRateLimiter` đếm trong bộ nhớ**, khóa là `IP@phút` nên sang phút mới là tự có bộ đếm
     mới, không phải dọn gì. Có chặn trên 10.000 địa chỉ rồi dọn sạch — không có chặn đó thì một
     đợt quét từ hàng chục nghìn IP làm hết bộ nhớ đúng bằng cái mà nó định chặn
+- **★ CN-04-08 — gửi email báo giờ giao cho khách sau khi chốt tuyến** (BR04-11, NTF-08).
+  Món cuối còn thiếu của Nhóm 4, nay **Nhóm 4 xong trọn**.
+  - **Mỗi lần chốt đều ghi một dòng `notifications`, kể cả khi không gửi được.** Chạy thật một
+    tuyến 2 điểm: khách có email → dòng `NOT_SENT` kèm địa chỉ; khách **không có email** → dòng
+    `NOT_SENT` với `recipient_email = NULL` (BR04-12). Màn hình báo thẳng
+    *"Còn 2 khách chưa báo được bằng email, cần gọi điện"* — điều phối viên biết chính xác phải
+    gọi cho ai
+  - **Ba trạng thái phân biệt ba tình huống khác hẳn nhau:** `SENT` đã đẩy sang SMTP ·
+    `NOT_SENT` khách không có email **hoặc** hệ thống chưa cấu hình SMTP · `ERROR` có email, có
+    cấu hình, nhưng gửi hỏng
+  - **`ObjectProvider<JavaMailSender>` chứ không tiêm thẳng.** Spring Boot chỉ tạo bean đó khi
+    có `spring.mail.host`; máy chưa khai báo SMTP mà tiêm thẳng là **ứng dụng không khởi động
+    được**. Phân tuyến là chức năng lõi, không được chết chỉ vì chưa cấu hình email
+  - **Chưa cấu hình SMTP thì ghi cả nội dung thư vào log**, nên kiểm chứng được ngay mà không
+    cần tài khoản thật, và lúc cấu hình xong **không phải sửa một dòng code nào**. Nội dung chạy
+    thật có đủ mã đơn, ngày giao, giờ dự kiến `08:38`, địa chỉ và link tra cứu
+  - **Thư là văn bản thuần chứ không phải HTML**: tên khách và địa chỉ là dữ liệu người dùng
+    nhập, ghép vào HTML thì phải escape từng chỗ, quên một chỗ là mở đường cho mã độc chạy trong
+    hộp thư của khách
+  - **Cố ý không ghi số tiền, biển số xe hay tên tài xế vào thư.** Email đi qua nhiều máy chủ
+    trung gian và nằm lại trong hộp thư rất lâu nên còn dễ lộ hơn cả trang `/track` — cùng mức
+    giới hạn của BR07-04 thì càng phải giữ chặt ở đây
+  - **Thêm `GET /track/{mã đơn}`** để link trong thư bấm được. Đây là đường **duy nhất** của
+    trang tra cứu dùng GET và **chỉ nhận mã đơn**, không nhận số điện thoại: mã đơn đi trong thư
+    gửi riêng cho chính khách đó nên đặt lên thanh địa chỉ là chấp nhận được, còn số điện thoại
+    thì tra ra được nhiều đơn và dễ dò tuần tự. Kiểm chứng: bấm link ra đúng đơn, sai mã ra MSG-11
+  - `application.properties` **không commit mật khẩu nào**: năm dòng SMTP vẫn đóng, và khi mở thì
+    đọc từ biến môi trường `MPROUTE_MAIL_USERNAME` / `MPROUTE_MAIL_PASSWORD` giống cách làm với
+    mật khẩu MySQL
 - **Sửa một chỗ bỏ sót của tuần 9:** đơn **chưa bao giờ đi qua trạng thái `DELIVERING`**, nhảy
   thẳng `ROUTED → DELIVERED`, lệch với luồng trạng thái ở `docs/01`. Nay tài xế bấm nhận hàng thì
   mọi đơn của tuyến chuyển sang `DELIVERING` và điểm kế tiếp chuyển sang `DELIVERING`. **Không có
@@ -508,13 +537,15 @@ bước 12–14 (phương án B) cần hai tuyến chạy song song mới dựng
 
 ## Việc tiếp theo — TUẦN 9
 
-1. **Gửi email ETA sau khi chốt tuyến** (CN-04-08) — món cuối còn thiếu của Nhóm 4.
-   Khách không có email vẫn ghi `notifications` với `NOT_SENT` (BR04-12)
-2. **Xử lý sự cố** (CN-06) — nếu đuối thì cắt cả nhóm, đưa vào Hướng phát triển.
+1. **Xử lý sự cố** (CN-06) — nếu đuối thì cắt cả nhóm, đưa vào Hướng phát triển.
    `CheapestInsertion` đã viết sẵn từ tuần 7 nên phương án B không tốn nhiều
-3. **Nghiệm thu BR07-03** — tra bằng SĐT chỉ hiện đơn 30 ngày gần nhất. Code đã lọc đúng nhưng
+2. **Nghiệm thu BR07-03** — tra bằng SĐT chỉ hiện đơn 30 ngày gần nhất. Code đã lọc đúng nhưng
    **chưa thử được**: CSDL chưa có đơn nào cũ hơn 30 ngày. Thử luôn khi seed dữ liệu 10 ngày
    trước ở tuần 11
+3. **Gửi thư thật một lần** để nghiệm thu trọn CN-04-08: mở năm dòng SMTP trong
+   `application.properties`, đặt `MPROUTE_MAIL_USERNAME` / `MPROUTE_MAIL_PASSWORD` bằng mật khẩu
+   ứng dụng của Gmail, đổi email của một khách trong danh mục thành email thật rồi chốt một tuyến.
+   Hiện đã kiểm được nhánh ghi `notifications` và nội dung thư, **chưa kiểm được nhánh gửi thật**
 
 Còn nợ của tuần 8, làm được lúc nào cũng được:
 
