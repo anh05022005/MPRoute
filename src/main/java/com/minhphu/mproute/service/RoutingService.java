@@ -354,8 +354,116 @@ public class RoutingService {
                 LocalDateTime.of(deliveryDate, departureTime()), speedKmh, loadingMinutes);
     }
 
+    /**
+     * Tinh lai quang duong va ETA cho cac tuyen ma THU TU DIEM DA DUOC AN DINH san
+     * (CN-04-01, CN-04-02, BR04-03).
+     *
+     * Dung sau khi dieu phoi vien keo tha chinh tay: luc do khong con bai toan toi uu nao
+     * de giai nua, chi con phai do lai xem cach sap moi dai bao nhieu km va den tung diem
+     * luc may gio.
+     *
+     * DUNG LAI DUNG HAI HAM CUA THUAT TOAN — RouteDistanceCalculator va EtaCalculator —
+     * chu khong viet mot cong thuc thu hai. Neu tinh rieng o day thi chi can quen chang
+     * cuoi ve kho (CBR-01) la con so cua phuong an chinh tay va con so cua phuong an tu
+     * dong khong con so sanh duoc voi nhau nua, ma bang so sanh CN-04-04 dat hai con so
+     * do canh nhau.
+     *
+     * Ma tran nap MOT lan cho toan bo diem cua ca ngay roi dung chung — dung nguyen tac
+     * cua dieu cam so 4, khong tra khoang cach tung cap mot trong vong lap.
+     */
+    @Transactional
+    public void recalculate(List<Route> routes) {
+        if (routes.isEmpty()) {
+            return;
+        }
+
+        Depot depot = depotService.getActiveDepot();
+
+        /*
+         * Gom diem cua TAT CA cac tuyen vao mot ma tran chung. Moi tuyen mot ma tran rieng
+         * thi khong tinh duoc chang giua hai tuyen, ma keo tha lai chuyen don qua lai giua
+         * chung — dung chung mot ma tran thi don sang tuyen nao cung co san khoang cach.
+         */
+        List<OptimizationPoint> allPoints = new ArrayList<>();
+        allPoints.add(OptimizationPoint.depot(depot.getLatitude(), depot.getLongitude()));
+
+        Map<Long, OptimizationPoint> pointByOrderId = new LinkedHashMap<>();
+        for (Route route : routes) {
+            for (RouteStop stop : route.getStops()) {
+                Order order = stop.getOrder();
+                OptimizationPoint point = OptimizationPoint.forOrder(
+                        order.getId(), order.getCustomer().getName(),
+                        order.getLatitude(), order.getLongitude(),
+                        order.getTotalWeight(), order.getTotalVolume());
+                pointByOrderId.put(order.getId(), point);
+                allPoints.add(point);
+            }
+        }
+
+        DistanceMatrixService.DistanceMatrix matrix = distanceMatrixService.loadMatrix(allPoints);
+        double[][] meters = matrix.meters();
+
+        double speedKmh = systemParameterService.getDouble(SystemParameterService.AVERAGE_SPEED);
+        int loadingMinutes = systemParameterService.getInt(SystemParameterService.LOADING_TIME);
+
+        for (Route route : routes) {
+            if (route.getStops().isEmpty()) {
+                route.setTotalDistance(0.0);
+                route.setTotalWeight(0.0);
+                route.setTotalVolume(0.0);
+                continue;
+            }
+
+            // Dung lai doi tuong cua thuat toan de goi duoc dung hai ham tinh cua no
+            OptimizationRoute optimizationRoute = new OptimizationRoute(new OptimizationVehicle(
+                    route.getVehicle().getId(), route.getVehicle().getLicensePlate(),
+                    route.getVehicle().getMaxWeight(), route.getVehicle().getMaxVolume()));
+
+            for (RouteStop stop : route.getStops()) {
+                optimizationRoute.addPoint(pointByOrderId.get(stop.getOrder().getId()));
+            }
+
+            RouteDistanceCalculator.updateTotalDistance(optimizationRoute, meters);
+            EtaCalculator.assignEta(optimizationRoute, meters,
+                    LocalDateTime.of(route.getDeliveryDate(), departureTime()),
+                    speedKmh, loadingMinutes);
+
+            route.setTotalDistance(optimizationRoute.getTotalDistance());
+            route.setTotalWeight(optimizationRoute.getTotalWeight());
+            route.setTotalVolume(optimizationRoute.getTotalVolume());
+            route.setApproximateDistance(matrix.approximate());
+
+            // Chep nguoc ket qua vao tung diem dung: chang toi diem nay va gio du kien den
+            List<OptimizationPoint> points = optimizationRoute.getPoints();
+            for (int i = 0; i < points.size(); i++) {
+                RouteStop stop = route.getStops().get(i);
+                int previousIndex = (i == 0)
+                        ? RouteDistanceCalculator.DEPOT_INDEX
+                        : points.get(i - 1).getMatrixIndex();
+
+                stop.setLegDistance(meters[previousIndex][points.get(i).getMatrixIndex()]);
+                stop.setEstimatedArrival(points.get(i).getEstimatedArrival());
+            }
+        }
+
+        routeRepository.saveAll(routes);
+    }
+
+    /**
+     * Ma tran khoang cach cua toan bo diem trong ngay, de trinh duyet tinh THU quang duong
+     * ngay luc keo tha (CN-04-01, BR04-03).
+     *
+     * Con so trinh duyet tinh ra chi la XEM TRUOC. Luc bam Luu thi may chu tinh lai bang
+     * recalculate() va con so cua may chu moi la con so duoc ghi xuong CSDL — trinh duyet
+     * khong bao gio duoc quyen quyet dinh mot con so nghiep vu.
+     */
+    @Transactional
+    public DistanceMatrixService.DistanceMatrix matrixFor(List<OptimizationPoint> points) {
+        return distanceMatrixService.loadMatrix(points);
+    }
+
     /** Gio xe roi kho, tham so DEPARTURE_TIME dang HH:mm. */
-    private LocalTime departureTime() {
+    public LocalTime departureTime() {
         String value = systemParameterService.getValue(SystemParameterService.DEPARTURE_TIME);
         try {
             return LocalTime.parse(value);

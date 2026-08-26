@@ -6,6 +6,7 @@ import com.minhphu.mproute.entity.Order;
 import com.minhphu.mproute.entity.Route;
 import com.minhphu.mproute.entity.RouteStop;
 import com.minhphu.mproute.entity.Vehicle;
+import com.minhphu.mproute.entity.enums.AlgorithmType;
 import com.minhphu.mproute.entity.enums.EntityType;
 import com.minhphu.mproute.entity.enums.NotificationSendStatus;
 import com.minhphu.mproute.entity.enums.OrderStatus;
@@ -26,7 +27,10 @@ import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.HashSet;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Locale;
+import java.util.Map;
 import java.util.Set;
 
 /**
@@ -56,6 +60,7 @@ public class RoutePlanService {
     private final OrderRepository orderRepository;
     private final NotificationRepository notificationRepository;
     private final StatusHistoryService statusHistoryService;
+    private final RoutingService routingService;
 
     // ==================== Doc ====================
 
@@ -133,6 +138,179 @@ public class RoutePlanService {
         route.setDriver(driver);
         log.info("Tuyen {} giao cho tai xe {} ({})", route.getCode(), driver.getFullName(), driverId);
         return routeRepository.save(route);
+    }
+
+    // ==================== CN-04-01, CN-04-02, CN-04-03 chinh tay ====================
+
+    /** Mot tuyen sau khi dieu phoi vien keo tha: dung tuyen do, thu tu don moi. */
+    public record ManualRoute(Long routeId, List<Long> orderIds) {}
+
+    /**
+     * Ghi lai cach sap xep do dieu phoi vien keo tha (CN-04-01, CN-04-02).
+     *
+     * TRINH DUYET CHI GUI LEN THU TU DON, khong gui km, khong gui ETA, khong gui kg. Con so
+     * hien luc keo tha chi la xem truoc cho de nhin; moi con so ghi xuong CSDL deu do may chu
+     * tinh lai bang dung ham cua thuat toan (RoutingService.recalculate). Tin con so cua trinh
+     * duyet la mo duong cho bat ky ai sua JavaScript cung ghi duoc mot tuyen 0 km vao bao cao.
+     *
+     * Ba phep kiem, tat ca deu o tang service (CBR-15):
+     *   1. moi tuyen phai con la DRAFT — tuyen da chot khong sua duoc (CBR-10)
+     *   2. tap don sau khi sap phai TRUNG KHIT tap don truoc do: khong duoc mat don, khong
+     *      duoc nhan doi don. Keo tha lam mat mot don thi khong ai phat hien ra cho toi khi
+     *      khach goi den hoi
+     *   3. moi tuyen phai nam trong suc chua CA VE KG LAN VE M3 (CBR-03, CBR-04, MSG-14)
+     */
+    @Transactional
+    public void applyManualArrangement(LocalDate deliveryDate, List<ManualRoute> arrangement) {
+        List<Route> routes =
+                routeRepository.findByDeliveryDateAndStatus(deliveryDate, RouteStatus.DRAFT);
+        if (routes.isEmpty()) {
+            throw new IllegalStateException("Ngày này không còn tuyến nháp nào để chỉnh.");
+        }
+
+        Map<Long, Route> routeById = new LinkedHashMap<>();
+        for (Route route : routes) {
+            routeById.put(route.getId(), route);
+        }
+
+        // ---------- 1. chi duoc dung toi tuyen nhap cua chinh ngay do ----------
+        for (ManualRoute manualRoute : arrangement) {
+            if (!routeById.containsKey(manualRoute.routeId())) {
+                throw new IllegalArgumentException(
+                        "Có tuyến trong yêu cầu không thuộc kế hoạch nháp của ngày này.");
+            }
+        }
+        if (arrangement.size() != routes.size()) {
+            throw new IllegalArgumentException(
+                    "Số tuyến gửi lên không khớp với kế hoạch hiện có. Tải lại trang rồi chỉnh lại.");
+        }
+
+        // ---------- 2. tap don phai trung khit ----------
+        Map<Long, Order> ordersBefore = new LinkedHashMap<>();
+        for (Route route : routes) {
+            for (RouteStop stop : route.getStops()) {
+                ordersBefore.put(stop.getOrder().getId(), stop.getOrder());
+            }
+        }
+
+        Set<Long> orderIdsAfter = new HashSet<>();
+        int totalAfter = 0;
+        for (ManualRoute manualRoute : arrangement) {
+            for (Long orderId : manualRoute.orderIds()) {
+                orderIdsAfter.add(orderId);
+                totalAfter++;
+            }
+        }
+        if (totalAfter != orderIdsAfter.size()) {
+            throw new IllegalArgumentException("Có đơn bị lặp lại ở hai tuyến. Tải lại trang rồi chỉnh lại.");
+        }
+        if (!orderIdsAfter.equals(ordersBefore.keySet())) {
+            throw new IllegalArgumentException(
+                    "Danh sách đơn sau khi chỉnh không khớp với danh sách đơn đang có trên tuyến. "
+                            + "Tải lại trang rồi chỉnh lại.");
+        }
+
+        // ---------- 3. suc chua tung tuyen, kiem ca hai chieu ----------
+        for (ManualRoute manualRoute : arrangement) {
+            Route route = routeById.get(manualRoute.routeId());
+            double weight = 0;
+            double volume = 0;
+            for (Long orderId : manualRoute.orderIds()) {
+                Order order = ordersBefore.get(orderId);
+                weight += order.getTotalWeight();
+                volume += order.getTotalVolume();
+            }
+
+            Vehicle vehicle = route.getVehicle();
+            if (weight > vehicle.getMaxWeight()) {
+                // MSG-14
+                throw new IllegalStateException(String.format(Locale.ROOT,
+                        "Tuyến %s vượt quá tải trọng cho phép của xe %s: %.1f kg so với %.0f kg.",
+                        route.getCode(), vehicle.getLicensePlate(), weight, vehicle.getMaxWeight()));
+            }
+            if (volume > vehicle.getMaxVolume()) {
+                throw new IllegalStateException(String.format(Locale.ROOT,
+                        "Tuyến %s vượt quá thể tích cho phép của xe %s: %.3f m³ so với %.1f m³.",
+                        route.getCode(), vehicle.getLicensePlate(), volume, vehicle.getMaxVolume()));
+            }
+        }
+
+        /*
+         * Xoa het diem dung cu roi flush TRUOC khi tao diem moi.
+         *
+         * Bat buoc phai flush o giua: cot route_stops.order_id dat UNIQUE de mot don chi thuoc
+         * mot tuyen (CBR-02), va cap (route_id, sequence) cung UNIQUE. Chuyen mot don sang tuyen
+         * khac ma khong xoa dong cu truoc thi dong moi dam thang vao hai rang buoc do.
+         */
+        for (Route route : routes) {
+            route.getStops().clear();
+        }
+        routeRepository.saveAll(routes);
+        routeRepository.flush();
+
+        for (ManualRoute manualRoute : arrangement) {
+            Route route = routeById.get(manualRoute.routeId());
+            int sequence = 1;
+            for (Long orderId : manualRoute.orderIds()) {
+                RouteStop stop = new RouteStop();
+                stop.setOrder(ordersBefore.get(orderId));
+                stop.setSequence(sequence++);
+                stop.setLegDistance(0.0);      // may chu tinh lai ngay o buoc duoi
+                route.addStop(stop);
+            }
+
+            /*
+             * Danh dau tuyen la CHINH TAY. Bang chi so cua lan chay tu dong van giu nguyen
+             * (CBR-18), nho vay man hinh dat duoc hai con so canh nhau: quang duong thuat toan
+             * tim ra va quang duong sau khi nguoi sua (CN-04-04).
+             */
+            route.setAlgorithm(AlgorithmType.MANUAL);
+        }
+
+        routeRepository.saveAll(routes);
+        routingService.recalculate(routes);
+
+        log.info("Ap dung chinh tay ngay {}: {} tuyen, {} don", deliveryDate, routes.size(), totalAfter);
+    }
+
+    /**
+     * CN-04-05 — bo phuong an chinh tay, quay ve ket qua cua thuat toan.
+     *
+     * Cach lam: CHAY LAI dung bo giai da sinh ra ke hoach nay, tren dung doi xe dang giu tuyen.
+     * Hai bo giai deu chay tu dinh, khong co yeu to ngau nhien, nen chay lai ra dung ket qua cu.
+     *
+     * Vi sao khong luu san thu tu goc vao mot cot rieng: bang routes theo docs/02 khong co cho
+     * cho no, ma them cot chi de phuc vu nut nay thi khong dang. Chay lai vua don gian vua co
+     * loi the la tinh lai luon bang chi so, khong so hai con so lech nhau.
+     */
+    @Transactional
+    public void restoreAutomaticPlan(LocalDate deliveryDate, Long currentUserId) {
+        List<Route> routes =
+                routeRepository.findByDeliveryDateAndStatus(deliveryDate, RouteStatus.DRAFT);
+        if (routes.isEmpty()) {
+            throw new IllegalStateException("Ngày này không còn tuyến nháp nào để khôi phục.");
+        }
+
+        List<Long> vehicleIds = new ArrayList<>();
+        for (Route route : routes) {
+            vehicleIds.add(route.getVehicle().getId());
+        }
+
+        /*
+         * Thuat toan lay tu bang chi so da luu chu khong lay tu route.algorithm: sau khi chinh
+         * tay thi route.algorithm da bi doi thanh MANUAL, ma MANUAL khong phai mot bo giai.
+         */
+        AlgorithmType algorithm = AlgorithmType.MANUAL;
+        var metrics = routingService.latestMetricsOf(deliveryDate);
+        if (metrics != null && metrics.getAlgorithm() != AlgorithmType.MANUAL) {
+            algorithm = metrics.getAlgorithm();
+        }
+        if (algorithm == AlgorithmType.MANUAL) {
+            algorithm = routingService.defaultAlgorithm();
+        }
+
+        routingService.optimize(deliveryDate, vehicleIds, algorithm, currentUserId);
+        log.info("Khoi phuc ket qua tu dong ngay {} bang {}", deliveryDate, algorithm);
     }
 
     // ==================== CN-04-07 chot ke hoach ====================
@@ -261,8 +439,27 @@ public class RoutePlanService {
             vehicleRepository.save(vehicle);
         }
 
+        /*
+         * XOA CAC DIEM DUNG CUA TUYEN BI HUY — bat buoc, khong phai don dep cho gon.
+         *
+         * Cot route_stops.order_id dat UNIQUE tren TOAN BANG de bao dam mot don chi thuoc mot
+         * tuyen (CBR-02). Neu de lai cac dong cua tuyen da huy thi don vua duoc tra ve APPROVED
+         * se KHONG BAO GIO phan tuyen lai duoc: lan chay sau cham vao dung rang buoc do va chet
+         * voi "Duplicate entry ... for key route_stops".
+         *
+         * Y cua CBR-02 la mot don nam tren toi da mot tuyen DANG SONG. Tuyen da huy thi khong
+         * con giu don nua — chinh vong lap ben tren vua tra don ve hang cho — nen giu lai dong
+         * diem dung la tu mau thuan voi chinh minh.
+         *
+         * Khong mat dau vet: lan huy da duoc ghi vao status_history kem ly do, va do cung la
+         * nguon du lieu cua trang tra cuu (BR07-06). Giu lai diem dung con sinh loi khac —
+         * RouteStopRepository.findByOrderId() se tra ve ETA cua mot tuyen da huy.
+         */
+        route.getStops().clear();
+
         route.setStatus(RouteStatus.CANCELLED);
         routeRepository.save(route);
+        routeRepository.flush();
         statusHistoryService.recordChange(EntityType.ROUTE, route.getId(),
                 oldStatus.name(), RouteStatus.CANCELLED.name(), currentUserId, reason);
 

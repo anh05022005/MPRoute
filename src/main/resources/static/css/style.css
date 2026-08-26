@@ -373,6 +373,28 @@ body {
    on-screen proof that total distance includes the return trip (CBR-01). */
 .return-leg-row > td { color: var(--text-secondary); }
 
+/* Manual drag-and-drop editing of a route (CN-04-01, CN-04-02) */
+
+.stop-row[draggable="true"] { cursor: grab; }
+.stop-row.is-dragging { opacity: 0.4; }
+.drag-grip {
+  color: var(--text-muted);
+  margin-right: 6px;
+  cursor: grab;
+  user-select: none;
+}
+
+/* Over capacity: the route title turns red and the save/confirm buttons lock (CN-04-03) */
+.route-heading.is-over-capacity { color: var(--danger); }
+.route-capacity-warning {
+  background: var(--danger-bg);
+  color: var(--danger);
+  border-radius: 4px;
+  padding: 7px 10px;
+  font-size: 12.5px;
+  margin-bottom: 8px;
+}
+
 /* Numbered stop pin on the map. The number is the delivery order, so the dispatcher
    can match a row of the route table to a pin without counting (CN-03-09). */
 .route-pin {

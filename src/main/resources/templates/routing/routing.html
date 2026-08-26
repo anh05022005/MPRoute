@@ -224,7 +224,11 @@
             </div>
 
             <!-- ============ CN-03-07 Ket qua tung tuyen ============ -->
-            <div th:each="route, routeStat : ${routes}">
+            <div th:each="route, routeStat : ${routes}" class="route-block"
+                 th:data-route-id="${route.id}"
+                 th:data-max-weight="${route.vehicle.maxWeight}"
+                 th:data-max-volume="${route.vehicle.maxVolume}"
+                 th:data-editable="${route.status.name() == 'DRAFT'}">
 
                 <div class="route-heading">
                     <span class="route-swatch"
@@ -242,6 +246,9 @@
                         32,50 km · 1.399,0/1.500 kg · 6,600/12,0 m³
                     </span>
                 </div>
+
+                <!-- CN-04-03: keo don nang sang xe nho thi dong nay hien do kem MSG-14 -->
+                <div class="route-capacity-warning" hidden></div>
 
                 <!-- ============ CN-04-06 gan tai xe · CN-04-09 huy tuyen ============ -->
                 <div class="d-flex align-items-center gap-2 mb-2" sec:authorize="hasRole('DISPATCHER')">
@@ -292,20 +299,30 @@
                         <th class="num" style="width: 70px;">ETA</th>
                     </tr>
                     </thead>
-                    <tbody>
-                    <tr th:each="stop : ${route.stops}">
-                        <td th:text="${stop.sequence}">1</td>
+                    <!--
+                        tbody la vung tha cua keo tha (CN-04-01, CN-04-02). Chang ve kho nam o
+                        tfoot chu khong o trong tbody: no khong phai mot diem giao, de lan trong
+                        vung tha thi keo nham vao giua no la thu tu diem loan het.
+                    -->
+                    <tbody class="stop-list">
+                    <tr th:each="stop : ${route.stops}" class="stop-row"
+                        th:data-order-id="${stop.order.id}"
+                        th:attr="draggable=${route.status.name() == 'DRAFT'} ? 'true' : 'false'">
+                        <td class="stop-sequence" th:text="${stop.sequence}">1</td>
                         <td>
+                            <span class="drag-grip" th:if="${route.status.name() == 'DRAFT'}"
+                                  title="Kéo để đổi thứ tự hoặc chuyển sang tuyến khác">⠿</span>
                             <a th:href="@{/orders/{id}(id=${stop.order.id})}"
                                th:text="${stop.order.customer.name}">Tạp hóa Minh Anh</a>
                             <div class="small text-sub" th:text="${stop.order.code}">MP2608160001</div>
                         </td>
                         <td class="num" th:text="${#aggregates.sum(stop.order.items.![boxCount])}">50</td>
-                        <td class="num"
+                        <td class="num stop-leg"
                             th:text="${#numbers.formatDecimal(stop.legDistance / 1000, 1, 'POINT', 2, 'COMMA')} + ' km'">8,20 km</td>
-                        <td class="num"
+                        <td class="num stop-eta"
                             th:text="${stop.estimatedArrival != null} ? ${#temporals.format(stop.estimatedArrival, 'HH:mm')} : '—'">08:16</td>
                     </tr>
+                    </tbody>
 
                     <!--
                         CHANG CUOI VE KHO (CBR-01) — dong nay luon hien, khong phai de cho dep.
@@ -313,28 +330,100 @@
                         minh trong hai giay khi hoi dong hoi "em co cong chang ve kho khong".
                         Quang duong chang cuoi = tong tuyen - tong cac chang cua diem dung.
                     -->
+                    <tfoot>
                     <tr class="return-leg-row">
                         <td>↩</td>
                         <td colspan="2">Về kho</td>
-                        <td class="num"
+                        <td class="num return-leg"
                             th:text="${#numbers.formatDecimal((route.totalDistance - #aggregates.sum(route.stops.![legDistance])) / 1000, 1, 'POINT', 2, 'COMMA')} + ' km'">6,10 km</td>
                         <td></td>
                     </tr>
-                    </tbody>
+                    </tfoot>
                 </table>
             </div>
 
             <div th:if="${!routes.isEmpty()}" class="system-note">
                 Tổng quãng đường
-                <strong th:text="${#numbers.formatDecimal(totalRouteDistance / 1000, 1, 'POINT', 2, 'COMMA')} + ' km'">59,50 km</strong>
+                <strong id="total-distance"
+                        th:data-value="${totalRouteDistance}"
+                        th:text="${#numbers.formatDecimal(totalRouteDistance / 1000, 1, 'POINT', 2, 'COMMA')} + ' km'">59,50 km</strong>
                 — đã gồm chặng cuối về kho của từng tuyến (CBR-01).
             </div>
+
+            <!-- ============ CN-04-04 so sanh tu dong voi chinh tay · CN-04-05 khoi phuc ============ -->
+            <div th:if="${!routes.isEmpty() and automaticDistance != null}"
+                 class="panel mt-3" sec:authorize="hasRole('DISPATCHER')">
+
+                <div class="metric-row">
+                    <div>
+                        <div class="metric-label">Thuật toán tìm ra</div>
+                        <div class="metric-value" style="font-size: 17px;"
+                             th:text="${#numbers.formatDecimal(automaticDistance / 1000, 1, 'POINT', 2, 'COMMA')} + ' km'">25,17 km</div>
+                    </div>
+                    <div>
+                        <div class="metric-label">Phương án hiện tại</div>
+                        <div class="metric-value" style="font-size: 17px;" id="manual-distance"
+                             th:text="${#numbers.formatDecimal(totalRouteDistance / 1000, 1, 'POINT', 2, 'COMMA')} + ' km'">25,17 km</div>
+                    </div>
+                    <div>
+                        <div class="metric-label">Chênh lệch</div>
+                        <!--
+                            Do san tu may chu chu khong de trong cho JavaScript dien: tat
+                            JavaScript hay JavaScript loi thi o nay van phai co con so dung.
+                            JavaScript chi cap nhat lai no trong luc keo tha.
+                        -->
+                        <div class="metric-value" style="font-size: 17px;" id="manual-gap"
+                             th:data-auto="${automaticDistance}"
+                             th:text="${totalRouteDistance - automaticDistance > 1}
+                                        ? 'Dài hơn ' + ${#numbers.formatDecimal((totalRouteDistance - automaticDistance) / 1000, 1, 'POINT', 2, 'COMMA')} + ' km'
+                                        : (${automaticDistance - totalRouteDistance > 1}
+                                            ? 'Ngắn hơn ' + ${#numbers.formatDecimal((automaticDistance - totalRouteDistance) / 1000, 1, 'POINT', 2, 'COMMA')} + ' km'
+                                            : 'Bằng nhau')">Bằng nhau</div>
+                    </div>
+                </div>
+
+                <!--
+                    Con so ben tren doi ngay khi keo tha, nhung do chi la TRINH DUYET tinh thu.
+                    Bam Luu thi may chu tinh lai bang dung ham cua thuat toan roi ghi xuong CSDL —
+                    con so cua may chu moi la con so that.
+                -->
+                <div class="d-flex align-items-center gap-2 mt-3">
+                    <button type="submit" form="arrange-form" class="btn btn-sm btn-primary"
+                            id="save-arrangement" disabled>Lưu phương án chỉnh tay</button>
+
+                    <form th:action="@{/routing/restore}" method="post">
+                        <input type="hidden" name="deliveryDate" th:value="${deliveryDate}">
+                        <button type="submit" class="btn btn-sm btn-outline-secondary">
+                            Khôi phục kết quả tự động</button>
+                    </form>
+
+                    <span class="form-text mb-0" id="arrange-hint">
+                        Kéo dòng khách hàng để đổi thứ tự trong tuyến, hoặc kéo sang bảng của tuyến khác.
+                    </span>
+                </div>
+
+                <div th:if="${manuallyEdited}" class="form-text mt-1">
+                    Kế hoạch này đã được chỉnh tay nên các tuyến được đánh dấu
+                    <strong>Chỉnh tay</strong>. Bảng chỉ số phía trên vẫn là số liệu của lần chạy
+                    thuật toán, cố ý giữ nguyên để đối chiếu (CBR-18).
+                </div>
+            </div>
+
+            <!--
+                Form rong, JavaScript chen thu tu don vao truoc khi gui. De rong o day vi cac
+                nut Giao tuyen va Huy tuyen da nam trong form rieng cua chung, ma HTML khong
+                cho long form trong form.
+            -->
+            <form th:action="@{/routing/arrange}" method="post" id="arrange-form"
+                  th:if="${!routes.isEmpty()}" sec:authorize="hasRole('DISPATCHER')">
+                <input type="hidden" name="deliveryDate" th:value="${deliveryDate}">
+            </form>
 
             <!-- ============ CN-04-07 chot ke hoach ============ -->
             <div th:if="${!routes.isEmpty()}" class="mt-3" sec:authorize="hasRole('DISPATCHER')">
                 <form th:action="@{/routing/confirm}" method="post">
                     <input type="hidden" name="deliveryDate" th:value="${deliveryDate}">
-                    <button type="submit" class="btn btn-primary"
+                    <button type="submit" class="btn btn-primary" id="confirm-plan-button"
                             th:disabled="${!canConfirmPlan}">Chốt kế hoạch</button>
                 </form>
 
@@ -420,6 +509,9 @@
 
     <!-- CN-03-09: mau, ghim danh so va lo trinh that cua tung tuyen -->
     <script id="route-lines-data" type="application/json" th:text="${routeLinesJson}">[]</script>
+
+    <!-- CN-04-01/02: ma tran khoang cach de tinh THU km va ETA ngay khi keo tha -->
+    <script id="plan-data" type="application/json" th:text="${planJson}">null</script>
 
 </div>
 

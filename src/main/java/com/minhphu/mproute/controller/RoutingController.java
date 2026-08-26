@@ -18,6 +18,7 @@ import com.minhphu.mproute.service.DepotService;
 import com.minhphu.mproute.service.RouteGeometryService;
 import com.minhphu.mproute.service.RoutePlanService;
 import com.minhphu.mproute.service.RoutingService;
+import com.minhphu.mproute.service.SystemParameterService;
 import com.minhphu.mproute.service.optimization.DistanceMatrixService;
 import com.minhphu.mproute.service.optimization.OptimizationPoint;
 import lombok.RequiredArgsConstructor;
@@ -68,6 +69,7 @@ public class RoutingController {
     private final RoutingService routingService;
     private final RoutePlanService routePlanService;
     private final RouteGeometryService routeGeometryService;
+    private final SystemParameterService systemParameterService;
     private final ObjectMapper objectMapper;
 
     /** Mot ghim tren ban do. Chi chua thu can ve, khong day ca entity ra giao dien. */
@@ -145,7 +147,22 @@ public class RoutingController {
          * thai nhu vay thi tai lai trang van con canh bao, khong phu thuoc flash message.
          */
         model.addAttribute("unassignedOrders", routes.isEmpty() ? List.of() : orders);
-        model.addAttribute("metrics", routes.isEmpty() ? null : routingService.latestMetricsOf(targetDate));
+
+        var metrics = routes.isEmpty() ? null : routingService.latestMetricsOf(targetDate);
+        model.addAttribute("metrics", metrics);
+
+        /*
+         * CN-04-04 — dat hai con so canh nhau: quang duong thuat toan tim ra (luu tai thoi diem
+         * chay, khong bao gio tinh lai, CBR-18) va quang duong cua cac tuyen hien tai. Hai con so
+         * bang nhau khi chua ai dong vao; lech nhau la do da chinh tay.
+         */
+        boolean manuallyEdited = routes.stream()
+                .anyMatch(route -> route.getAlgorithm() == AlgorithmType.MANUAL);
+        model.addAttribute("manuallyEdited", manuallyEdited);
+        model.addAttribute("automaticDistance", metrics == null ? null : metrics.getOptimizedDistance());
+
+        // CN-04-01/02: ma tran de trinh duyet hien ngay con so moi khi keo tha, chi la xem truoc
+        model.addAttribute("planJson", toJson(buildPlanData(depot, routes), "null"));
 
         /*
          * CN-03-09 — duong di THAT cua tung tuyen, lay tu OSRM Route API.
@@ -269,6 +286,54 @@ public class RoutingController {
         return "redirect:/routing?deliveryDate=" + deliveryDate;
     }
 
+    /**
+     * CN-04-01, CN-04-02 — luu cach sap xep do dieu phoi vien keo tha.
+     *
+     * Nhan hai danh sach SONG SONG thay vi mot khoi JSON: routeIds[i] di voi orderIdsPerRoute[i].
+     * Form thuong gui duoc kieu nay ma khong can JavaScript dung JSON, va khong can them thu
+     * vien nao — tuyen khong con don nao thi gui chuoi rong.
+     *
+     * NGAN CACH BANG DAU GACH NGANG CHU KHONG PHAI DAU PHAY. Spring TU DONG tach chuoi co dau
+     * phay khi bind vao List<String>, nen "5,6,7" cua mot tuyen se bien thanh ba phan tu va hai
+     * danh sach song song lech nhau ngay. Loi nay khong bao gi ro rang, no chi bao "du lieu
+     * khong hop le" — mat mot luc moi truy ra.
+     */
+    @PreAuthorize("hasRole('DISPATCHER')")
+    @PostMapping("/arrange")
+    public String arrange(@RequestParam
+                          @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate deliveryDate,
+                          @RequestParam(required = false) List<Long> routeIds,
+                          @RequestParam(required = false) List<String> orderIdsPerRoute,
+                          RedirectAttributes redirectAttributes) {
+
+        try {
+            routePlanService.applyManualArrangement(deliveryDate, toManualRoutes(routeIds, orderIdsPerRoute));
+            redirectAttributes.addFlashAttribute("successMessage",
+                    "Đã lưu phương án chỉnh tay. Quãng đường và giờ dự kiến đã được tính lại.");
+        } catch (IllegalArgumentException | IllegalStateException ex) {
+            redirectAttributes.addFlashAttribute("errorMessage", ex.getMessage());
+        }
+        return "redirect:/routing?deliveryDate=" + deliveryDate;
+    }
+
+    /** CN-04-05 — bỏ phương án chỉnh tay, chạy lại thuật toán để về kết quả gốc. */
+    @PreAuthorize("hasRole('DISPATCHER')")
+    @PostMapping("/restore")
+    public String restore(@RequestParam
+                          @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate deliveryDate,
+                          @AuthenticationPrincipal CurrentUser currentUser,
+                          RedirectAttributes redirectAttributes) {
+
+        try {
+            routePlanService.restoreAutomaticPlan(deliveryDate, currentUser.getId());
+            redirectAttributes.addFlashAttribute("successMessage",
+                    "Đã khôi phục kết quả của thuật toán, bỏ mọi thay đổi chỉnh tay.");
+        } catch (IllegalArgumentException | IllegalStateException ex) {
+            redirectAttributes.addFlashAttribute("errorMessage", ex.getMessage());
+        }
+        return "redirect:/routing?deliveryDate=" + deliveryDate;
+    }
+
     /** CN-04-07 — chot ke hoach cua ca ngay. */
     @PreAuthorize("hasRole('DISPATCHER')")
     @PostMapping("/confirm")
@@ -311,6 +376,95 @@ public class RoutingController {
     }
 
     // ==================== Ham rieng ====================
+
+    /**
+     * Doi hai danh sach song song tu form thanh danh sach tuyen da sap.
+     *
+     * Chuoi rong nghia la tuyen do khong con don nao — hop le, dieu phoi vien co the keo het
+     * don cua mot tuyen sang tuyen khac. Bo qua phan tu rong chu khong nem loi.
+     */
+    private List<RoutePlanService.ManualRoute> toManualRoutes(List<Long> routeIds,
+                                                              List<String> orderIdsPerRoute) {
+        if (routeIds == null || routeIds.isEmpty()) {
+            throw new IllegalArgumentException("Không nhận được phương án sắp xếp nào.");
+        }
+        if (orderIdsPerRoute == null || orderIdsPerRoute.size() != routeIds.size()) {
+            throw new IllegalArgumentException("Dữ liệu sắp xếp gửi lên không hợp lệ. Tải lại trang rồi thử lại.");
+        }
+
+        List<RoutePlanService.ManualRoute> manualRoutes = new ArrayList<>();
+        for (int i = 0; i < routeIds.size(); i++) {
+            List<Long> orderIds = new ArrayList<>();
+            for (String part : orderIdsPerRoute.get(i).split("-")) {
+                if (!part.isBlank()) {
+                    try {
+                        orderIds.add(Long.valueOf(part.trim()));
+                    } catch (NumberFormatException ex) {
+                        throw new IllegalArgumentException(
+                                "Dữ liệu sắp xếp gửi lên không hợp lệ. Tải lại trang rồi thử lại.");
+                    }
+                }
+            }
+            manualRoutes.add(new RoutePlanService.ManualRoute(routeIds.get(i), orderIds));
+        }
+        return manualRoutes;
+    }
+
+    /** Mot diem trong khoi du lieu de trinh duyet tinh thu quang duong luc keo tha. */
+    public record PlanPoint(Long orderId, int matrixIndex, double weight, double volume) {}
+
+    /**
+     * Ma tran khoang cach va tham so ETA, de trinh duyet hien ngay con so moi khi keo tha
+     * (CN-04-01, CN-04-02, BR04-03).
+     *
+     * CHI LA XEM TRUOC. Luc bam Luu thi may chu tinh lai bang dung ham cua thuat toan, va con
+     * so cua may chu moi la con so ghi xuong CSDL. Day la ly do khoi nay chi chua ma tran chu
+     * khong chua san km cua tung tuyen: trinh duyet tu cong lay, con so cuoi cung van do Java quyet.
+     */
+    public record PlanData(double[][] matrix,
+                           List<PlanPoint> points,
+                           double speedKmh,
+                           int loadingMinutes,
+                           String departureTime) {}
+
+    private PlanData buildPlanData(Depot depot, List<Route> routes) {
+        if (depot == null || routes.isEmpty()) {
+            return null;
+        }
+
+        // Kho luon o chi so 0 — quy uoc xuyen suot do an, JavaScript dua vao dung quy uoc nay
+        List<OptimizationPoint> points = new ArrayList<>();
+        points.add(OptimizationPoint.depot(depot.getLatitude(), depot.getLongitude()));
+
+        List<Order> ordersInRoutes = new ArrayList<>();
+        for (Route route : routes) {
+            for (var stop : route.getStops()) {
+                Order order = stop.getOrder();
+                ordersInRoutes.add(order);
+                points.add(OptimizationPoint.forOrder(order.getId(), order.getCustomer().getName(),
+                        order.getLatitude(), order.getLongitude(),
+                        order.getTotalWeight(), order.getTotalVolume()));
+            }
+        }
+        if (ordersInRoutes.isEmpty()) {
+            return null;
+        }
+
+        // loadMatrix dat luon matrixIndex cho tung diem theo dung thu tu danh sach o tren
+        var matrix = routingService.matrixFor(points);
+
+        List<PlanPoint> planPoints = new ArrayList<>();
+        for (int i = 0; i < ordersInRoutes.size(); i++) {
+            Order order = ordersInRoutes.get(i);
+            planPoints.add(new PlanPoint(order.getId(), points.get(i + 1).getMatrixIndex(),
+                    order.getTotalWeight(), order.getTotalVolume()));
+        }
+
+        return new PlanData(matrix.meters(), planPoints,
+                systemParameterService.getDouble(SystemParameterService.AVERAGE_SPEED),
+                systemParameterService.getInt(SystemParameterService.LOADING_TIME),
+                routingService.departureTime().toString());
+    }
 
     /**
      * Cau tom tat sau mot lan chay, dat ngay dau man hinh.
