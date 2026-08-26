@@ -11,7 +11,7 @@
 | | |
 |---|---|
 | Theo kế hoạch | Tuần 8 — gắn thuật toán vào web |
-| Thực tế | **Đúng tiến độ.** Thuật toán đã chạy trên web: bấm nút ra tuyến thật, lưu xuống CSDL, bảng chỉ số và **lộ trình thật vẽ lên bản đồ**. Còn nợ cả nhóm 4 (chỉnh tay, gán tài xế, chốt kế hoạch) |
+| Thực tế | **Đúng tiến độ.** Vòng đời một tuyến đã chạy trọn: chạy thuật toán → vẽ lộ trình thật lên bản đồ → gán tài xế → chốt kế hoạch → hủy tuyến. Còn nợ phần kéo thả chỉnh tay (CN-04-01 → 05) |
 
 ```
 [x] T1  Chot de tai, hoi Minh Phu 3 cau
@@ -332,6 +332,33 @@
     Nay tách hai khối: điểm đã có tuyến đi theo `routeLinesJson` (ghim đánh số, màu tuyến), điểm
     chưa xếp được đi theo `mapPointsJson` (chấm xám rỗng ruột). Hai khối không bao giờ chồng nhau
     vì đơn đã xếp thì không còn ở trạng thái `APPROVED`
+  - **★ CN-04-06, CN-04-07, CN-04-09 — `RoutePlanService`.** Đây là chỗ một tuyến đổi từ *nháp*
+    sang *thật*: trước khi chốt, chạy lại thuật toán là xóa sạch; sau khi chốt, xe bị khóa và
+    tài xế nhìn thấy tuyến trên điện thoại. Tách khỏi `RoutingService` vì hai việc ngược nhau —
+    một bên xóa tuyến nháp để sinh lại, một bên khóa tuyến lại không cho sinh nữa
+    - **Chạy thật đủ vòng đời trên 2 tuyến** ngày 21/08 (tạm thu nhỏ tải trọng để ép tách tuyến,
+      **đã trả lại 1500/500/1000 kg**):
+      chốt khi chưa gán tài xế → *"Chưa gán tài xế cho tuyến TT26082101, TT26082102"*;
+      gán Hùng cho tuyến 1 → ô chọn của tuyến 2 **mất Hùng** (BR04-07) nhưng ô chọn tuyến 1
+      **vẫn còn** Hùng; gửi thẳng `driverId=1` cho tuyến 2 → **bị chặn ở tầng service** (CBR-06)
+    - **Chốt xong kiểm CSDL:** 2 tuyến `CONFIRMED`, xe 1 và 3 sang **`IN_USE`**, 2 dòng
+      `notifications` **NTF-01** gửi đúng `taixe01` và `taixe03`, 2 dòng `status_history`
+      `DRAFT → CONFIRMED`. Xe bị khóa **ngay lúc chốt** chứ không đợi tài xế nhận hàng (docs/01)
+    - **Hủy tuyến TT26082102 kiểm CSDL:** tuyến `CANCELLED`, **xe 3 về `AVAILABLE`** còn xe 1
+      vẫn `IN_USE` vì tuyến kia còn sống, **2 đơn về `APPROVED`** còn đơn của tuyến kia giữ
+      `ROUTED`, có **NTF-05**, lịch sử ghi kèm lý do. Kiểm `HEX` lý do và nội dung thông báo
+      đều khớp UTF-8
+    - **Ba nhánh chặn khác đã thử:** đổi tài xế tuyến đã chốt → chặn (CBR-10); chốt lần hai →
+      *"chưa có tuyến nháp nào để chốt"*; hủy không nhập lý do → chặn
+    - **Màn hình nay hiện cả tuyến nháp lẫn tuyến đã chốt.** Trước đó chỉ lấy `DRAFT` nên bấm
+      Chốt xong là **cả bảng biến mất** — lỗi chỉ lộ ra khi có nút chốt. Tuyến đã hủy thì không
+      hiện nữa, bản ghi vẫn nằm trong CSDL cho báo cáo
+    - Nút Chốt kế hoạch bị khóa kèm **câu giải thích vì sao**; máy chủ vẫn chặn lại bằng đúng ba
+      điều kiện đó, ẩn nút chỉ để người dùng khỏi mất công (CBR-15)
+  - **Nhập nốt 2 tài xế còn thiếu theo `docs/08`** (Lê Văn Nam, Phạm Văn Tú) — trước đó danh mục
+    chỉ có 1 người nên không thử được CBR-06. Nhập qua chính màn hình danh mục, kiểm `HEX(full_name)`
+    khớp UTF-8. Tiện thể nghiệm thu lại rào của CN-01-03: gán nhầm tài khoản `dieuphoi` cho tài xế
+    thì bị chặn vì tài khoản đó không phải vai trò `DRIVER`
   - **Phân quyền kiểm lại đủ 4 phép:** `admin` GET `/routing` ra **200 nhưng không có nút chạy**,
     POST `/routing/optimize` ra **403**; `taixe01` ra **403** cả hai. Xe `MAINTENANCE` gửi thẳng
     `vehicleIds=4` lên vẫn **bị chặn ở tầng service** chứ không chỉ ẩn khỏi ô chọn (CBR-05, CBR-15)
@@ -347,8 +374,10 @@ bước 12–14 (phương án B) cần hai tuyến chạy song song mới dựng
 
 ## Việc tiếp theo — nốt TUẦN 8
 
-1. **Điều chỉnh thủ công, gán tài xế, chốt kế hoạch** (CN-04-01 → 07). Chốt tuyến là chỗ xe chuyển
-   sang `IN_USE` (BR03-12) và tuyến sang `CONFIRMED`
+1. **Kéo thả chỉnh tay** (CN-04-01 → 05): đổi thứ tự điểm trong tuyến, chuyển đơn giữa hai tuyến,
+   cảnh báo vượt sức chứa (MSG-14), hiện song song quãng đường tự động và chỉnh tay, nút khôi phục.
+   Đây là phần JavaScript nặng nhất của đồ án — **nếu đuối thì đây là chỗ cắt trước tiên**, vì
+   CN-04-06/07/09 đã xong nên vòng đời tuyến vẫn chạy trọn mà không cần kéo thả
 2. **Nghiệm thu CN-03-10 (MSG-08) bằng dữ liệu thật.** Code đã có và đã chặn đúng khi *không chọn xe
    nào*, nhưng **chưa dựng được tình huống tổng nhu cầu > tổng sức chứa**: xe nhỏ nhất đã 500 kg /
    6 m³ trong khi 3 đơn thử chỉ 237 kg / 0,61 m³. Tạo một đơn to lúc seed dữ liệu tuần 11 rồi thử
@@ -416,9 +445,13 @@ Còn nợ một phép nghiệm thu của BR02-11: đơn `ROUTED` mới ra đúng
 
   **Lần sau thêm giá trị enum bất kỳ thì phải sửa `CHECK` tay**, hoặc xóa bảng cho Hibernate tạo lại.
   Máy khác dựng lại CSDL từ đầu thì không gặp lỗi này — càng dễ tưởng là lỗi của riêng máy mình
-- Trong CSDL đang có **7 đơn thử** do lần kiểm thử `curl` tạo ra: `MP2608160001` (Đã duyệt),
-  `MP2608160002`, `MP2608160003`, `MP2608170001` (cả ba Đã hủy), và ba đơn ngày 21/08 nay đã
-  **Đã phân tuyến** cùng tuyến nháp `TT26082101`. Giữ lại để bấm thử giao diện;
+- **Mật khẩu tài khoản `dieuphoi` đã bị đổi khỏi giá trị `dieuphoi123` của `DataSeeder`.**
+  `seedUser()` chỉ tạo khi thiếu chứ không ghi đè, nên khởi động lại không đưa về mặc định.
+  `docs/08` vẫn ghi `dieuphoi123` — **trước ngày bảo vệ phải đưa về đúng tài liệu**, hoặc sửa
+  `docs/08`. Ba tài khoản còn lại vẫn đúng mật khẩu mặc định
+- Trong CSDL đang có **8 đơn thử** do các lần kiểm thử tạo ra. Ngày 21/08 hiện có tuyến
+  `TT26082101` **đã chốt** (xe 29H-123.45 đang `IN_USE`, tài xế Nguyễn Văn Hùng) và 2 đơn quay
+  lại hàng chờ sau khi hủy `TT26082102`. Hủy nốt tuyến đó là xe về `AVAILABLE`. Giữ lại để bấm thử;
   xóa lúc seed lại dữ liệu ở tuần 11. Ba khách thử của CN-02-10 (`#22`, `#23`, `#24`) đã chuyển
   **`INACTIVE`** nên không còn hiện trong ô chọn khách lúc tạo đơn
 - **Hai container Docker phải bật trước khi chạy ứng dụng**, cả hai đều không phải service Windows:
