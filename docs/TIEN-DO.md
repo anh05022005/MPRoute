@@ -528,6 +528,37 @@ bước 12–14 (phương án B) cần hai tuyến chạy song song mới dựng
   - `application.properties` **không commit mật khẩu nào**: năm dòng SMTP vẫn đóng, và khi mở thì
     đọc từ biến môi trường `MPROUTE_MAIL_USERNAME` / `MPROUTE_MAIL_PASSWORD` giống cách làm với
     mật khẩu MySQL
+- **★ CN-06-01 → CN-06-05, CN-06-13 — tài xế báo sự cố trên đường.** Nửa đầu Nhóm 6.
+  - **Hai mức độ dẫn tới hai đường đi hoàn toàn khác nhau**, và đó là toàn bộ cái khó của nhóm này:
+    `CAN_CONTINUE` hệ thống **tự xử lý ngay** (cộng phút chậm vào ETA, báo khách, đóng sự cố lại);
+    `CANNOT_CONTINUE` hệ thống **không tự quyết** mà chờ điều phối viên chọn phương án
+  - **Vì sao không để máy tự chọn cả trường hợp nặng:** ba phương án có chi phí rất gần nhau mà
+    hậu quả thì khác hẳn — điều thêm một xe là thêm một tài xế phải làm ngoài giờ, còn hoãn sang
+    hôm sau là một cuộc gọi xin lỗi khách. **Máy không biết hôm nay ai rảnh**
+  - **★ CN-06-04** chạy thật: báo tắc đường chậm 30 phút → ETA điểm còn lại lùi từ **08:12:40
+    sang 08:42:40**, đúng 30 phút; khách nhận **NTF-07** kèm giờ mới `08:42`; sự cố đóng luôn
+    `RESOLVED` vì không còn gì cho điều phối quyết
+  - **Thư báo ETA mới gửi SAU khi đã tính lại**, không phải trước — gửi trước thì khách nhận
+    được đúng cái giờ cũ mà hệ thống vừa bỏ đi
+  - **★ CN-06-03, BR06-02** không lấy được GPS thì dùng tọa độ **điểm giao gần nhất đã xong** và
+    đánh dấu `estimated_location = true`; chưa giao điểm nào thì lấy tọa độ kho. Chạy thật cả hai
+    nhánh: lần đầu không gửi tọa độ → ghi tọa độ kho, cờ ước lượng bật; lần sau có GPS → ghi đúng
+    tọa độ, cờ tắt. **Không để trống**: điều phối cần biết xe đang ở đâu để điều xe cứu hộ tới,
+    một tọa độ gần đúng vẫn hơn hẳn không có gì
+  - **★ CN-06-05** thông báo khẩn cho điều phối gộp đủ ba thứ vào **một dòng đọc được ngay**:
+    *"Tuyến TT26082701 báo sự cố tắc đường (vẫn tiếp tục được), chậm 30 phút. Vị trí 20.94970,
+    105.81720 (ước lượng). Còn 1 điểm chưa giao: Cửa hàng Bảo Châu."*
+  - **★ CN-06-13, BR06-14** báo xe hỏng → tuyến sang `INCIDENT`, **xe 29H-123.45 sang
+    `MAINTENANCE`** và **biến mất khỏi danh sách xe khả dụng** của màn hình phân tuyến — kiểm
+    chứng bằng cách mở màn hình phân tuyến ngày khác, ô chọn xe trống trơn.
+    **Chuyển ngay chứ không đợi chọn xong phương án**: giữa lúc đó có thể có người chạy phân tuyến
+    cho ngày mai và hệ thống lại xếp đúng chiếc xe đang nằm đường vào kế hoạch
+  - **Tuyến sang `INCIDENT` chứ không phải `CANCELLED`**: các điểm đã giao vẫn giữ nguyên kết quả,
+    và tuyến sẽ quay lại `IN_PROGRESS` nếu điều phối chọn phương án điều xe cứu hộ
+  - **Ba nhánh chặn đã thử:** không chọn loại; chọn `OTHER` mà không mô tả (BR06-01); chọn
+    `CAN_CONTINUE` mà không nhập số phút (BR06-04)
+  - Nút **BÁO SỰ CỐ** viền đỏ đặt cuối màn hình tài xế, **chỉ hiện khi tuyến `IN_PROGRESS`** —
+    trước đó xe còn ở kho nên chưa có gì trên đường để báo, sau đó thì tuyến đã xong
 - **Sửa một chỗ bỏ sót của tuần 9:** đơn **chưa bao giờ đi qua trạng thái `DELIVERING`**, nhảy
   thẳng `ROUTED → DELIVERED`, lệch với luồng trạng thái ở `docs/01`. Nay tài xế bấm nhận hàng thì
   mọi đơn của tuyến chuyển sang `DELIVERING` và điểm kế tiếp chuyển sang `DELIVERING`. **Không có
@@ -537,8 +568,11 @@ bước 12–14 (phương án B) cần hai tuyến chạy song song mới dựng
 
 ## Việc tiếp theo — TUẦN 9
 
-1. **Xử lý sự cố** (CN-06) — nếu đuối thì cắt cả nhóm, đưa vào Hướng phát triển.
-   `CheapestInsertion` đã viết sẵn từ tuần 7 nên phương án B không tốn nhiều
+1. **Nửa sau Nhóm 6 — màn hình xử lý sự cố** (CN-06-06 → CN-06-12): điều phối viên xem sự cố và
+   vị trí xe trên bản đồ, hệ thống sinh ba phương án A/B/C xếp theo km phát sinh, chọn một
+   phương án thì cập nhật tuyến, tính lại ETA và báo khách.
+   `CheapestInsertion` đã viết sẵn từ tuần 7 nên phương án B không tốn nhiều.
+   **Đã có sẵn sự cố `PENDING` trong CSDL** (tuyến `TT26082701`, xe hỏng) để bấm thử ngay
 2. **Nghiệm thu BR07-03** — tra bằng SĐT chỉ hiện đơn 30 ngày gần nhất. Code đã lọc đúng nhưng
    **chưa thử được**: CSDL chưa có đơn nào cũ hơn 30 ngày. Thử luôn khi seed dữ liệu 10 ngày
    trước ở tuần 11
