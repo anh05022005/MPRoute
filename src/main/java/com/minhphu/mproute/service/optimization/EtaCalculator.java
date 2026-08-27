@@ -41,6 +41,26 @@ public final class EtaCalculator {
     public static void assignEta(OptimizationRoute route, double[][] matrix,
                                  LocalDateTime departureTime,
                                  double speedKmh, int loadingMinutesPerStop) {
+        assignEta(route, matrix, RouteDistanceCalculator.DEPOT_INDEX,
+                departureTime, speedKmh, loadingMinutesPerStop);
+    }
+
+    /**
+     * Nhu tren nhung xe XUAT PHAT TU MOT DIEM KHAC KHO.
+     *
+     * Dung khi xu ly su co (UC06): xe cuu ho di tu diem xay ra su co, con xe duoc chen them
+     * diem thi dang o giua duong tai diem no vua giao xong. Ca hai truong hop deu khong bat
+     * dau tu kho, nhung CONG THUC TINH GIO THI KHONG DOI — chi khac moc xuat phat.
+     *
+     * Tach tham so originIndex thay vi viet mot ham tinh gio thu hai: hai cong thuc song song
+     * la som muon lech nhau, ma luc do gio bao cho khach va gio hien cho tai xe se khac nhau.
+     *
+     * @param originIndex chi so trong ma tran cua diem xe dang dung truoc khi chay chang dau
+     */
+    public static void assignEta(OptimizationRoute route, double[][] matrix,
+                                 int originIndex,
+                                 LocalDateTime departureTime,
+                                 double speedKmh, int loadingMinutesPerStop) {
 
         List<OptimizationPoint> points = route.getPoints();
         if (points.isEmpty()) {
@@ -52,8 +72,8 @@ public final class EtaCalculator {
             throw new IllegalArgumentException("Toc do trung binh phai lon hon 0, dang la " + speedKmh);
         }
 
-        // B1. Chang dau tien: kho -> diem giao thu nhat
-        double cumulativeMeters = matrix[RouteDistanceCalculator.DEPOT_INDEX][points.get(0).getMatrixIndex()];
+        // B1. Chang dau tien: diem xuat phat -> diem giao thu nhat
+        double cumulativeMeters = matrix[originIndex][points.get(0).getMatrixIndex()];
 
         for (int i = 0; i < points.size(); i++) {
 

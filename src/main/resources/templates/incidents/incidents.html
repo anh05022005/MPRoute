@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<!-- Danh sach su co. Cai dang cho xu ly len dau vi do la thu can lam ngay (CN-06-06). -->
+<html lang="vi"
+      xmlns:th="http://www.thymeleaf.org"
+      th:replace="~{layout :: main('Sự cố', ~{::content})}">
+<body>
+
+<div th:fragment="content">
+
+    <div class="section-label">Sự cố đang chờ xử lý</div>
+
+    <div th:if="${pendingIncidents.isEmpty()}" class="panel mb-4">
+        <div class="text-sub small">
+            Không có sự cố nào đang chờ. Tài xế báo sự cố từ màn hình của họ, và sự cố mức
+            <strong>Vẫn tiếp tục được</strong> thì hệ thống tự xử lý, không hiện ở đây.
+        </div>
+    </div>
+
+    <table class="table table-striped align-middle mb-4" th:unless="${pendingIncidents.isEmpty()}">
+        <thead>
+        <tr>
+            <th style="width: 150px;">Thời điểm</th>
+            <th style="width: 130px;">Tuyến</th>
+            <th>Loại · mức độ</th>
+            <th>Tài xế</th>
+            <th style="width: 110px;"></th>
+        </tr>
+        </thead>
+        <tbody>
+        <tr th:each="incident : ${pendingIncidents}">
+            <td th:text="${#temporals.format(incident.reportedAt, 'HH:mm dd/MM/yyyy')}">10:20 27/08/2026</td>
+            <td th:text="${incident.route.code}">TT26082701</td>
+            <td>
+                <span th:text="${incident.incidentType.displayName}">Xe hỏng</span>
+                <span class="status-tag status-tag-danger"
+                      th:text="${incident.severity.displayName}">Không thể tiếp tục</span>
+                <div class="small text-sub" th:if="${incident.description != null}"
+                     th:text="${incident.description}">Nổ lốp trước</div>
+            </td>
+            <td th:text="${incident.driver != null} ? ${incident.driver.fullName} : '—'">Lê Văn Nam</td>
+            <td>
+                <a class="btn btn-sm btn-primary" th:href="@{/incidents/{id}(id=${incident.id})}">Xử lý</a>
+            </td>
+        </tr>
+        </tbody>
+    </table>
+
+    <div class="section-label">Sự cố đã xử lý</div>
+
+    <div th:if="${resolvedIncidents.isEmpty()}" class="text-sub small">
+        Chưa có sự cố nào được xử lý.
+    </div>
+
+    <table class="table table-striped align-middle" th:unless="${resolvedIncidents.isEmpty()}">
+        <thead>
+        <tr>
+            <th style="width: 150px;">Thời điểm</th>
+            <th style="width: 130px;">Tuyến</th>
+            <th>Loại · mức độ</th>
+            <th>Cách xử lý</th>
+            <th class="num" style="width: 120px;">Km phát sinh</th>
+        </tr>
+        </thead>
+        <tbody>
+        <tr th:each="incident : ${resolvedIncidents}">
+            <td th:text="${#temporals.format(incident.reportedAt, 'HH:mm dd/MM/yyyy')}">10:20 27/08/2026</td>
+            <td>
+                <a th:href="@{/incidents/{id}(id=${incident.id})}"
+                   th:text="${incident.route.code}">TT26082701</a>
+            </td>
+            <td>
+                <span th:text="${incident.incidentType.displayName}">Tắc đường</span>
+                <span class="status-tag status-tag-muted"
+                      th:text="${incident.severity.displayName}">Vẫn tiếp tục được</span>
+            </td>
+            <td>
+                <!--
+                    Su co muc nhe khong co phuong an nao ca — he thong tu cong phut cham vao ETA.
+                    Ghi ro ra day chu khong de o trong, khong thi nhin vao tuong bi bo quen.
+                -->
+                <span th:if="${incident.appliedSolution != null}"
+                      th:text="${incident.appliedSolution.displayName}">Điều xe cứu hộ</span>
+                <span th:if="${incident.appliedSolution == null and incident.delayMinutes != null}"
+                      th:text="'Tự lùi giờ dự kiến ' + ${incident.delayMinutes} + ' phút'">Tự lùi giờ dự kiến 30 phút</span>
+            </td>
+            <td class="num"
+                th:text="${incident.extraDistance != null}
+                         ? ${#numbers.formatDecimal(incident.extraDistance / 1000, 1, 'POINT', 2, 'COMMA')} + ' km'
+                         : '—'">12,40 km</td>
+        </tr>
+        </tbody>
+    </table>
+
+</div>
+
+</body>
+</html>

@@ -1,0 +1,207 @@
+<!DOCTYPE html>
+<!--
+    SCR-11 — Man hinh xu ly mot su co (CN-06-06 -> CN-06-12).
+
+    Bo cuc: thong tin su co va ban do ben trai, cac phuong an ben phai — giong man hinh phan
+    tuyen. Dieu phoi vien nhin ban do de uoc luong khoang cach roi doc bang phuong an de chon.
+-->
+<html lang="vi"
+      xmlns:th="http://www.thymeleaf.org"
+      xmlns:sec="http://www.thymeleaf.org/extras/spring-security"
+      th:replace="~{layout :: main('Xử lý sự cố', ~{::content})}">
+<body>
+
+<div th:fragment="content">
+
+    <div class="toolbar">
+        <div class="section-label mb-0"
+             th:text="'Sự cố trên tuyến ' + ${incident.route.code}">Sự cố trên tuyến TT26082701</div>
+        <a class="btn btn-sm btn-outline-secondary push-right" th:href="@{/incidents}">Danh sách sự cố</a>
+    </div>
+
+    <!-- ============ Thong tin su co ============ -->
+    <div class="panel panel-danger mb-3" th:if="${incident.status.name() == 'PENDING'}">
+        <div class="field-grid">
+            <div class="field">
+                <div class="field-label">Loại sự cố</div>
+                <div class="field-value" th:text="${incident.incidentType.displayName}">Xe hỏng</div>
+            </div>
+            <div class="field">
+                <div class="field-label">Mức độ</div>
+                <div class="field-value" th:text="${incident.severity.displayName}">Không thể tiếp tục</div>
+            </div>
+            <div class="field">
+                <div class="field-label">Thời điểm báo</div>
+                <div class="field-value"
+                     th:text="${#temporals.format(incident.reportedAt, 'HH:mm dd/MM/yyyy')}">10:20 27/08/2026</div>
+            </div>
+            <div class="field">
+                <div class="field-label">Tài xế</div>
+                <div class="field-value"
+                     th:text="${incident.driver != null} ? ${incident.driver.fullName} + ' · ' + ${incident.driver.phone} : '—'">
+                    Lê Văn Nam · 0987654322</div>
+            </div>
+            <div class="field" th:if="${incident.description != null}">
+                <div class="field-label">Mô tả</div>
+                <div class="field-value" th:text="${incident.description}">Nổ lốp trước</div>
+            </div>
+            <div class="field">
+                <div class="field-label">Xe</div>
+                <div class="field-value"
+                     th:text="${incident.route.vehicle.licensePlate} + ' · ' + ${incident.route.vehicle.status.displayName}">
+                    29H-123.45 · Bảo trì</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Su co da xu ly: hien ket qua thay cho danh sach phuong an -->
+    <div class="panel panel-info mb-3" th:if="${incident.status.name() == 'RESOLVED'}">
+        <div class="field-grid">
+            <div class="field">
+                <div class="field-label">Đã xử lý bằng</div>
+                <div class="field-value"
+                     th:text="${incident.appliedSolution != null}
+                              ? ${incident.appliedSolution.displayName}
+                              : 'Hệ thống tự lùi giờ dự kiến ' + ${incident.delayMinutes} + ' phút'">
+                    Điều xe cứu hộ</div>
+            </div>
+            <div class="field">
+                <div class="field-label">Km phát sinh</div>
+                <div class="field-value"
+                     th:text="${incident.extraDistance != null}
+                              ? ${#numbers.formatDecimal(incident.extraDistance / 1000, 1, 'POINT', 2, 'COMMA')} + ' km'
+                              : '0,00 km'">12,40 km</div>
+            </div>
+            <div class="field" th:if="${incident.resolvedAt != null}">
+                <div class="field-label">Thời điểm xử lý</div>
+                <div class="field-value"
+                     th:text="${#temporals.format(incident.resolvedAt, 'HH:mm dd/MM/yyyy')}">10:45 27/08/2026</div>
+            </div>
+        </div>
+    </div>
+
+    <div class="split wide-right">
+
+        <!-- ============ CN-06-06 Vi tri xe tren ban do ============ -->
+        <div>
+            <div class="section-label">Vị trí xe và các điểm chưa giao</div>
+            <div class="map-frame">
+                <div id="routing-map" class="map-canvas"></div>
+                <div class="map-legend">
+                    <span><span class="legend-swatch" style="background: var(--blue-900);"></span>Vị trí sự cố và kho</span>
+                    <span><span class="legend-swatch" style="background: var(--route-1);"></span>Điểm chưa giao</span>
+                </div>
+            </div>
+            <div class="form-text" th:if="${incident.estimatedLocation}" style="color: var(--warning);">
+                Tài xế không cho phép lấy vị trí nên tọa độ này là <strong>ước lượng</strong> theo
+                điểm giao gần nhất đã xong (BR06-02).
+            </div>
+        </div>
+
+        <!-- ============ Cac phuong an ============ -->
+        <div>
+            <div class="section-label">Điểm chưa giao</div>
+            <table class="table table-sm table-striped align-middle mb-3">
+                <thead>
+                <tr>
+                    <th style="width: 40px;">#</th>
+                    <th>Khách hàng</th>
+                    <th class="num" style="width: 90px;">Khối lượng</th>
+                    <th class="num" style="width: 90px;">Thể tích</th>
+                </tr>
+                </thead>
+                <tbody>
+                <tr th:each="stop : ${remainingStops}">
+                    <td th:text="${stop.sequence}">2</td>
+                    <td>
+                        <span th:text="${stop.order.customer.name}">Cửa hàng Bảo Châu</span>
+                        <div class="small text-sub" th:text="${stop.order.code}">MP2608270001</div>
+                    </td>
+                    <td class="num"
+                        th:text="${#numbers.formatDecimal(stop.order.totalWeight, 1, 'POINT', 1, 'COMMA')} + ' kg'">60,0 kg</td>
+                    <td class="num"
+                        th:text="${#numbers.formatDecimal(stop.order.totalVolume, 1, 'POINT', 3, 'COMMA')} + ' m³'">0,850 m³</td>
+                </tr>
+                <tr th:if="${remainingStops.isEmpty()}">
+                    <td colspan="4" class="text-center text-sub py-3">
+                        Tuyến này không còn điểm nào chưa giao.
+                    </td>
+                </tr>
+                </tbody>
+            </table>
+
+            <!--
+                ============ CN-06-07 -> CN-06-10 Cac phuong an ============
+                Xep theo km phat sinh tang dan, rieng phuong an C luon xep cuoi du km bang 0
+                (BR06-08, BR06-11). Chi hien phuong an KHA THI — cai vi pham suc chua da bi
+                loai o tang service, khong hien ra roi moi bao khong dung duoc (BR06-09).
+            -->
+            <div th:if="${options != null}">
+                <div class="section-label">Phương án xử lý</div>
+
+                <div th:if="${options.isEmpty()}" class="panel panel-warning">
+                    Không sinh được phương án nào. Kiểm tra lại: tuyến còn điểm chưa giao không,
+                    và có xe nào đang rảnh không.
+                </div>
+
+                <div th:each="option, optionStat : ${options}" class="stop-card mb-2">
+                    <div class="stop-card-title">
+                        <span th:text="${optionStat.count} + '. ' + ${option.title()}">
+                            1. Điều xe 29C-678.90 ra sang hàng</span>
+                        <span class="status-tag"
+                              th:classappend="${option.type().name() == 'C_POSTPONE'} ? 'status-tag-warning' : 'status-tag-info'"
+                              th:text="${option.type().displayName}">Điều xe cứu hộ</span>
+                    </div>
+
+                    <div class="metric-row mt-2">
+                        <div>
+                            <div class="metric-label">Km phát sinh</div>
+                            <div class="metric-value" style="font-size: 17px;"
+                                 th:text="${#numbers.formatDecimal(option.extraDistanceMeters() / 1000, 1, 'POINT', 2, 'COMMA')} + ' km'">
+                                12,40 km</div>
+                        </div>
+                        <div style="grid-column: span 3;">
+                            <div class="metric-label">Nguồn lực cần huy động</div>
+                            <div class="field-value" th:text="${option.resourceNeeded()}">
+                                Xe 29C-678.90 (500 kg / 6,0 m³) và một tài xế rảnh</div>
+                        </div>
+                    </div>
+
+                    <!-- BR06-10 — ETA moi cua tung khach, de dieu phoi can nhac truoc khi chon -->
+                    <div class="stop-items mt-2">
+                        <div th:each="eta : ${option.newEtas()}">
+                            <span th:text="${eta.customerName()}">Cửa hàng Bảo Châu</span>
+                            <span class="push-right"
+                                  th:text="${eta.estimatedArrival() != null}
+                                           ? ${#temporals.format(eta.estimatedArrival(), 'HH:mm')}
+                                           : 'hẹn ngày mai'">14:20</span>
+                        </div>
+                    </div>
+
+                    <form th:action="@{/incidents/{id}/apply(id=${incident.id})}" method="post"
+                          class="mt-2" sec:authorize="hasRole('DISPATCHER')">
+                        <input type="hidden" name="solutionType" th:value="${option.type()}">
+                        <input type="hidden" name="targetVehicleId" th:value="${option.targetVehicleId()}">
+                        <input type="hidden" name="targetRouteId" th:value="${option.targetRouteId()}">
+                        <button type="submit"
+                                th:class="${optionStat.first} ? 'btn btn-primary w-100' : 'btn btn-outline-secondary w-100'"
+                                th:text="'Áp dụng phương án ' + ${optionStat.count}">Áp dụng phương án 1</button>
+                    </form>
+                </div>
+
+                <div class="form-text">
+                    Phương án xếp theo <strong>km phát sinh</strong> tăng dần. Hoãn sang ngày mai
+                    luôn xếp cuối dù không phát sinh km nào — khách không nhận được hàng hôm nay
+                    là cái giá không đo bằng km được (BR06-11).
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script id="map-points-data" type="application/json" th:text="${mapPointsJson}">[]</script>
+    <script id="route-lines-data" type="application/json">[]</script>
+
+</div>
+
+</body>
+</html>

@@ -331,10 +331,36 @@ public class DeliveryService {
             throw new IllegalArgumentException("Ngày giao mới không được là ngày trong quá khứ.");
         }
 
-        Order order = stop.getOrder();
-        stop.setStatus(StopStatus.POSTPONED);
         stop.setFailureNote(blankToNull(note));
         recordArrival(stop, latitude, longitude);
+        movePostponed(stop, newDeliveryDate, userId);
+
+        markNextStopAsInProgress(stop.getRoute());
+        finishRouteIfDone(stop.getRoute(), userId);
+        return stop;
+    }
+
+    /**
+     * Hoan mot diem dung khi XU LY SU CO chu khong phai khi tai xe bam nut (CN-06-09).
+     *
+     * Khac duong vao cua CN-05-09 o dung mot cho: khong kiem "dung diem dang toi luot" nua.
+     * Luc xu ly su co thi ca mot loat diem con lai cung bi hoan mot the, va nguoi bam nut la
+     * dieu phoi vien chu khong phai tai xe dang dung truoc cua hang.
+     *
+     * Van di qua CUNG mot ham movePostponed nen don van sang POSTPONED, van duoc tao lai o
+     * ngay moi, va van co dong lich su y het — hai duong hoan khong bao gio lech nhau duoc.
+     */
+    @Transactional
+    public void postponeFromIncident(RouteStop stop, LocalDate newDeliveryDate, Long userId) {
+        stop.setActualArrival(LocalDateTime.now());
+        movePostponed(stop, newDeliveryDate, userId);
+    }
+
+    /** Phan loi cua viec hoan mot diem: don cu sang POSTPONED, sinh don moi o ngay moi. */
+    private void movePostponed(RouteStop stop, LocalDate newDeliveryDate, Long userId) {
+        Order order = stop.getOrder();
+        stop.setStatus(StopStatus.POSTPONED);
+        routeStopRepository.save(stop);
 
         // BR05-13: hoan thi tien cung chua thu
         String previousStatus = order.getStatus().name();
@@ -351,10 +377,6 @@ public class DeliveryService {
                 "Đơn %s (%s) được hoãn sang ngày %s, đã tạo lại thành đơn %s.",
                 order.getCode(), order.getCustomer().getName(),
                 newDeliveryDate.format(DAY_MONTH_YEAR), reissued.getCode()));
-
-        markNextStopAsInProgress(stop.getRoute());
-        finishRouteIfDone(stop.getRoute(), userId);
-        return stop;
     }
 
     /** Tao lai don o ngay giao moi, chep nguyen chi tiet hang cua don cu. */

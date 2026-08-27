@@ -14,6 +14,7 @@ import com.minhphu.mproute.entity.enums.IncidentType;
 import com.minhphu.mproute.entity.enums.NotificationSendStatus;
 import com.minhphu.mproute.entity.enums.Role;
 import com.minhphu.mproute.entity.enums.RouteStatus;
+import com.minhphu.mproute.entity.enums.SolutionType;
 import com.minhphu.mproute.entity.enums.StopStatus;
 import com.minhphu.mproute.entity.enums.VehicleStatus;
 import com.minhphu.mproute.repository.IncidentRepository;
@@ -27,6 +28,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
@@ -64,6 +66,7 @@ public class IncidentService {
     private final DeliveryService deliveryService;
     private final StatusHistoryService statusHistoryService;
     private final CustomerNotificationService customerNotificationService;
+    private final RoutingService routingService;
 
     /** Ket qua mot lan bao su co, du de man hinh tai xe biet phai hien gi tiep theo. */
     public record ReportResult(Incident incident, int affectedStopCount, boolean needsDispatcher) {}
@@ -231,6 +234,170 @@ public class IncidentService {
             vehicle.setStatus(VehicleStatus.MAINTENANCE);
             vehicleRepository.save(vehicle);
         }
+    }
+
+    // ==================== CN-06-11 ap dung phuong an ====================
+
+    /**
+     * Dieu phoi vien chon mot phuong an (BR06-12, CN-06-11, CN-06-12).
+     *
+     * BA PHUONG AN LAM BA VIEC KHAC HAN NHAU voi cung cac diem chua giao do:
+     *   A — doi tuyen sang xe cuu ho, tuyen chay tiep binh thuong
+     *   B — chuyen cac diem sang mot tuyen khac dang chay, tuyen cu ket thuc tai day
+     *   C — hoan cac diem sang hom sau, tuyen cu ket thuc tai day
+     *
+     * Diem chung: sau khi ap dung, KHONG diem nao con lo lung. Do la phep thu quan trong nhat
+     * cua ca ham — mot diem bi bo quen o day thi khach cho ca ngay ma khong ai biet.
+     */
+    @Transactional
+    public Incident applySolution(Long incidentId, SolutionType solutionType,
+                                  Long targetId, Long currentUserId) {
+
+        Incident incident = incidentRepository.findById(incidentId).orElseThrow(() ->
+                new IllegalArgumentException("Không tìm thấy sự cố cần xử lý."));
+
+        if (incident.getStatus() == IncidentStatus.RESOLVED) {
+            throw new IllegalStateException("Sự cố này đã được xử lý rồi.");
+        }
+        if (solutionType == null) {
+            throw new IllegalArgumentException("Bắt buộc chọn một phương án.");
+        }
+
+        Route brokenRoute = incident.getRoute();
+        List<RouteStop> remainingStops = remainingStopsOf(brokenRoute);
+        if (remainingStops.isEmpty()) {
+            throw new IllegalStateException("Tuyến này không còn điểm nào chưa giao.");
+        }
+
+        double extraDistance = switch (solutionType) {
+            case A_RESCUE_VEHICLE -> applyRescueVehicle(brokenRoute, targetId, currentUserId);
+            case B_INSERT_OTHER_ROUTE -> applyInsertIntoRoute(brokenRoute, remainingStops, targetId, currentUserId);
+            case C_POSTPONE -> applyPostpone(brokenRoute, remainingStops, currentUserId);
+            case MANUAL -> throw new IllegalArgumentException(
+                    "Xử lý thủ công chưa được hỗ trợ trong phiên bản này.");
+        };
+
+        incident.setAppliedSolution(solutionType);
+        incident.setExtraDistance(extraDistance);
+        incident.setStatus(IncidentStatus.RESOLVED);
+        incident.setResolvedAt(LocalDateTime.now());
+        incident.setResolvedBy(userRepository.findById(currentUserId).orElse(null));
+        incidentRepository.save(incident);
+
+        /*
+         * CN-06-12, BR06-13 — bao gio moi cho khach SAU khi da cap nhat tuyen va tinh lai ETA.
+         * Voi phuong an C thi cac diem da chuyen sang don moi cua ngay mai, khong con ETA hom
+         * nay de bao, nen bo qua buoc gui thu — khach se nhan thu khi ke hoach ngay mai duoc chot.
+         */
+        if (solutionType != SolutionType.C_POSTPONE) {
+            customerNotificationService.notifyEtaChanged(remainingStops,
+                    "xe gặp sự cố trên đường");
+        }
+
+        log.info("Su co {} xu ly bang phuong an {}, km phat sinh {}",
+                incidentId, solutionType, extraDistance);
+        return incident;
+    }
+
+    /**
+     * Phuong an A — doi tuyen sang xe cuu ho roi cho chay tiep.
+     *
+     * Tuyen quay lai IN_PROGRESS vi xe moi da nhan hang va dang tren duong. Xe hong o lai
+     * MAINTENANCE cho toi khi quan tri vien sua xong va tu doi trang thai.
+     */
+    private double applyRescueVehicle(Route route, Long vehicleId, Long userId) {
+        if (vehicleId == null) {
+            throw new IllegalArgumentException("Chưa chọn xe cứu hộ.");
+        }
+        Vehicle rescue = vehicleRepository.findById(vehicleId).orElseThrow(() ->
+                new IllegalArgumentException("Không tìm thấy xe cứu hộ được chọn."));
+
+        if (rescue.getStatus() != VehicleStatus.AVAILABLE) {
+            throw new IllegalStateException(String.format(
+                    "Xe %s đang ở trạng thái \"%s\" nên không điều đi cứu hộ được.",
+                    rescue.getLicensePlate(), rescue.getStatus().getDisplayName()));
+        }
+
+        double beforeDistance = route.getTotalDistance();
+
+        route.setVehicle(rescue);
+        route.setStatus(RouteStatus.IN_PROGRESS);
+        routeRepository.save(route);
+        statusHistoryService.recordChange(EntityType.ROUTE, route.getId(),
+                RouteStatus.INCIDENT.name(), RouteStatus.IN_PROGRESS.name(), userId,
+                "Dieu xe cuu ho " + rescue.getLicensePlate());
+
+        rescue.setStatus(VehicleStatus.IN_USE);
+        vehicleRepository.save(rescue);
+
+        // Tinh lai quang duong va ETA theo dung ham cua thuat toan
+        routingService.recalculate(List.of(route));
+        return Math.max(route.getTotalDistance() - beforeDistance, 0);
+    }
+
+    /**
+     * Phuong an B — chuyen cac diem chua giao sang mot tuyen khac dang chay.
+     *
+     * CHUYEN DIEM DUNG SANG TUYEN KHAC chu khong tao diem moi: cot route_stops.order_id dat
+     * UNIQUE toan bang (CBR-02), tao dong moi ma khong xoa dong cu la dam thang vao rang buoc do.
+     */
+    private double applyInsertIntoRoute(Route brokenRoute, List<RouteStop> remainingStops,
+                                        Long targetRouteId, Long userId) {
+        if (targetRouteId == null) {
+            throw new IllegalArgumentException("Chưa chọn tuyến nhận thêm điểm.");
+        }
+        Route target = routeRepository.findById(targetRouteId).orElseThrow(() ->
+                new IllegalArgumentException("Không tìm thấy tuyến nhận thêm điểm."));
+
+        if (target.getStatus() != RouteStatus.IN_PROGRESS) {
+            throw new IllegalStateException(String.format(
+                    "Tuyến %s không còn đang chạy nên không chèn thêm điểm được.", target.getCode()));
+        }
+
+        double beforeDistance = target.getTotalDistance();
+        int nextSequence = target.getStops().size() + 1;
+
+        for (RouteStop stop : remainingStops) {
+            brokenRoute.getStops().remove(stop);
+            stop.setRoute(target);
+            stop.setSequence(nextSequence++);
+            target.getStops().add(stop);
+        }
+        routeRepository.save(brokenRoute);
+        routeRepository.save(target);
+        routeRepository.flush();
+
+        // Tuyen hong ket thuc tai day: cac diem cua no da co nguoi khac nhan
+        closeBrokenRoute(brokenRoute, userId, "Cac diem con lai chuyen sang tuyen " + target.getCode());
+
+        routingService.recalculate(List.of(target));
+        return Math.max(target.getTotalDistance() - beforeDistance, 0);
+    }
+
+    /**
+     * Phuong an C — hoan cac diem con lai sang hom sau.
+     *
+     * Dung lai dung ham hoan cua man hinh tai xe (CN-05-09): don cu sang POSTPONED va he thong
+     * tao mot don moi o ngay mai. Viet lai mot duong hoan thu hai la som muon hai duong lech
+     * nhau, ma ca hai deu ket thuc o cung mot bang.
+     */
+    private double applyPostpone(Route route, List<RouteStop> remainingStops, Long userId) {
+        LocalDate tomorrow = LocalDate.now().plusDays(1);
+        for (RouteStop stop : remainingStops) {
+            deliveryService.postponeFromIncident(stop, tomorrow, userId);
+        }
+        closeBrokenRoute(route, userId, "Cac diem con lai hoan sang ngay " + tomorrow);
+        return 0;
+    }
+
+    /** Tuyen bi su co ket thuc: chuyen COMPLETED va tra xe hong ve dung trang thai cua no. */
+    private void closeBrokenRoute(Route route, Long userId, String note) {
+        RouteStatus oldStatus = route.getStatus();
+        route.setStatus(RouteStatus.COMPLETED);
+        route.setCompletedAt(LocalDateTime.now());
+        routeRepository.save(route);
+        statusHistoryService.recordChange(EntityType.ROUTE, route.getId(),
+                oldStatus.name(), RouteStatus.COMPLETED.name(), userId, note);
     }
 
     // ==================== CN-06-05 bao dieu phoi ====================

@@ -113,8 +113,12 @@
 <script th:if="${needsOrderJs}" th:src="@{/js/order-form.js}"></script>
 
 <!-- Man hinh phan tuyen: ve diem giao len ban do (CN-03-02).
-     Can ca canBanDo de nap Leaflet truoc -->
-<script th:if="${needsRoutingJs}" th:src="@{/js/routing-map.js}"></script>
+     Can ca canBanDo de nap Leaflet truoc.
+     Man hinh su co dung lai chinh file nay de ve vi tri xe va cac diem chua giao (CN-06-06) -->
+<!-- So sanh voi null chu khong viet thang "a or b": man hinh nao khong dat co nao thi bien do
+     la null, ma SpEL khong doi duoc null sang boolean — ca trang se hong voi loi EL1001E -->
+<script th:if="${needsRoutingJs != null or needsIncidentJs != null}"
+        th:src="@{/js/routing-map.js}"></script>
 
 <!-- Man hinh phan tuyen: cong suc chua cac xe da tich chon (CN-03-03). Khong can Leaflet -->
 <script th:if="${needsRoutingJs}" th:src="@{/js/routing-fleet.js}"></script>
