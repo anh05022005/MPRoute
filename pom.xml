@@ -108,6 +108,26 @@
             <version>9.15.6755</version>
         </dependency>
 
+        <!--
+            Apache POI: xuat bao cao ra file .xlsx (CN-08-05, BR08-05).
+
+            Dung poi-ooxml chu khong dung poi thuan: "poi" chi doc/ghi duoc dinh dang .xls
+            cu cua Office 2003, con .xlsx la dinh dang OOXML nen phai co goi nay.
+
+            Keo theo khoang 12 MB phu thuoc (xmlbeans, commons-compress...). Chap nhan vi
+            day la phu thuoc LUC BIEN DICH VA CHAY PHIA MAY CHU, khong co dich vu ngoai nao
+            phai dung them, va CN-08-05 noi ro la "xuat Excel" chu khong phai xuat CSV.
+
+            PHAI GHI RO <version>: spring-boot-starter-parent KHONG quan ly phien ban POI
+            (no chi quan ly cac thu vien ma Spring Boot dung toi). Bo dong version di la
+            Maven dung ngay voi loi "'dependencies.dependency.version' ... is missing".
+        -->
+        <dependency>
+            <groupId>org.apache.poi</groupId>
+            <artifactId>poi-ooxml</artifactId>
+            <version>5.4.1</version>
+        </dependency>
+
         <!-- ============ Kiem thu ============ -->
 
         <!-- Da bao gom JUnit 5, AssertJ, Mockito -->

@@ -28,6 +28,12 @@
             </div>
             <button type="submit" class="btn btn-sm btn-primary">Xem báo cáo</button>
         </form>
+
+        <!-- CN-08-05: tai dung khoang ngay dang xem -->
+        <a class="btn btn-sm btn-outline-secondary push-right"
+           th:href="@{/reports/delivery/excel(fromDate=${fromDate}, toDate=${toDate})}">
+            Xuất Excel
+        </a>
     </div>
 
     <div th:if="${report.empty}" class="panel">

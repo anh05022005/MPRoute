@@ -723,3 +723,34 @@ bước 12–14 (phương án B) cần hai tuyến chạy song song mới dựng
 - Ba báo cáo dùng chung một thanh tab và **mang theo khoảng ngày khi đổi tab** — đang xem tháng 8
   mà bấm sang báo cáo khác lại nhảy về mặc định 30 ngày thì lần nào cũng phải chọn lại
 - **Phân quyền:** `taixe02` gõ cả ba đường dẫn đều ra **403**
+
+### CN-08-05 Xuất Excel — chức năng bắt buộc cuối cùng
+
+- **★ CN-08-05** cả ba báo cáo có nút *Xuất Excel* (BR08-05). File `.xlsx` thật bằng Apache POI
+  `5.4.1`, không phải CSV đổi đuôi
+- **Phải ghi rõ `<version>` trong `pom.xml`.** `spring-boot-starter-parent` **không** quản lý phiên
+  bản POI — nó chỉ quản lý những thư viện Spring Boot dùng tới. Bỏ dòng version đi là Maven dừng
+  ngay với `'dependencies.dependency.version' for org.apache.poi:poi-ooxml:jar is missing`
+- **Đường xuất file gọi lại đúng hàm của `ReportService` mà màn hình vừa gọi**, với đúng bộ tham
+  số của màn hình. Không viết lại phép tính nào ở lớp xuất file — viết lại là có ngày file Excel
+  và màn hình lệch nhau, mà đó là kiểu sai không ai phát hiện ra cho tới lúc đem hai cái ra so
+- **Mỗi file tự giải thích được bộ lọc của nó:** dòng đầu ghi tên báo cáo, dòng hai ghi kỳ báo
+  cáo. File Excel rời khỏi phần mềm thì không còn màn hình nào nói hộ nó là số liệu của kỳ nào,
+  mà *"báo cáo tháng 8"* nằm cạnh *"báo cáo tháng 9"* trong thư mục Tải về thì nhìn tên không
+  phân biệt nổi. **RPT-02 còn ghi thẳng công thức BR08-06 vào file** — người mở Excel không có
+  màn hình bên cạnh để đọc ghi chú, mà "92,1%" thì không nói rõ mẫu số là gì
+- **Ngày dùng khoảng cách xấp xỉ ra trang tính riêng** trong file RPT-03, đúng như trên màn hình
+  (BR08-03). Trộn chung vào trang chính là người nhận file cộng cả cột lại rồi báo cáo một con số
+  đã bị phá bằng số liệu Haversine
+- **Tạo `CellStyle` một lần rồi dùng lại cho mọi ô.** POI giới hạn 64 000 `CellStyle` mỗi workbook
+  và mỗi lần gọi `createCellStyle()` là một kiểu mới — tạo kiểu bên trong vòng lặp ghi dòng thì
+  báo cáo vài nghìn dòng sẽ dừng chương trình
+- **Tên file không dấu** (`RPT-01-don-hang-20260801-20260831.xlsx`): tên có dấu đi qua header HTTP
+  là một chỗ dễ hỏng encoding, mà file nằm trong thư mục Tải về thì tên không dấu vẫn đọc được.
+  Ngày nằm trong tên để hai kỳ báo cáo khác nhau không đè lên nhau
+- **Đã kiểm bằng chương trình:** cả ba file mở được bằng `zipfile`, đúng cấu trúc OOXML, tên trang
+  tính tiếng Việt có dấu không hỏng, số khớp với màn hình. Giá trị lưu vào ô là **số thực đầy đủ**
+  còn `#,##0.0` chỉ là định dạng hiển thị — người nhận file tính tiếp không bị mất chữ số
+- **Phân quyền:** `taixe02` gõ cả ba đường `/excel` đều ra **403**
+
+**Đến đây là xong toàn bộ 86 chức năng bắt buộc của `docs/04-chuc-nang.md`.**

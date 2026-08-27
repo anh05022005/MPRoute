@@ -3,10 +3,13 @@ package com.minhphu.mproute.controller;
 import com.minhphu.mproute.dto.DeliveryReport;
 import com.minhphu.mproute.dto.OptimizationReport;
 import com.minhphu.mproute.dto.OrderReport;
+import com.minhphu.mproute.service.ReportExcelExporter;
 import com.minhphu.mproute.service.ReportService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.format.annotation.DateTimeFormat;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
@@ -43,6 +46,7 @@ public class ReportController {
     private static final int DEFAULT_RANGE_DAYS = 30;
 
     private final ReportService reportService;
+    private final ReportExcelExporter reportExcelExporter;
 
     @GetMapping
     public String index() {
@@ -110,6 +114,80 @@ public class ReportController {
         addRange(model, range);
 
         return "reports/optimization";
+    }
+
+
+    // ==================== CN-08-05 Xuat Excel ====================
+
+    /*
+     * Ba duong tai file, moi bao cao mot cai (BR08-05).
+     *
+     * MOI DUONG NHAN DUNG BO THAM SO CUA MAN HINH TUONG UNG, roi goi lai chinh ham cua
+     * ReportService ma man hinh vua goi. Nho vay file tai ve luon dung bang dang hien
+     * (CN-08-05 doi "du lieu chi tiet theo bo loc hien tai"), va khong co phep tinh nao
+     * bi viet lai o duong xuat file — viet lai la co ngay truong hop file va man hinh
+     * lech nhau ma khong ai phat hien ra cho toi luc dem hai cai ra so.
+     */
+
+    @GetMapping("/orders/excel")
+    public ResponseEntity<byte[]> exportOrderReport(
+            @RequestParam(required = false)
+            @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate fromDate,
+            @RequestParam(required = false)
+            @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate toDate,
+            @RequestParam(required = false) OrderReport.Grouping grouping,
+            Model model) {
+
+        LocalDate[] range = resolveRange(fromDate, toDate, model);
+        OrderReport.Grouping chosen = (grouping != null) ? grouping : OrderReport.Grouping.DAY;
+
+        byte[] workbook = reportExcelExporter.exportOrderReport(
+                reportService.orderReport(range[0], range[1], chosen), range[0], range[1]);
+        return download(workbook, ReportExcelExporter.fileName("RPT-01-don-hang", range[0], range[1]));
+    }
+
+    @GetMapping("/delivery/excel")
+    public ResponseEntity<byte[]> exportDeliveryReport(
+            @RequestParam(required = false)
+            @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate fromDate,
+            @RequestParam(required = false)
+            @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate toDate,
+            Model model) {
+
+        LocalDate[] range = resolveRange(fromDate, toDate, model);
+
+        byte[] workbook = reportExcelExporter.exportDeliveryReport(
+                reportService.deliveryReport(range[0], range[1]), range[0], range[1]);
+        return download(workbook, ReportExcelExporter.fileName("RPT-02-ty-le-giao", range[0], range[1]));
+    }
+
+    @GetMapping("/optimization/excel")
+    public ResponseEntity<byte[]> exportOptimizationReport(
+            @RequestParam(required = false)
+            @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate fromDate,
+            @RequestParam(required = false)
+            @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate toDate,
+            Model model) {
+
+        LocalDate[] range = resolveRange(fromDate, toDate, model);
+
+        byte[] workbook = reportExcelExporter.exportOptimizationReport(
+                reportService.optimizationReport(range[0], range[1]));
+        return download(workbook, ReportExcelExporter.fileName("RPT-03-hieu-qua-toi-uu", range[0], range[1]));
+    }
+
+    /**
+     * Dong goi mang byte thanh mot file tai ve.
+     *
+     * CONTENT_DISPOSITION voi "attachment" la cho quyet dinh: thieu no thi trinh duyet co
+     * the mo thang noi dung nhi phan ra tab moi thay vi tai xuong. Ten file khong dau nen
+     * khong can ma hoa gi them — xem ReportExcelExporter.fileName().
+     */
+    private ResponseEntity<byte[]> download(byte[] content, String fileName) {
+        return ResponseEntity.ok()
+                .header(HttpHeaders.CONTENT_TYPE, ReportExcelExporter.XLSX_CONTENT_TYPE)
+                .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + fileName + "\"")
+                .body(content);
     }
 
     /**

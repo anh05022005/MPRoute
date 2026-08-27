@@ -12,7 +12,7 @@
 | | |
 |---|---|
 | Theo kế hoạch | Tuần 10 — báo cáo, thực nghiệm benchmark |
-| Thực tế | **Hết chức năng bắt buộc, trừ CN-08-05 xuất Excel.** Cả ba báo cáo RPT-01/02/03 chạy trên dữ liệu thật, benchmark Augerat có số. Còn lại là viết chương 4, chạy thử, quay video và luận văn |
+| Thực tế | **XONG TOÀN BỘ 86 CHỨC NĂNG BẮT BUỘC.** Ba báo cáo chạy trên dữ liệu thật và xuất Excel được, benchmark Augerat có số. Còn lại là viết chương 4, chạy thử, quay video và luận văn |
 
 ```
 [x] T1  Chot de tai, hoi Minh Phu 3 cau
@@ -40,11 +40,14 @@ phải sát nhất có thể.
 
 ## Việc tiếp theo — TUẦN 10 (phần còn lại) và TUẦN 11
 
+**Hết việc code.** Còn lại là làm báo cáo và chuẩn bị bảo vệ:
+
 1. **Viết chương 4 báo cáo** — số liệu đã có đủ ở `docs/07`: bảng gap 10 bài Augerat, bảng
    riêng đóng góp 2-opt, và RPT-03 trên **14 ngày / 139 đơn** dữ liệu thật
-2. **Chạy thử kịch bản demo 3 lần** theo `docs/08`, rồi quay video
-3. **CN-08-05 xuất Excel** — mục ★ duy nhất còn thiếu. Cần Apache POI, xem mục "Cần quyết định"
-4. Luyện vấn đáp
+2. **Chạy thử kịch bản demo 3 lần** theo `docs/08`, rồi quay video. Thêm hai bước vào kịch
+   bản: mở RPT-01/RPT-02 và bấm **Xuất Excel** một lần
+3. Luyện vấn đáp, đánh tag bản chắc chắn chạy được trước ngày bảo vệ
+4. Bấm thử bằng chuột thật mấy màn hình còn nợ ở mục dưới
 
 **Seed lại dữ liệu lịch sử** (bật `mysql-8.0.44` và `osrm-vietnam` trước; ngày nào đã có đơn
 thì tự bỏ qua nên chạy lại nhiều lần không sao):
@@ -78,6 +81,10 @@ chạy thử thật**. Làm được lúc nào cũng được, muộn nhất là
 | **CN-04-08 gửi thư thật** | Mở năm dòng SMTP trong `application.properties`, đặt `MPROUTE_MAIL_USERNAME` / `MPROUTE_MAIL_PASSWORD` bằng mật khẩu ứng dụng Gmail, đổi email một khách thành email thật rồi chốt một tuyến. Nhánh ghi `notifications` và nội dung thư đã kiểm xong |
 | **BR02-11** đơn `ROUTED` ra đúng chữ MSG-07 | Nay đã có đơn `ROUTED` thật trong CSDL nên thử được ngay |
 
+**Chưa mở file Excel bằng Excel thật.** Ba file `.xlsx` đã kiểm bằng chương trình: đúng
+định dạng zip OOXML, đúng tên trang tính, tiếng Việt có dấu không hỏng, số khớp với màn hình.
+Nhưng chưa ai bấm nút rồi mở file bằng Microsoft Excel. **Làm luôn khi chạy thử kịch bản demo.**
+
 **Hai màn hình chưa ai bấm thử bằng chuột thật** — phía máy chủ đã kiểm hết, nhưng phần
 JavaScript chỉ chạy trong trình duyệt:
 
@@ -92,7 +99,6 @@ JavaScript chỉ chạy trong trình duyệt:
 
 | Việc | Tình hình |
 |---|---|
-| **Thư viện xuất Excel** | CN-08-05 là mục ★ **duy nhất còn thiếu**. Cần `poi-ooxml`, kéo theo khoảng 12 MB phụ thuộc. Ba lựa chọn: thêm POI cho đúng đặc tả · xuất CSV có BOM (Excel mở thẳng được, không thêm thư viện nào) · bỏ hẳn và ghi vào `docs/09` là đã cắt có chủ đích |
 | **Mật khẩu lệch tài liệu** | `dieuphoi` và `taixe01` đã bị đổi khỏi giá trị của `DataSeeder`. `seedUser()` chỉ tạo khi thiếu chứ không ghi đè nên khởi động lại không tự về mặc định. **Trước ngày bảo vệ phải đưa về đúng `docs/08`, hoặc sửa `docs/08`** — kịch bản demo đọc mật khẩu từ đó, lệch là hỏng ngay bước đăng nhập đầu tiên. `admin`, `taixe02`, `taixe03` vẫn đúng mặc định |
 
 ---
@@ -143,7 +149,7 @@ nhưng số km là xấp xỉ, **đừng lấy số đó đưa vào báo cáo**.
 - Máy này lưu thông tin đăng nhập GitHub của **hai tài khoản**. Remote cố ý ghi là
   `https://anh05022005@github.com/...` — xóa phần `anh05022005@` đi là đẩy bằng tài khoản kia,
   báo lỗi 403
-- Menu trỏ tới `/tracking` chưa có Controller → bấm vào ra 404. `/reports` đã có từ tuần 10
+- Menu trỏ tới `/tracking` chưa có Controller → bấm vào ra 404. `/reports` đã đủ cả ba báo cáo
 - Sau khi đăng nhập địa chỉ có đuôi `?continue` — hành vi mặc định của Spring Security 6, vô hại
 
 ### Dữ liệu thử đang có trong CSDL
