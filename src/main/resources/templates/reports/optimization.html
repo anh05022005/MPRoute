@@ -13,6 +13,11 @@
 
 <div th:fragment="content">
 
+    <div th:replace="~{fragments/report-tabs :: tabs(
+             active   = 'optimization',
+             fromDate = ${fromDate},
+             toDate   = ${toDate})}"></div>
+
     <div class="toolbar">
         <form th:action="@{/reports/optimization}" method="get" class="d-flex align-items-end gap-2">
             <div>

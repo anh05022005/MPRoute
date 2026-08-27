@@ -55,7 +55,18 @@ public class SystemParameterService {
                     "Thời gian bốc dỡ tại mỗi điểm giao (phút)"),
             new ParameterDefault(DEPARTURE_TIME, "08:00",
                     "Giờ xe xuất phát từ kho, dạng HH:mm"),
-            new ParameterDefault(HAVERSINE_FACTOR, "1.3",
+            /*
+             * 1.45 la SO DO DUOC, khong phai so uoc chung. Do ngay 27/08/2026 tren 264 cap
+             * diem that dang nam trong bang distance_matrix: lay tong quang duong OSRM chia
+             * cho tong quang duong chim bay cua chinh cac cap do ra 1.453. Gia tri cu 1.3
+             * la con so muon tu tai lieu, va no uoc luong THIEU quang duong that.
+             *
+             * Chia TONG cho TONG chu khong lay trung binh cac ty le: trung binh cac ty le
+             * ra 1.499 vi cac cap diem gan nhau co ty le rat cao (ngo nho, duong mot chieu)
+             * ma chung lai dong gop it vao tong quang duong. He so nay dung de uoc luong
+             * TONG quang duong tuyen, nen phai lay theo tong.
+             */
+            new ParameterDefault(HAVERSINE_FACTOR, "1.45",
                     "Hệ số quy đổi từ đường chim bay sang đường đi thật, dùng khi OSRM không chạy"),
             new ParameterDefault(DEFAULT_ALGORITHM, AlgorithmType.OR_TOOLS.name(),
                     "Thuật toán chọn sẵn trên màn hình phân tuyến"),

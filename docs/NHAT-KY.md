@@ -689,3 +689,37 @@ bước 12–14 (phương án B) cần hai tuyến chạy song song mới dựng
 - **Tỷ lệ lấp đầy ra 97–99% kg nhưng chỉ 37–52% m³** — đúng đặc thù hàng của Minh Phú: nước giặt
   và nước lau sàn nặng mà gọn, nên xe đầy tải trọng trước khi đầy thùng. Chính là lý do phải kiểm
   **cả hai** ràng buộc chứ không chỉ một (CBR-03, CBR-04)
+
+### RPT-01, RPT-02 và đo lại hệ số Haversine
+
+- **★ CN-08-01 RPT-01** `/reports/orders` — số đơn theo **ngày/tuần/tháng** (chọn được), biểu đồ
+  cột, và bảng số thùng theo từng sản phẩm. Chạy thật trên tháng 8: **142 đơn, 1 863 thùng**;
+  bông tẩy trang nhiều thùng nhất (501) nhưng nước giặt nặng nhất (8 557 kg trên 398 thùng)
+- **★ CN-08-02 RPT-02** `/reports/delivery` — **tỷ lệ giao thành công 92,1%** (129/140), biểu đồ
+  tròn, và phân tích lý do thất bại: sai địa chỉ 2, khách không có mặt 1, khách từ chối 1
+- **Mẫu số của tỷ lệ là đơn ĐÃ PHÂN TUYẾN, không phải mọi đơn trong kỳ** (BR08-06). Đơn còn chờ
+  duyệt hay đã hủy thì chưa bao giờ lên xe — đếm vào mẫu số là tự hạ tỷ lệ của mình xuống vì một
+  lý do không liên quan đến việc giao hàng. **Đã viết công thức thẳng lên màn hình**, vì đây đúng
+  là câu hội đồng sẽ hỏi khi thấy con số 92%
+- **Lý do thất bại đếm trên `route_stops`, không đếm trên `orders`.** Lý do thuộc về *lần giao*:
+  một đơn hoãn rồi giao lại và lại hỏng là hai lần thất bại với hai lý do, mà cột trạng thái của
+  đơn chỉ giữ được cái cuối. Đây cũng chính là lý do màn hình tài xế **bắt chọn** lý do từ danh
+  sách thay vì gõ tự do (BR05-06) — gõ tự do thì không gom nhóm được
+- **Gộp tuần/tháng làm ở tầng service chứ không trong SQL.** Hàm lấy số tuần là hàm riêng của
+  từng hệ quản trị (`WEEK()` của MySQL, `EXTRACT` của Postgres), viết vào JPQL là khóa đồ án vào
+  MySQL. CSDL gộp sẵn theo **ngày** — tối đa 365 dòng — rồi gộp tiếp trong bộ nhớ. Dùng
+  `WeekFields.ISO` chứ không dùng mặc định của máy: mặc định đổi theo Locale, máy cài tiếng Anh
+  Mỹ thì tuần bắt đầu từ Chủ nhật và số tuần lệch đi một
+- **Biểu đồ tròn vẽ bằng `stroke-dasharray` trên các vòng tròn chồng lên nhau**, không vẽ bằng
+  cung tròn `<path>`: cung tròn phải tính sin/cos cho từng đầu mút và phải đổi cờ khi miếng lớn
+  hơn nửa đường tròn, sai một dấu là miếng bánh lật ngược. Cách dasharray chỉ cần một phép nhân
+  và không có trường hợp đặc biệt nào. Kiểm lại: tổng bốn miếng ra **502,65** đúng bằng chu vi
+  `2π × 80`
+- **★ Đo lại `HAVERSINE_FACTOR`: 1.3 → 1.45.** Đo trên **264 cặp điểm OSRM thật** đang nằm trong
+  `distance_matrix`. Lấy **tổng quãng đường OSRM chia tổng quãng đường chim bay** ra 1,453; lấy
+  trung bình các tỷ lệ thì ra 1,499. **Chọn cách chia tổng** vì hệ số này dùng để ước lượng TỔNG
+  quãng đường tuyến, mà các cặp điểm gần nhau có tỷ lệ rất cao (ngõ nhỏ, đường một chiều) lại
+  đóng góp ít vào tổng. Tỷ lệ thấp nhất 1,035, cao nhất 3,066
+- Ba báo cáo dùng chung một thanh tab và **mang theo khoảng ngày khi đổi tab** — đang xem tháng 8
+  mà bấm sang báo cáo khác lại nhảy về mặc định 30 ngày thì lần nào cũng phải chọn lại
+- **Phân quyền:** `taixe02` gõ cả ba đường dẫn đều ra **403**

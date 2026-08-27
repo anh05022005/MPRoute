@@ -1,5 +1,8 @@
 package com.minhphu.mproute.repository;
 
+import com.minhphu.mproute.dto.DailyOrderCount;
+import com.minhphu.mproute.dto.OrderStatusCount;
+import com.minhphu.mproute.dto.ProductBoxCount;
 import com.minhphu.mproute.entity.Order;
 import com.minhphu.mproute.entity.enums.OrderStatus;
 import org.springframework.data.domain.Page;
@@ -62,4 +65,65 @@ public interface OrderRepository extends JpaRepository<Order, Long> {
 
     // Dem so don da tao trong ngay de sinh 4 chu so thu tu cua ma don (BR02-01)
     long countByDeliveryDate(LocalDate deliveryDate);
+
+    // ==================== Nguon du lieu cho bao cao nhom 8 ====================
+
+    /**
+     * So don, tong kg, tong m3 va tong tien theo TUNG NGAY GIAO — bao cao RPT-01 (CN-08-01).
+     *
+     * Gop san trong CSDL roi moi tra ve, khong nap het don ra rai roi dem trong Java: mot
+     * khoang 365 ngay cua Minh Phu la vai nghin don, nap het ra chi de dem la thua.
+     *
+     * BO DON DA HUY (BR08-04): don huy khong phat sinh chuyen giao nao, dem vao thi so don
+     * cua bao cao khong khop voi so hang thuc su ra khoi kho.
+     */
+    @Query("""
+            SELECT new com.minhphu.mproute.dto.DailyOrderCount(
+                       o.deliveryDate, COUNT(o), SUM(o.totalWeight), SUM(o.totalVolume), SUM(o.totalAmount))
+            FROM Order o
+            WHERE o.deliveryDate BETWEEN :fromDate AND :toDate
+              AND o.status <> com.minhphu.mproute.entity.enums.OrderStatus.CANCELLED
+            GROUP BY o.deliveryDate
+            ORDER BY o.deliveryDate
+            """)
+    List<DailyOrderCount> countOrdersByDay(@Param("fromDate") LocalDate fromDate,
+                                           @Param("toDate") LocalDate toDate);
+
+    /**
+     * So thung da giao theo tung san pham trong ky (CN-08-01).
+     *
+     * COUNT(DISTINCT o.id) chu khong COUNT(o): mot don co the co hai dong cung mot san pham,
+     * dem thang la mot don bi tinh hai lan o cot "so don co mat".
+     */
+    @Query("""
+            SELECT new com.minhphu.mproute.dto.ProductBoxCount(
+                       p.code, p.name, SUM(i.boxCount), SUM(i.lineWeight), SUM(i.lineVolume),
+                       COUNT(DISTINCT o.id))
+            FROM OrderItem i
+            JOIN i.order o
+            JOIN i.product p
+            WHERE o.deliveryDate BETWEEN :fromDate AND :toDate
+              AND o.status <> com.minhphu.mproute.entity.enums.OrderStatus.CANCELLED
+            GROUP BY p.code, p.name
+            ORDER BY SUM(i.boxCount) DESC
+            """)
+    List<ProductBoxCount> countBoxesByProduct(@Param("fromDate") LocalDate fromDate,
+                                              @Param("toDate") LocalDate toDate);
+
+    /**
+     * So don theo tung trang thai — bao cao RPT-02 (CN-08-02).
+     *
+     * Giu ca don CANCELLED o day, khac voi hai cau tren: RPT-02 do ty le giao thanh cong,
+     * ma mau so cua no la "don DA PHAN TUYEN" (BR08-06). Don huy bi loai o tang service khi
+     * tinh ty le, nhung van hien ra bang de nguoi xem biet ky do co bao nhieu don bi huy.
+     */
+    @Query("""
+            SELECT new com.minhphu.mproute.dto.OrderStatusCount(o.status, COUNT(o))
+            FROM Order o
+            WHERE o.deliveryDate BETWEEN :fromDate AND :toDate
+            GROUP BY o.status
+            """)
+    List<OrderStatusCount> countOrdersByStatus(@Param("fromDate") LocalDate fromDate,
+                                               @Param("toDate") LocalDate toDate);
+
 }

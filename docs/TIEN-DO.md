@@ -12,7 +12,7 @@
 | | |
 |---|---|
 | Theo kế hoạch | Tuần 10 — báo cáo, thực nghiệm benchmark |
-| Thực tế | **Xong phần code của tuần 10 và phần seed của tuần 11.** RPT-03 đầy dữ liệu 14 ngày, benchmark Augerat có số. **Mọi mục "tuyệt đối không cắt" đã xong** (Nhóm 3, CN-08-03, Nhóm 9). Còn lại là viết chương 4, chạy thử, quay video và luận văn |
+| Thực tế | **Hết chức năng bắt buộc, trừ CN-08-05 xuất Excel.** Cả ba báo cáo RPT-01/02/03 chạy trên dữ liệu thật, benchmark Augerat có số. Còn lại là viết chương 4, chạy thử, quay video và luận văn |
 
 ```
 [x] T1  Chot de tai, hoi Minh Phu 3 cau
@@ -32,6 +32,10 @@
 **14/14 test bắt buộc xanh** (`mvnw.cmd test` → **17 test**: 14 bắt buộc + 2 test cho
 `VrpFileReader` + 1 lần nạp Spring context).
 
+**`HAVERSINE_FACTOR` đã đo lại: 1.45** (trước để 1.3). Đo trên 264 cặp điểm OSRM thật trong
+`distance_matrix` — xem `NHAT-KY.md`. Chỉ ảnh hưởng lúc OSRM chết, nhưng đúng lúc đó thì con số
+phải sát nhất có thể.
+
 ---
 
 ## Việc tiếp theo — TUẦN 10 (phần còn lại) và TUẦN 11
@@ -39,8 +43,7 @@
 1. **Viết chương 4 báo cáo** — số liệu đã có đủ ở `docs/07`: bảng gap 10 bài Augerat, bảng
    riêng đóng góp 2-opt, và RPT-03 trên **14 ngày / 139 đơn** dữ liệu thật
 2. **Chạy thử kịch bản demo 3 lần** theo `docs/08`, rồi quay video
-3. RPT-01, RPT-02 và xuất Excel (CN-08-01, 02, 05) — **cắt được nếu đuối**, đã quyết từ tuần 7.
-   Menu "Báo cáo" hiện chỉ có RPT-03, đủ đúng thứ tự cắt của `docs/04`
+3. **CN-08-05 xuất Excel** — mục ★ duy nhất còn thiếu. Cần Apache POI, xem mục "Cần quyết định"
 4. Luyện vấn đáp
 
 **Seed lại dữ liệu lịch sử** (bật `mysql-8.0.44` và `osrm-vietnam` trước; ngày nào đã có đơn
@@ -74,7 +77,6 @@ chạy thử thật**. Làm được lúc nào cũng được, muộn nhất là
 | **BR07-03** tra SĐT chỉ hiện đơn 30 ngày gần nhất | Đơn cũ nhất mới là 13/08, chưa quá 30 ngày. Seed thêm một ngày thật xa là thử được |
 | **CN-04-08 gửi thư thật** | Mở năm dòng SMTP trong `application.properties`, đặt `MPROUTE_MAIL_USERNAME` / `MPROUTE_MAIL_PASSWORD` bằng mật khẩu ứng dụng Gmail, đổi email một khách thành email thật rồi chốt một tuyến. Nhánh ghi `notifications` và nội dung thư đã kiểm xong |
 | **BR02-11** đơn `ROUTED` ra đúng chữ MSG-07 | Nay đã có đơn `ROUTED` thật trong CSDL nên thử được ngay |
-| **Đo lại `HAVERSINE_FACTOR`** | Đang để 1.3, đo ở tuần 5 thấy **ước lượng thiếu ~24%**. Nay `distance_matrix` đã có nhiều cặp điểm OSRM thật, tính lại được bằng một câu truy vấn |
 
 **Hai màn hình chưa ai bấm thử bằng chuột thật** — phía máy chủ đã kiểm hết, nhưng phần
 JavaScript chỉ chạy trong trình duyệt:
@@ -90,7 +92,7 @@ JavaScript chỉ chạy trong trình duyệt:
 
 | Việc | Tình hình |
 |---|---|
-| Thư viện xuất Excel | CN-08-05 cần Apache POI. Thêm vào `pom.xml` khi làm tới — hoặc bỏ hẳn, vì đây là mục cắt được |
+| **Thư viện xuất Excel** | CN-08-05 là mục ★ **duy nhất còn thiếu**. Cần `poi-ooxml`, kéo theo khoảng 12 MB phụ thuộc. Ba lựa chọn: thêm POI cho đúng đặc tả · xuất CSV có BOM (Excel mở thẳng được, không thêm thư viện nào) · bỏ hẳn và ghi vào `docs/09` là đã cắt có chủ đích |
 | **Mật khẩu lệch tài liệu** | `dieuphoi` và `taixe01` đã bị đổi khỏi giá trị của `DataSeeder`. `seedUser()` chỉ tạo khi thiếu chứ không ghi đè nên khởi động lại không tự về mặc định. **Trước ngày bảo vệ phải đưa về đúng `docs/08`, hoặc sửa `docs/08`** — kịch bản demo đọc mật khẩu từ đó, lệch là hỏng ngay bước đăng nhập đầu tiên. `admin`, `taixe02`, `taixe03` vẫn đúng mặc định |
 
 ---

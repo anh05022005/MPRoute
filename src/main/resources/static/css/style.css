@@ -599,6 +599,112 @@ body {
 .chart-legend .legend-a { border-top: 2.5px solid var(--blue-500); }
 .chart-legend .legend-b { border-top: 2.5px dashed var(--warning); }
 
+/* ============ Reports: tab bar across the three reports ============ */
+
+.report-tabs {
+  display: flex;
+  gap: 2px;
+  list-style: none;
+  margin: 0 0 14px;
+  padding: 0;
+  border-bottom: 1px solid var(--border);
+}
+.report-tabs a {
+  display: block;
+  padding: 8px 15px;
+  font-size: 13.5px;
+  color: var(--text-secondary);
+  text-decoration: none;
+  border: 1px solid transparent;
+  border-bottom: none;
+  border-radius: 5px 5px 0 0;
+}
+.report-tabs a:hover { background: var(--surface-stripe); color: var(--text-primary); }
+
+/* The active tab sits on top of the border line so it reads as the open folder */
+.report-tabs a.is-active {
+  background: #FFFFFF;
+  color: var(--blue-700);
+  font-weight: 600;
+  border-color: var(--border);
+  margin-bottom: -1px;
+  padding-bottom: 9px;
+}
+
+/* ============ Reports: RPT-01 bar chart ============ */
+
+.bar-chart { width: 100%; height: auto; display: block; }
+.bar-chart .grid { stroke: var(--border); stroke-width: 1; }
+.bar-chart .axis-label { fill: var(--text-muted); font-size: 11px; }
+.bar-chart .bar { fill: var(--blue-500); }
+.bar-chart .bar-value { fill: var(--text-secondary); font-size: 11px; }
+
+/* ============ Reports: RPT-02 donut chart ============ */
+
+/* One <circle> per slice, all sharing a centre and radius; stroke-dasharray cuts each
+   ring into its coloured arc and the gap, stroke-dashoffset rotates it into place.
+   The coordinates come from ReportService - see DeliveryReport.DonutChart. */
+.donut-chart {
+  width: 200px;
+  height: 200px;
+  flex: none;
+  /* Start every slice at 12 o'clock; an SVG circle otherwise starts at 3 o'clock */
+  transform: rotate(-90deg);
+}
+.donut-chart .donut-track {
+  fill: none;
+  stroke: var(--surface-header);
+  stroke-width: 26;
+}
+.donut-chart .donut-slice {
+  fill: none;
+  stroke-width: 26;
+}
+/* Undo the rotation for the two labels, otherwise they read sideways */
+.donut-chart .donut-centre-value,
+.donut-chart .donut-centre-label {
+  transform: rotate(90deg);
+  transform-origin: 120px 120px;
+  fill: var(--text-primary);
+}
+.donut-chart .donut-centre-value { font-size: 26px; font-weight: 600; }
+.donut-chart .donut-centre-label { font-size: 11px; fill: var(--text-secondary); }
+
+/* One colour per outcome, reused by the donut, the legend and the status table so a
+   reader matches a slice to its row without counting round the circle. */
+.slice-delivered { stroke: var(--success); }
+.slice-failed { stroke: var(--danger); }
+.slice-postponed { stroke: var(--warning); }
+.slice-in-progress { stroke: var(--blue-500); }
+
+.donut-legend { list-style: none; margin: 0; padding: 0; font-size: 13px; }
+.donut-legend li { padding: 3px 0; }
+.donut-legend i,
+.legend-dot {
+  display: inline-block;
+  width: 11px;
+  height: 11px;
+  border-radius: 3px;
+  margin-right: 7px;
+  vertical-align: -1px;
+  /* The slice classes set stroke, which does nothing on a block element - borrow the
+     same colour through currentColor so one class drives both shapes. */
+  background: currentColor;
+}
+.donut-legend i.slice-delivered, .legend-dot.slice-delivered { color: var(--success); }
+.donut-legend i.slice-failed, .legend-dot.slice-failed { color: var(--danger); }
+.donut-legend i.slice-postponed, .legend-dot.slice-postponed { color: var(--warning); }
+.donut-legend i.slice-in-progress, .legend-dot.slice-in-progress { color: var(--blue-500); }
+
+/* Inline share bar in the failure-reason table */
+.share-bar {
+  height: 9px;
+  background: var(--surface-header);
+  border-radius: 5px;
+  overflow: hidden;
+}
+.share-bar-fill { height: 100%; background: var(--danger); }
+
 /* Period total line of a report table */
 .total-row > * {
   background-color: var(--surface-header);

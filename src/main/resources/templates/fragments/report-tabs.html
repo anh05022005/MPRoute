@@ -1,0 +1,34 @@
+<!DOCTYPE html>
+<!--
+    Thanh chuyen giua ba bao cao cua nhom 8.
+
+    Cach dung:
+        <div th:replace="~{fragments/report-tabs :: tabs(
+                 active   = 'orders',
+                 fromDate = ${fromDate},
+                 toDate   = ${toDate})}"></div>
+
+    Mang theo khoang ngay khi doi tab: dang xem thang 8 ma bam sang bao cao khac lai nhay
+    ve mac dinh 30 ngay thi lan nao cung phai chon lai ngay, rat kho chiu khi doi chieu ba
+    bao cao cua cung mot ky.
+-->
+<html lang="vi" xmlns:th="http://www.thymeleaf.org">
+<body>
+
+<ul th:fragment="tabs(active, fromDate, toDate)" class="report-tabs">
+    <li>
+        <a th:href="@{/reports/orders(fromDate=${fromDate}, toDate=${toDate})}"
+           th:classappend="${active == 'orders'} ? 'is-active'">RPT-01 · Đơn hàng</a>
+    </li>
+    <li>
+        <a th:href="@{/reports/delivery(fromDate=${fromDate}, toDate=${toDate})}"
+           th:classappend="${active == 'delivery'} ? 'is-active'">RPT-02 · Tỷ lệ giao thành công</a>
+    </li>
+    <li>
+        <a th:href="@{/reports/optimization(fromDate=${fromDate}, toDate=${toDate})}"
+           th:classappend="${active == 'optimization'} ? 'is-active'">RPT-03 · Hiệu quả tối ưu</a>
+    </li>
+</ul>
+
+</body>
+</html>

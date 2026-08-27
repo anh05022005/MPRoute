@@ -1,6 +1,8 @@
 package com.minhphu.mproute.controller;
 
+import com.minhphu.mproute.dto.DeliveryReport;
 import com.minhphu.mproute.dto.OptimizationReport;
+import com.minhphu.mproute.dto.OrderReport;
 import com.minhphu.mproute.service.ReportService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -18,9 +20,13 @@ import java.time.temporal.ChronoUnit;
 /**
  * SCR-14 — Man hinh bao cao (nhom 8).
  *
- * Hien co mot bao cao: RPT-03 hieu qua toi uu (CN-08-03). Duong dan de o
- * /reports/optimization ngay tu dau de sau nay them RPT-01, RPT-02 khong phai doi
- * dia chi cu — dia chi da vao slide va vao video demo thi doi la phai lam lai het.
+ * Ba bao cao, moi cai mot duong dan rieng:
+ *   /reports/orders        RPT-01 thong ke don hang     (CN-08-01)
+ *   /reports/delivery      RPT-02 ty le giao thanh cong (CN-08-02)
+ *   /reports/optimization  RPT-03 hieu qua toi uu       (CN-08-03) — quan trong nhat
+ *
+ * /reports tro thang vao RPT-03 chu khong vao RPT-01: mo menu Bao cao ra la thay ngay
+ * bao cao dang gia nhat, khong phai bam them mot lan nua.
  *
  * Ca quan tri lan dieu phoi deu xem duoc (docs/05 — SCR-14). Chan hai lop: mot lop o
  * SecurityConfig cho /reports/**, mot lop @PreAuthorize ngay tren lop nay — an nut tren
@@ -44,6 +50,46 @@ public class ReportController {
     }
 
     /**
+     * RPT-01 — thong ke don hang (CN-08-01).
+     *
+     * grouping quyet dinh gom theo ngay, tuan hay thang. Mac dinh gom theo NGAY vi do la
+     * cach nhin ma dieu phoi vien dung hang ngay; xem theo thang la viec cua cuoi ky.
+     */
+    @GetMapping("/orders")
+    public String orderReport(@RequestParam(required = false)
+                              @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate fromDate,
+                              @RequestParam(required = false)
+                              @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate toDate,
+                              @RequestParam(required = false) OrderReport.Grouping grouping,
+                              Model model) {
+
+        LocalDate[] range = resolveRange(fromDate, toDate, model);
+        OrderReport.Grouping chosen = (grouping != null) ? grouping : OrderReport.Grouping.DAY;
+
+        model.addAttribute("report", reportService.orderReport(range[0], range[1], chosen));
+        model.addAttribute("groupings", OrderReport.Grouping.values());
+        model.addAttribute("selectedGrouping", chosen);
+        addRange(model, range);
+        return "reports/orders";
+    }
+
+    /** RPT-02 — ty le giao thanh cong va phan tich ly do that bai (CN-08-02). */
+    @GetMapping("/delivery")
+    public String deliveryReport(@RequestParam(required = false)
+                                 @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate fromDate,
+                                 @RequestParam(required = false)
+                                 @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate toDate,
+                                 Model model) {
+
+        LocalDate[] range = resolveRange(fromDate, toDate, model);
+        DeliveryReport report = reportService.deliveryReport(range[0], range[1]);
+
+        model.addAttribute("report", report);
+        addRange(model, range);
+        return "reports/delivery";
+    }
+
+    /**
      * RPT-03 — bao cao hieu qua toi uu (CN-08-03).
      *
      * Hai tham so ngay deu khong bat buoc: bam tu menu la vao thang duoc, khong phai
@@ -56,6 +102,23 @@ public class ReportController {
                                      @RequestParam(required = false)
                                      @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate toDate,
                                      Model model) {
+
+        LocalDate[] range = resolveRange(fromDate, toDate, model);
+
+        OptimizationReport report = reportService.optimizationReport(range[0], range[1]);
+        model.addAttribute("report", report);
+        addRange(model, range);
+
+        return "reports/optimization";
+    }
+
+    /**
+     * Chuan hoa khoang ngay cho ca ba bao cao — dung chung nen ba man hinh khong bao gio
+     * hieu tham so khac nhau.
+     *
+     * @return mang hai phan tu: [tu ngay, den ngay]
+     */
+    private LocalDate[] resolveRange(LocalDate fromDate, LocalDate toDate, Model model) {
 
         LocalDate to = (toDate != null) ? toDate : LocalDate.now();
         LocalDate from = (fromDate != null) ? fromDate : to.minusDays(DEFAULT_RANGE_DAYS - 1L);
@@ -79,12 +142,11 @@ public class ReportController {
                     "Khoảng thời gian tối đa của một báo cáo là " + ReportService.MAX_RANGE_DAYS
                             + " ngày. Hệ thống đã tự rút gọn về khoảng này.");
         }
+        return new LocalDate[]{from, to};
+    }
 
-        OptimizationReport report = reportService.optimizationReport(from, to);
-        model.addAttribute("report", report);
-        model.addAttribute("fromDate", from);
-        model.addAttribute("toDate", to);
-
-        return "reports/optimization";
+    private void addRange(Model model, LocalDate[] range) {
+        model.addAttribute("fromDate", range[0]);
+        model.addAttribute("toDate", range[1]);
     }
 }

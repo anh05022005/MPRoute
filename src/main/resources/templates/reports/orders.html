@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<!-- SCR-14 — RPT-01 Thong ke don hang (CN-08-01). -->
+<html lang="vi"
+      xmlns:th="http://www.thymeleaf.org"
+      th:replace="~{layout :: main('Thống kê đơn hàng', ~{::content})}">
+<body>
+
+<div th:fragment="content">
+
+    <div th:replace="~{fragments/report-tabs :: tabs(
+             active   = 'orders',
+             fromDate = ${fromDate},
+             toDate   = ${toDate})}"></div>
+
+    <div class="toolbar">
+        <form th:action="@{/reports/orders}" method="get" class="d-flex align-items-end gap-2">
+            <div>
+                <label for="fromDate" class="form-label mb-1 small">Từ ngày</label>
+                <input type="date" id="fromDate" name="fromDate"
+                       class="form-control form-control-sm" style="width: 170px;"
+                       th:value="${fromDate}">
+            </div>
+            <div>
+                <label for="toDate" class="form-label mb-1 small">Đến ngày</label>
+                <input type="date" id="toDate" name="toDate"
+                       class="form-control form-control-sm" style="width: 170px;"
+                       th:value="${toDate}">
+            </div>
+            <div>
+                <label for="grouping" class="form-label mb-1 small">Gộp</label>
+                <select id="grouping" name="grouping" class="form-select form-select-sm"
+                        style="width: 150px;">
+                    <option th:each="option : ${groupings}"
+                            th:value="${option}"
+                            th:text="${option.displayName}"
+                            th:selected="${option == selectedGrouping}">Theo ngày</option>
+                </select>
+            </div>
+            <button type="submit" class="btn btn-sm btn-primary">Xem báo cáo</button>
+        </form>
+    </div>
+
+    <div th:if="${report.empty}" class="panel">
+        <div class="text-sub small">
+            Không có đơn hàng nào trong khoảng
+            <strong th:text="${#temporals.format(fromDate, 'dd/MM/yyyy')}">01/08/2026</strong> –
+            <strong th:text="${#temporals.format(toDate, 'dd/MM/yyyy')}">27/08/2026</strong>.
+        </div>
+    </div>
+
+    <div th:unless="${report.empty}">
+
+        <!-- ============ Tong ket ============ -->
+        <div class="panel panel-info mb-3" th:with="totals=${report.totals}">
+            <div class="metric-row five-up">
+                <div>
+                    <div class="metric-label">Số đơn</div>
+                    <div class="metric-value" th:text="${totals.orderCount}">139</div>
+                </div>
+                <div>
+                    <div class="metric-label">Số thùng</div>
+                    <div class="metric-value" th:text="${totals.boxCount}">2.480</div>
+                </div>
+                <div>
+                    <div class="metric-label">Tổng khối lượng</div>
+                    <div class="metric-value"
+                         th:text="${#numbers.formatDecimal(totals.totalWeight, 1, 'POINT', 0, 'COMMA')} + ' kg'">27.400 kg</div>
+                </div>
+                <div>
+                    <div class="metric-label">Tổng thể tích</div>
+                    <div class="metric-value"
+                         th:text="${#numbers.formatDecimal(totals.totalVolume, 1, 'POINT', 1, 'COMMA')} + ' m³'">186,4 m³</div>
+                </div>
+                <div>
+                    <div class="metric-label">Tổng giá trị</div>
+                    <div class="metric-value" style="font-size: 17px;"
+                         th:text="${#numbers.formatDecimal(totals.totalAmount, 1, 'POINT', 0, 'COMMA')} + ' đ'">1.284.000.000 đ</div>
+                </div>
+            </div>
+            <div class="small text-sub mt-2">
+                Đơn đã hủy không được tính (BR08-04) — đơn hủy không phát sinh chuyến giao nào,
+                đếm vào thì số đơn của báo cáo không khớp với số hàng thực sự ra khỏi kho.
+            </div>
+        </div>
+
+        <!-- ============ Bieu do cot ============ -->
+        <div class="panel mb-3" th:with="chart=${report.chart}">
+            <div class="small mb-1">
+                <strong>Số đơn <span th:text="${#strings.toLowerCase(report.grouping.displayName)}">theo ngày</span></strong>
+            </div>
+
+            <svg class="bar-chart" viewBox="0 0 960 220" preserveAspectRatio="xMidYMid meet"
+                 role="img" aria-label="Biểu đồ cột số đơn theo kỳ">
+
+                <g th:each="line : ${chart.gridLines}">
+                    <line class="grid" x1="54" x2="944"
+                          th:attr="y1=${line.y},y2=${line.y}"></line>
+                    <text class="axis-label" x="46" text-anchor="end"
+                          th:attr="y=${line.y} + 4" th:text="${line.label}">15</text>
+                </g>
+
+                <g th:each="bar : ${chart.bars}">
+                    <rect class="bar"
+                          th:attr="x=${bar.x},y=${bar.y},width=${bar.width},height=${bar.height}"></rect>
+                    <text class="bar-value" text-anchor="middle"
+                          th:attr="x=${bar.x} + ${bar.width} / 2,y=${bar.y} - 5"
+                          th:text="${bar.value}">13</text>
+                    <text class="axis-label" y="206" text-anchor="middle"
+                          th:attr="x=${bar.x} + ${bar.width} / 2" th:text="${bar.label}">13/08/2026</text>
+                </g>
+            </svg>
+        </div>
+
+        <!-- ============ Bang theo ky ============ -->
+        <div class="section-label" th:text="'Đơn hàng ' + ${#strings.toLowerCase(report.grouping.displayName)}">Đơn hàng theo ngày</div>
+
+        <table class="table table-striped align-middle mb-4">
+            <thead>
+            <tr>
+                <th style="width: 160px;">Kỳ</th>
+                <th class="num" style="width: 110px;">Số đơn</th>
+                <th class="num">Khối lượng (kg)</th>
+                <th class="num">Thể tích (m³)</th>
+                <th class="num">Giá trị (đ)</th>
+            </tr>
+            </thead>
+            <tbody>
+            <tr th:each="row : ${report.rows}">
+                <td th:text="${row.label}">13/08/2026</td>
+                <td class="num" th:text="${row.orderCount}">13</td>
+                <td class="num"
+                    th:text="${#numbers.formatDecimal(row.totalWeight, 1, 'POINT', 1, 'COMMA')}">2.470,0</td>
+                <td class="num"
+                    th:text="${#numbers.formatDecimal(row.totalVolume, 1, 'POINT', 3, 'COMMA')}">16,840</td>
+                <td class="num"
+                    th:text="${#numbers.formatDecimal(row.totalAmount, 1, 'POINT', 0, 'COMMA')}">118.400.000</td>
+            </tr>
+            </tbody>
+            <tfoot th:with="totals=${report.totals}">
+            <tr class="total-row">
+                <td><strong>Toàn kỳ</strong></td>
+                <td class="num"><strong th:text="${totals.orderCount}">139</strong></td>
+                <td class="num"
+                    th:text="${#numbers.formatDecimal(totals.totalWeight, 1, 'POINT', 1, 'COMMA')}">27.400,0</td>
+                <td class="num"
+                    th:text="${#numbers.formatDecimal(totals.totalVolume, 1, 'POINT', 3, 'COMMA')}">186,400</td>
+                <td class="num"
+                    th:text="${#numbers.formatDecimal(totals.totalAmount, 1, 'POINT', 0, 'COMMA')}">1.284.000.000</td>
+            </tr>
+            </tfoot>
+        </table>
+
+        <!-- ============ So thung theo san pham ============ -->
+        <div class="section-label">Số thùng theo sản phẩm</div>
+
+        <div th:if="${report.products.isEmpty()}" class="text-sub small">
+            Chưa có dòng hàng nào trong khoảng này.
+        </div>
+
+        <table class="table table-striped align-middle" th:unless="${report.products.isEmpty()}">
+            <thead>
+            <tr>
+                <th style="width: 100px;">Mã</th>
+                <th>Sản phẩm</th>
+                <th class="num" style="width: 110px;">Số thùng</th>
+                <th class="num" style="width: 130px;">Khối lượng (kg)</th>
+                <th class="num" style="width: 130px;">Thể tích (m³)</th>
+                <th class="num" style="width: 110px;">Số đơn có mặt</th>
+            </tr>
+            </thead>
+            <tbody>
+            <tr th:each="product : ${report.products}">
+                <td th:text="${product.productCode}">SP001</td>
+                <td th:text="${product.productName}">Bông tẩy trang</td>
+                <td class="num"><strong th:text="${product.boxCount}">640</strong></td>
+                <td class="num"
+                    th:text="${#numbers.formatDecimal(product.totalWeight, 1, 'POINT', 1, 'COMMA')}">3.840,0</td>
+                <td class="num"
+                    th:text="${#numbers.formatDecimal(product.totalVolume, 1, 'POINT', 3, 'COMMA')}">54,400</td>
+                <td class="num" th:text="${product.orderCount}">71</td>
+            </tr>
+            </tbody>
+        </table>
+
+        <div class="text-sub small">
+            Cột <strong>Số đơn có mặt</strong> đếm số đơn <em>khác nhau</em> có mặt hàng này —
+            một đơn có hai dòng cùng sản phẩm vẫn chỉ tính một lần.
+        </div>
+    </div>
+
+</div>
+</body>
+</html>

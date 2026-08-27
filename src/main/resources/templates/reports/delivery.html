@@ -1,0 +1,196 @@
+<!DOCTYPE html>
+<!-- SCR-14 — RPT-02 Ty le giao thanh cong (CN-08-02). -->
+<html lang="vi"
+      xmlns:th="http://www.thymeleaf.org"
+      th:replace="~{layout :: main('Tỷ lệ giao thành công', ~{::content})}">
+<body>
+
+<div th:fragment="content">
+
+    <div th:replace="~{fragments/report-tabs :: tabs(
+             active   = 'delivery',
+             fromDate = ${fromDate},
+             toDate   = ${toDate})}"></div>
+
+    <div class="toolbar">
+        <form th:action="@{/reports/delivery}" method="get" class="d-flex align-items-end gap-2">
+            <div>
+                <label for="fromDate" class="form-label mb-1 small">Từ ngày</label>
+                <input type="date" id="fromDate" name="fromDate"
+                       class="form-control form-control-sm" style="width: 170px;"
+                       th:value="${fromDate}">
+            </div>
+            <div>
+                <label for="toDate" class="form-label mb-1 small">Đến ngày</label>
+                <input type="date" id="toDate" name="toDate"
+                       class="form-control form-control-sm" style="width: 170px;"
+                       th:value="${toDate}">
+            </div>
+            <button type="submit" class="btn btn-sm btn-primary">Xem báo cáo</button>
+        </form>
+    </div>
+
+    <div th:if="${report.empty}" class="panel">
+        <div class="text-sub small">
+            Chưa có đơn nào được phân tuyến trong khoảng
+            <strong th:text="${#temporals.format(fromDate, 'dd/MM/yyyy')}">01/08/2026</strong> –
+            <strong th:text="${#temporals.format(toDate, 'dd/MM/yyyy')}">27/08/2026</strong>.
+        </div>
+    </div>
+
+    <div th:unless="${report.empty}">
+
+        <div class="panel panel-info mb-3">
+            <div class="metric-row">
+                <div>
+                    <div class="metric-label">Tỷ lệ giao thành công</div>
+                    <div class="metric-value" style="font-size: 26px;"
+                         th:text="${#numbers.formatDecimal(report.successPercent, 1, 'POINT', 1, 'COMMA')} + '%'">96,4%</div>
+                </div>
+                <div>
+                    <div class="metric-label">Đơn đã phân tuyến</div>
+                    <div class="metric-value" th:text="${report.routedOrderCount}">139</div>
+                </div>
+                <div>
+                    <div class="metric-label">Giao thất bại</div>
+                    <div class="metric-value" th:text="${report.failedCount}">4</div>
+                </div>
+                <div>
+                    <div class="metric-label">Hoãn sang ngày khác</div>
+                    <div class="metric-value" th:text="${report.postponedCount}">1</div>
+                </div>
+            </div>
+
+            <!-- Cach tinh de ngay tren man hinh: day la cong thuc hoi dong se hoi -->
+            <div class="small text-sub mt-2">
+                <strong>Cách tính (BR08-06):</strong> tỷ lệ thành công = số đơn <em>Đã giao</em>
+                chia cho tổng đơn <em>đã phân tuyến</em>, không phải chia cho mọi đơn trong kỳ.
+                Đơn còn chờ duyệt hoặc đã hủy thì chưa bao giờ lên xe — đếm chúng vào mẫu số là
+                tự hạ tỷ lệ của mình xuống vì một lý do không liên quan đến việc giao hàng.
+                <span th:if="${report.cancelledCount > 0}">
+                    Kỳ này có <strong th:text="${report.cancelledCount}">4</strong> đơn đã hủy,
+                    không nằm trong mẫu số.
+                </span>
+            </div>
+        </div>
+
+        <div class="row g-3 mb-4">
+
+            <!-- ============ Bieu do tron ============ -->
+            <div class="col-lg-5">
+                <div class="panel h-100">
+                    <div class="small mb-2"><strong>Kết quả giao hàng</strong></div>
+
+                    <div class="d-flex align-items-center gap-3 flex-wrap">
+                        <!--
+                            Ve bang stroke-dasharray tren cac vong tron chong len nhau — do dai
+                            va do lech cua tung mieng do ReportService tinh san. Xem giai thich
+                            cach ve o DeliveryReport.DonutChart.
+                        -->
+                        <svg class="donut-chart" viewBox="0 0 240 240"
+                             role="img" aria-label="Biểu đồ tròn kết quả giao hàng">
+                            <circle class="donut-track" cx="120" cy="120" r="80"></circle>
+                            <circle th:each="slice : ${report.chart.slices}"
+                                    th:classappend="${slice.styleClass}"
+                                    class="donut-slice" cx="120" cy="120" r="80"
+                                    th:attr="stroke-dasharray=${slice.dashLength} + ' ' + ${slice.dashGap},
+                                             stroke-dashoffset=${slice.dashOffset}"></circle>
+                            <text class="donut-centre-value" x="120" y="118" text-anchor="middle"
+                                  th:text="${#numbers.formatDecimal(report.successPercent, 1, 'POINT', 1, 'COMMA')} + '%'">96,4%</text>
+                            <text class="donut-centre-label" x="120" y="140" text-anchor="middle">giao thành công</text>
+                        </svg>
+
+                        <ul class="donut-legend">
+                            <li th:each="row : ${report.statusRows}" th:if="${row.orderCount > 0}">
+                                <i th:classappend="${row.styleClass}"></i>
+                                <span th:text="${row.status.displayName}">Đã giao</span>
+                                <strong th:text="${row.orderCount}">134</strong>
+                                <span class="text-sub"
+                                      th:text="'(' + ${#numbers.formatDecimal(row.share, 1, 'POINT', 1, 'COMMA')} + '%)'">(96,4%)</span>
+                            </li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ============ Bang trang thai ============ -->
+            <div class="col-lg-7">
+                <div class="panel h-100">
+                    <div class="small mb-2"><strong>Chi tiết theo trạng thái</strong></div>
+                    <table class="table align-middle mb-0">
+                        <thead>
+                        <tr>
+                            <th>Trạng thái</th>
+                            <th class="num" style="width: 110px;">Số đơn</th>
+                            <th class="num" style="width: 110px;">Tỷ lệ</th>
+                        </tr>
+                        </thead>
+                        <tbody>
+                        <tr th:each="row : ${report.statusRows}">
+                            <td>
+                                <i class="legend-dot" th:classappend="${row.styleClass}"></i>
+                                <span th:text="${row.status == T(com.minhphu.mproute.entity.enums.OrderStatus).ROUTED
+                                                 ? 'Đang giao / chờ giao' : row.status.displayName}">Đã giao</span>
+                            </td>
+                            <td class="num" th:text="${row.orderCount}">134</td>
+                            <td class="num"
+                                th:text="${#numbers.formatDecimal(row.share, 1, 'POINT', 1, 'COMMA')} + '%'">96,4%</td>
+                        </tr>
+                        </tbody>
+                        <tfoot>
+                        <tr class="total-row">
+                            <td><strong>Tổng đơn đã phân tuyến</strong></td>
+                            <td class="num"><strong th:text="${report.routedOrderCount}">139</strong></td>
+                            <td class="num">100,0%</td>
+                        </tr>
+                        </tfoot>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- ============ Phan tich ly do that bai ============ -->
+        <div class="section-label">Phân tích lý do giao thất bại</div>
+
+        <div th:if="${report.failureRows.isEmpty()}" class="panel">
+            <div class="text-sub small">
+                Không có lần giao thất bại nào trong kỳ này.
+            </div>
+        </div>
+
+        <table class="table table-striped align-middle" th:unless="${report.failureRows.isEmpty()}">
+            <thead>
+            <tr>
+                <th>Lý do</th>
+                <th class="num" style="width: 130px;">Số lần</th>
+                <th class="num" style="width: 130px;">Tỷ lệ</th>
+                <th style="width: 280px;"></th>
+            </tr>
+            </thead>
+            <tbody>
+            <tr th:each="row : ${report.failureRows}">
+                <td th:text="${row.reason.displayName}">Khách không có mặt</td>
+                <td class="num" th:text="${row.stopCount}">2</td>
+                <td class="num"
+                    th:text="${#numbers.formatDecimal(row.share, 1, 'POINT', 1, 'COMMA')} + '%'">50,0%</td>
+                <td>
+                    <!-- Thanh ngang cho de so sanh bang mat, khong can them mot bieu do nua -->
+                    <div class="share-bar">
+                        <div class="share-bar-fill" th:style="'width:' + ${row.share} + '%'"></div>
+                    </div>
+                </td>
+            </tr>
+            </tbody>
+        </table>
+
+        <div class="text-sub small" th:unless="${report.failureRows.isEmpty()}">
+            Đếm trên <strong>điểm dừng</strong> chứ không trên đơn: lý do thất bại thuộc về
+            <em>lần giao</em>. Một đơn bị hoãn rồi giao lại và lại hỏng là hai lần thất bại với
+            hai lý do, mà cột trạng thái của đơn chỉ giữ được cái cuối cùng. Điểm dừng của tuyến
+            đã hủy không được tính (BR08-04).
+        </div>
+    </div>
+
+</div>
+</body>
+</html>
