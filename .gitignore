@@ -37,3 +37,7 @@ build/
 # de lo co ai chep vao trong kho thi git cung khong nuot.
 *.osm.pbf
 *.osrm*
+
+# Classpath sinh ra boi "mvnw dependency:build-classpath", dung de chay
+# AlgorithmRunner va BenchmarkRunner bang lenh java -cp. Sinh lai luc nao cung duoc.
+cp.txt
