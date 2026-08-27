@@ -590,3 +590,64 @@ bước 12–14 (phương án B) cần hai tuyến chạy song song mới dựng
   thẳng `ROUTED → DELIVERED`, lệch với luồng trạng thái ở `docs/01`. Nay tài xế bấm nhận hàng thì
   mọi đơn của tuyến chuyển sang `DELIVERING` và điểm kế tiếp chuyển sang `DELIVERING`. **Không có
   chặng này thì CN-07-05 vô nghĩa** — không lúc nào đơn ở đúng trạng thái để hiện tài xế
+
+---
+
+## Tuần 10 — Báo cáo và thực nghiệm
+
+### RPT-03 Báo cáo hiệu quả tối ưu (CN-08-03, CN-08-04)
+
+- **★ CN-08-03** — `/reports/optimization`: bảng theo ngày (số đơn, số tuyến, mốc A, mốc B, sau
+  tối ưu, giảm so với A, giảm so với B, số chuyến tiết kiệm), dòng toàn kỳ, biểu đồ đường.
+  Chạy thật trên dữ liệu đang có: **4 ngày, 8 đơn, giảm 34,4% so với mốc A**, 6,4% so với mốc B,
+  tiết kiệm 4 chuyến. Kiểm tay: 144,7 km → 94,9 km
+- **Mỗi ngày chỉ lấy lần chạy gần nhất.** Ngày 21/08 có **9 dòng** trong `optimization_results`
+  vì hôm đó chạy đi chạy lại để thử. Cả 9 đều là số liệu thật, nhưng chỉ lần cuối mới là kế
+  hoạch được chốt và đem giao — nên báo cáo lấy `MAX(id)` của từng ngày
+- **Phần trăm toàn kỳ tính từ TỔNG quãng đường**, không phải trung bình cộng phần trăm từng
+  ngày. Trung bình cộng coi ngày 3 đơn nặng ngang ngày 15 đơn, không đúng nghĩa *"cả kỳ giảm
+  bao nhiêu"*. Đây là câu hỏi vấn đáp dễ bị hỏi nhất của màn hình này, đã ghi sẵn ngay trên
+  giao diện
+- **★ CN-08-04** hai nhánh lọc đều thử được thật:
+  - **BR08-04** — ngày 28/08 chỉ còn tuyến `CANCELLED` → **bị loại khỏi trung bình**, nhưng vẫn
+    liệt kê ngày đó ra cuối trang. Loại âm thầm là giấu dữ liệu
+  - **BR08-03** — tạm bật cờ `approximate_distance` một dòng: dòng đó **nhảy sang bảng riêng**
+    kèm ghi chú, số ngày tính vào trung bình giảm 4 → 3. Đã trả lại nguyên trạng ngay sau khi thử
+- **BR08-01** — chọn 01/2024 → 08/2026 thì tự rút về 365 ngày kèm thông báo, thay vì từ chối
+  hiển thị. Gõ nhầm năm vẫn xem được báo cáo và vẫn biết hệ thống đã cắt
+- **Biểu đồ vẽ thẳng bằng SVG**, toạ độ tính ở `ReportService`. Không nạp Chart.js: hai đường và
+  vài chục điểm không đáng đổi lấy 200 KB phải tải về, một thư viện nữa phải giải thích khi vấn
+  đáp, và một thứ nữa hỏng khi mất mạng. Biểu đồ vẽ **mức giảm** chứ không vẽ quãng đường — quãng
+  đường lên xuống theo số đơn từng ngày nên chỉ phản ánh hôm đó nhiều hàng hay ít hàng
+- **CBR-15** — `taixe02` gõ thẳng `/reports/optimization` ra **trang 403**, không phải trang trắng
+
+### Benchmark Augerat (CN-09-02, CN-09-03)
+
+- **Tải 10 bài từ CVRPLIB** về `src/main/resources/data/augerat/`. Địa chỉ cũ
+  `vrp.galgos.inf.puc-rio.br` đã chuyển sang `galgos.inf.puc-rio.br/cvrplib`, tải theo id chứ
+  không theo tên file. **Đã đối chiếu lời giải tối ưu trên trang web với `docs/07`: khớp cả 10**
+- **★ CN-09-01/02** `VrpFileReader` + `BenchmarkRunner` chạy bằng `main()`, không cần web, không
+  cần MySQL, không cần OSRM. Bảng kết quả đầy đủ ở `docs/07` mục "Kết quả đã chạy thật"
+- **Số chốt của chương 4:** gap trung bình **NN 39,6% · NN+2-opt 33,4% · OR-Tools 1,8%**
+- **★ Bằng chứng mạnh nhất rằng cách đo đúng: OR-Tools ra ĐÚNG BẰNG lời giải tối ưu đã công bố ở
+  4/10 bài** — 784, 955, 741, 458, không lệch một đơn vị. Con số chỉ khớp chính xác khi cả ba
+  thứ cùng đúng: quy ước làm tròn EUC_2D, kho ở điểm số 1, và **tổng quãng đường có tính chặng
+  cuối về kho** (CBR-01). Thiếu chặng về kho thì mọi dòng đều nhỏ hơn tối ưu, không đời nào khớp
+- **NN+2-opt ra 33,4%, cao hơn khoảng 10–25% mà bản thiết kế dự kiến.** Không giấu con số này:
+  lý do là 2-opt chỉ gỡ **thứ tự bên trong một tuyến**, mà các bài này chỉ 6–9 điểm mỗi tuyến nên
+  gần như không còn gì để gỡ — đo riêng thì 2-opt chỉ cải thiện **4,3%**. Phần sai số lớn còn lại
+  nằm ở **khâu chia điểm cho xe**, đúng thứ mà 2-opt theo định nghĩa không đụng tới
+- **P-n76-k5 cải thiện 14,8%, gấp ba lần trung bình** vì nó có nhiều điểm trên mỗi tuyến nhất
+  (75 điểm / 5 xe = 15 điểm mỗi tuyến). Đây là câu trả lời có số cho *"2-opt có đáng làm không"*:
+  càng nhiều điểm trên một tuyến thì càng đáng
+- **A-n45-k6 là bài duy nhất NN bỏ sót điểm**, và đó không phải lỗi: bài này đòi lấp đầy **98,8%**
+  đội xe (nhu cầu 593 / sức chứa 600), tức phải xếp thùng gần như hoàn hảo. Thuật toán tham lam
+  về nguyên tắc không làm được — đúng điểm yếu của NN mà kịch bản demo `docs/08` dùng tới. Hai ô
+  đó đánh dấu `*` và **không tính vào trung bình**: bên bỏ bớt điểm thì tuyến ngắn hơn là đương
+  nhiên, đem so là kết luận ngược
+- **Bỏ cấu hình "thứ tự ngẫu nhiên"** của bản thiết kế: `CN-09-03` chỉ yêu cầu `NN` và `NN_2OPT`,
+  còn vai trò "mốc dưới" thì **mốc B** đã giữ bằng một cách đáng tin hơn — thứ tự nhận đơn là
+  cách người điều phối thật sự làm, thứ tự ngẫu nhiên thì không ai làm bao giờ
+- **Hai test thêm cho `VrpFileReader`** (ngoài 14 test bắt buộc). Lý do: quy ước làm tròn EUC_2D
+  sai thì **không bao giờ báo lỗi** — chương trình vẫn chạy, vẫn in ra bảng, chỉ có mọi con số
+  gap là sai. Test kiểm tay `d(kho, điểm 2) = round(√(14² + 32²)) = round(34,93) = 35`

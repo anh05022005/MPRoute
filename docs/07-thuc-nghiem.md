@@ -98,16 +98,48 @@ Augerat chỉ có ràng buộc `demand` (một chiều), còn hệ thống của
 gap (%) = (ket_qua_cua_em - loi_giai_toi_uu) / loi_giai_toi_uu × 100
 ```
 
-### Bảng kết quả mẫu cho chương 4
+### Kết quả đã chạy thật — 27/08/2026
 
-| Bài toán | Số điểm | Tối ưu đã biết | NN | Gap NN | NN+2-opt | Gap NN+2-opt | Thời gian (ms) |
-|---|---|---|---|---|---|---|---|
-| A-n32-k5 | 31 | 784 | ... | ...% | ... | ...% | ... |
-| A-n39-k5 | 38 | 822 | ... | ...% | ... | ...% | ... |
-| ... | | | | | | | |
-| **Trung bình** | | | | **...%** | | **...%** | |
+Chạy bằng `BenchmarkRunner`, mười bài đã tải về `src/main/resources/data/augerat/`.
+Mỗi bài dùng **đúng số xe của đề bài**, khoảng cách EUC_2D làm tròn về số nguyên,
+OR-Tools giới hạn 5 giây/bài. Máy: JDK 23, Windows 11.
 
-**Con số cần đạt để yên tâm:** Nearest Neighbor thuần thường có gap 20–35%. Thêm 2-opt thường kéo xuống khoảng **10–25%**.
+| Bài toán | Số điểm | Số xe | Tối ưu đã biết | NN | Gap NN | NN+2-opt | Gap NN+2-opt | OR-Tools | Gap OR-Tools |
+|---|---|---|---|---|---|---|---|---|---|
+| A-n32-k5 | 31 | 5 | 784 | 1 145 | +46,0% | 1 116 | +42,3% | **784** | **+0,0%** |
+| A-n39-k5 | 38 | 5 | 822 | 1 070 | +30,2% | 1 028 | +25,1% | 825 | +0,4% |
+| A-n45-k6 | 44 | 6 | 944 | 1 345\* | sót 1 điểm | 1 275\* | sót 1 điểm | 1 002 | +6,1% |
+| A-n60-k9 | 59 | 9 | 1 354 | 1 837 | +35,7% | 1 774 | +31,0% | 1 359 | +0,4% |
+| A-n80-k10 | 79 | 10 | 1 763 | 2 348 | +33,2% | 2 290 | +29,9% | 1 817 | +3,1% |
+| B-n35-k5 | 34 | 5 | 955 | 1 304 | +36,5% | 1 277 | +33,7% | **955** | **+0,0%** |
+| B-n50-k7 | 49 | 7 | 741 | 1 036 | +39,8% | 1 018 | +37,4% | **741** | **+0,0%** |
+| P-n40-k5 | 39 | 5 | 458 | 682 | +48,9% | 657 | +43,4% | **458** | **+0,0%** |
+| P-n55-k7 | 54 | 7 | 568 | 754 | +32,7% | 723 | +27,3% | 575 | +1,2% |
+| P-n76-k5 | 75 | 5 | 627 | 962 | +53,4% | 820 | +30,8% | 668 | +6,5% |
+| **Trung bình** | | | | | **+39,6%** | | **+33,4%** | | **+1,8%** |
+
+\* **A-n45-k6:** Nearest Neighbor không xếp hết 44 điểm vào 6 xe nên hai ô đó không đặt
+cạnh lời giải tối ưu được, và **không tính vào trung bình**. Đây không phải lỗi: bài này
+đòi lấp đầy **98,8%** đội xe (nhu cầu 593 trên sức chứa 600), tức là phải xếp thùng gần
+như hoàn hảo — thuật toán tham lam về nguyên tắc không làm được. Chính là điểm yếu của NN
+mà kịch bản demo ở `docs/08` dùng đến. OR-Tools xếp hết vì có `addDisjunction` và tìm kiếm
+cục bộ chuyển được điểm giữa các xe.
+
+**Bằng chứng mạnh nhất rằng cách đo là đúng:** OR-Tools ra **đúng bằng lời giải tối ưu đã
+công bố** ở 4 trong 10 bài (784, 955, 741, 458 — không lệch một đơn vị nào). Con số chỉ
+khớp chính xác khi cả ba thứ cùng đúng: quy ước làm tròn EUC_2D, kho nằm ở điểm số 1, và
+**tổng quãng đường có tính chặng cuối về kho** (CBR-01). Thiếu chặng về kho thì mọi dòng
+đều nhỏ hơn tối ưu — không bao giờ khớp được.
+
+**Con số dự kiến ban đầu:** Nearest Neighbor thuần thường có gap 20–35%, thêm 2-opt thường kéo xuống khoảng 10–25%.
+
+**Đo thật thì cao hơn dự kiến:** NN ra 39,6% và NN+2-opt ra 33,4%. Cần nói thẳng chỗ này
+khi vấn đáp thay vì lờ đi. Lý do nằm ở chỗ 2-opt chỉ gỡ được **thứ tự bên trong một tuyến**,
+mà ở các bài này mỗi tuyến chỉ có 6–9 điểm nên gần như không còn gì để gỡ — đo riêng thì
+2-opt chỉ cải thiện **4,3%** so với NN thuần. Phần sai số lớn còn lại nằm ở **khâu chia
+điểm cho xe**, đúng thứ mà 2-opt theo định nghĩa không đụng tới. Bằng chứng đó là bản chất
+chứ không phải lỗi: cùng bộ đọc file, cùng ma trận, cùng hàm tính tổng quãng đường,
+OR-Tools ra gap 1,8% và trùng khít lời giải tối ưu ở 4 bài.
 
 Đừng hoảng nếu gap sau 2-opt vẫn nằm ở mức 20% — **đó không phải dấu hiệu code sai**. Lý do: 2-opt chỉ sắp lại thứ tự **bên trong** từng tuyến, nó không đụng được vào cách phân đơn cho xe. Mà với CVRP, phần sai số lớn nhất so với lời giải tối ưu lại nằm chính ở khâu phân đơn. Muốn kéo gap xuống nữa thì phải thêm bước hoán đổi đơn **giữa các tuyến** (ví dụ Or-opt hoặc relocate) — đó là hướng phát triển, không phải phạm vi đồ án.
 
@@ -117,23 +149,46 @@ gap (%) = (ket_qua_cua_em - loi_giai_toi_uu) / loi_giai_toi_uu × 100
 
 ## Loại 2 — So sánh giữa các thuật toán
 
-Dùng chính dữ liệu benchmark ở trên, chạy ba cấu hình:
+Dùng chính dữ liệu benchmark ở trên. Bảng trên đo *cách lời giải tốt nhất bao nhiêu*,
+bảng này đo **riêng đóng góp của bước 2-opt** — tức phần cải thiện do chính mình viết ra.
+Hai bảng trả lời hai câu hỏi khác nhau nên phải có cả hai (CN-09-03).
 
-| Cấu hình | Mô tả |
-|---|---|
-| Ngẫu nhiên | Thứ tự giao ngẫu nhiên (mốc dưới) |
-| NN | Chỉ Nearest Neighbor |
-| NN + 2-opt | Đầy đủ |
+Cấu hình *"thứ tự ngẫu nhiên"* trong bản thiết kế ban đầu **đã bỏ**: `CN-09-03` chỉ yêu cầu
+chạy `NN` và `NN_2OPT`, và trong phần mềm thì **mốc B** (cùng cách chia xe, giao theo thứ tự
+nhận đơn) đã giữ đúng vai trò "mốc dưới" đó bằng một cách đáng tin hơn — thứ tự nhận đơn là
+cách người điều phối thật sự làm, còn thứ tự ngẫu nhiên thì không ai làm bao giờ.
 
-### Bảng kết quả mẫu
+### Kết quả đã chạy thật — 27/08/2026
 
-| Thuật toán | Quãng đường TB | Cải thiện so với ngẫu nhiên | Gap so với tối ưu | Thời gian TB |
-|---|---|---|---|---|
-| Ngẫu nhiên | ... | 0% | ...% | ~0 ms |
-| Nearest Neighbor | ... | ...% | ...% | ... ms |
-| NN + 2-opt | ... | ...% | ...% | ... ms |
+| Bài toán | Số điểm | NN | NN + 2-opt | Cải thiện | t(NN) | t(2-opt) |
+|---|---|---|---|---|---|---|
+| A-n32-k5 | 31 | 1 145 | 1 116 | 2,5% | 13 ms | 1 ms |
+| A-n39-k5 | 38 | 1 070 | 1 028 | 3,9% | 0 ms | 0 ms |
+| A-n45-k6 | 44 | 1 345\* | 1 275\* | — | 0 ms | 0 ms |
+| A-n60-k9 | 59 | 1 837 | 1 774 | 3,4% | 0 ms | 0 ms |
+| A-n80-k10 | 79 | 2 348 | 2 290 | 2,5% | 1 ms | 0 ms |
+| B-n35-k5 | 34 | 1 304 | 1 277 | 2,1% | 0 ms | 0 ms |
+| B-n50-k7 | 49 | 1 036 | 1 018 | 1,7% | 0 ms | 0 ms |
+| P-n40-k5 | 39 | 682 | 657 | 3,7% | 0 ms | 1 ms |
+| P-n55-k7 | 54 | 754 | 723 | 4,1% | 0 ms | 0 ms |
+| P-n76-k5 | 75 | 962 | 820 | **14,8%** | 0 ms | 0 ms |
+| **Trung bình** | | | | **4,3%** | | |
 
-Bảng này trả lời trực tiếp câu "2-opt có đáng làm không" bằng số liệu.
+`Cải thiện = (NN − NN2opt) / NN × 100`. Dòng A-n45-k6 để trống vì cả hai bên đều bỏ sót một
+điểm, hai con số không đo cùng một thứ.
+
+**Đọc bảng này thế nào:**
+
+- **2-opt luôn dương, không bao giờ âm.** Đó là tính chất của chính thuật toán — nó chỉ nhận
+  một phép đảo khi độ lệch bốn cạnh âm — và là thứ test `twoOptNeverIncreasesTotalDistance`
+  kiểm. Chạy ra một dòng âm nghĩa là ma trận không đối xứng, không phải 2-opt sai.
+- **P-n76-k5 cải thiện 14,8%, gấp ba lần trung bình.** Đây là bài có nhiều điểm nhất trên mỗi
+  tuyến (75 điểm chia 5 xe, tức 15 điểm/tuyến), nên có nhiều thứ tự để gỡ nhất. Các bài còn
+  lại chỉ 6–9 điểm mỗi tuyến, gần như không còn "nút" nào để tháo. **Đây chính là câu trả lời
+  cho "2-opt có đáng làm không": càng nhiều điểm trên một tuyến thì càng đáng.**
+- **Thời gian chạy gần như bằng 0** ở mọi bài. 2-opt không phải thứ phải cân nhắc về hiệu
+  năng ở quy mô này — điều kiện là ma trận đã nạp sẵn trong bộ nhớ, không tra CSDL hay gọi
+  OSRM trong vòng lặp.
 
 ### Biểu đồ hội tụ của 2-opt
 

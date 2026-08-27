@@ -11,8 +11,8 @@
 
 | | |
 |---|---|
-| Theo kế hoạch | Tuần 9 — tài xế, tra cứu, sự cố |
-| Thực tế | **Xong tuần 9, sớm hơn kế hoạch.** Nhóm 4, 5, 6, 7 đều xong trọn — **hết chức năng bắt buộc của phần chạy được**. Còn lại là báo cáo, thực nghiệm benchmark và viết luận văn |
+| Theo kế hoạch | Tuần 10 — báo cáo, thực nghiệm benchmark |
+| Thực tế | **Xong phần code của tuần 10.** RPT-03 chạy được, benchmark Augerat có số. **Mọi mục "tuyệt đối không cắt" đã xong** (Nhóm 3, CN-08-03, Nhóm 9). Còn lại là viết chương 4, seed dữ liệu và luận văn |
 
 ```
 [x] T1  Chot de tai, hoi Minh Phu 3 cau
@@ -24,23 +24,36 @@
 [x] T7  2-opt chay duoc, OR-Tools cam vao, bang so sanh 4 dong
 [x] T8  Man hinh phan tuyen hoan chinh, ve tuyen len ban do
 [x] T9  Man hinh tai xe, tra cuu, su co
-[ ] T10 RPT-03 xong, benchmark Augerat xong, chuong 4 viet xong
+[~] T10 RPT-03 xong, benchmark Augerat xong — CON LAI: viet chuong 4
 [ ] T11 Seed du lieu, chay thu 3 lan, quay video
 [ ] T12 Bao cao hoan chinh, slide, luyen van dap
 ```
 
-**14/14 test bắt buộc xanh** (`mvnw.cmd test` → 15 test, gồm cả lần nạp Spring context).
+**14/14 test bắt buộc xanh** (`mvnw.cmd test` → **17 test**: 14 bắt buộc + 2 test cho
+`VrpFileReader` + 1 lần nạp Spring context).
 
 ---
 
-## Việc tiếp theo — TUẦN 10
+## Việc tiếp theo — TUẦN 10 (phần còn lại) và TUẦN 11
 
-1. **RPT-03 Báo cáo hiệu quả tối ưu** (CN-08-03) — **không được cắt**. Nguồn dữ liệu là bảng
-   `optimization_results` đã ghi từ tuần 8, hiện có sẵn vài dòng thật
-2. **Benchmark Augerat** (CN-09-02) — tải bộ dữ liệu, viết hàm đọc file `.vrp`, chạy qua
-   `AlgorithmRunner`, lập bảng gap. **Đây là phần ăn điểm của chương 4, không được cắt**
-3. **Bảng so sánh NN và NN+2-opt** (CN-09-03) — số liệu đã có từ tuần 7, chỉ cần dựng lại bảng
-4. RPT-01, RPT-02 và xuất Excel (CN-08-01, 02, 05) — **cắt được nếu đuối**, đã quyết từ tuần 7
+1. **Viết chương 4 báo cáo** — số liệu đã có đủ ở `docs/07` mục "Kết quả đã chạy thật":
+   bảng gap 10 bài, bảng riêng đóng góp 2-opt, và RPT-03 trên dữ liệu thật
+2. **Seed dữ liệu tuần 11** — `docs/08` yêu cầu **ít nhất 10 ngày, mỗi ngày 12–15 đơn**. Hiện
+   RPT-03 chỉ có 4 ngày và 8 đơn nên bảng còn thưa. Seed xong là báo cáo đầy ngay, đồng thời
+   trả luôn được mấy món ở "Còn nợ nghiệm thu" bên dưới
+3. RPT-01, RPT-02 và xuất Excel (CN-08-01, 02, 05) — **cắt được nếu đuối**, đã quyết từ tuần 7.
+   Menu "Báo cáo" hiện chỉ có RPT-03, đủ đúng thứ tự cắt của `docs/04`
+4. Quay video, luyện vấn đáp
+
+**Cách chạy lại benchmark** (không cần web, MySQL hay OSRM — bấm Run trong IDE là gọn nhất):
+
+```
+mvnw.cmd compile
+mvnw.cmd dependency:build-classpath -Dmdep.outputFile=cp.txt
+java -cp "target/classes;<noi dung cp.txt>" com.minhphu.mproute.service.optimization.BenchmarkRunner
+```
+
+Đừng dùng `mvnw.cmd exec:java` — classloader của nó không tìm thấy thư viện native OR-Tools.
 
 ---
 
@@ -123,7 +136,7 @@ nhưng số km là xấp xỉ, **đừng lấy số đó đưa vào báo cáo**.
 - Máy này lưu thông tin đăng nhập GitHub của **hai tài khoản**. Remote cố ý ghi là
   `https://anh05022005@github.com/...` — xóa phần `anh05022005@` đi là đẩy bằng tài khoản kia,
   báo lỗi 403
-- Menu trỏ tới `/tracking` và `/reports` chưa có Controller → bấm vào ra 404. Hết tuần 10 là tự hết
+- Menu trỏ tới `/tracking` chưa có Controller → bấm vào ra 404. `/reports` đã có từ tuần 10
 - Sau khi đăng nhập địa chỉ có đuôi `?continue` — hành vi mặc định của Spring Security 6, vô hại
 
 ### Dữ liệu thử đang có trong CSDL
