@@ -217,8 +217,27 @@ Nếu chỉ dùng mốc "mỗi đơn một chuyến", con số giảm sẽ rất
 | **Định nghĩa** | Mỗi đơn một chuyến khứ hồi từ kho | Cùng cách chia xe như thuật toán, nhưng thứ tự giao theo thứ tự nhận đơn |
 | **Mô phỏng** | Quy trình hiện tại của công ty | Trường hợp công ty đã gom đơn nhưng chưa tối ưu thứ tự |
 | **Đo được gì** | Tổng lợi ích của hệ thống | Riêng đóng góp của việc sắp thứ tự |
-| **Con số điển hình** | Giảm 40–50% | Giảm 8–15% |
+| **Con số dự kiến ban đầu** | Giảm 40–50% | Giảm 8–15% |
+| **Đo thật, 10 ngày seed** | **Giảm 65,9%** | **Giảm 33,1%** |
 | **Độ tin cậy** | Thấp hơn | **Cao hơn** |
+
+### Vì sao số đo thật cao hơn dự kiến
+
+Cả hai mốc đều ra cao hơn con số dự kiến, và lý do là **quy mô mỗi ngày**, không phải cách đo
+đổi đi. Bản thiết kế ước lượng theo ví dụ 8 đơn chia 3 xe; dữ liệu seed thật là **12–15 đơn
+chia 2 xe**, tức mỗi tuyến 6–7 điểm thay vì 2–3 điểm.
+
+- **Mốc A tăng theo số đơn.** `baselineA = Σ 2 × d(kho, điểm)` cộng thêm một số hạng đầy đủ
+  cho mỗi đơn, trong khi tuyến tối ưu gom nhiều đơn vào cùng một vòng nên dài thêm rất ít.
+  Càng nhiều đơn một ngày thì khoảng cách giữa hai bên càng giãn ra. Đây là điều đúng về mặt
+  toán học chứ không phải một con số may mắn.
+- **Mốc B chỉ có chỗ để chênh khi tuyến đủ dài.** Đúng như `docs/08` đã cảnh báo: tuyến 2 điểm
+  thì mốc B ra **đúng 0%** vì ma trận đối xứng. Dữ liệu cũ (3 đơn/ngày) cho mốc B 0–18%; dữ liệu
+  12–15 đơn/ngày cho **22,6% – 44,6%**. Sự chênh này là bằng chứng bằng số cho câu *"quy mô bài
+  toán phải đủ lớn thì việc tối ưu thứ tự mới có ý nghĩa"*.
+
+**Khi vấn đáp phải nói rõ con số 65,9% gắn với quy mô nào.** Nói trống "hệ thống giảm 66%" là
+chỗ dễ bị bẻ nhất của cả báo cáo — nó đúng với 13 đơn/ngày, không đúng với mọi quy mô.
 
 ### Cách tính
 

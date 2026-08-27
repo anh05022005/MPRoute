@@ -12,7 +12,7 @@
 | | |
 |---|---|
 | Theo kế hoạch | Tuần 10 — báo cáo, thực nghiệm benchmark |
-| Thực tế | **Xong phần code của tuần 10.** RPT-03 chạy được, benchmark Augerat có số. **Mọi mục "tuyệt đối không cắt" đã xong** (Nhóm 3, CN-08-03, Nhóm 9). Còn lại là viết chương 4, seed dữ liệu và luận văn |
+| Thực tế | **Xong phần code của tuần 10 và phần seed của tuần 11.** RPT-03 đầy dữ liệu 14 ngày, benchmark Augerat có số. **Mọi mục "tuyệt đối không cắt" đã xong** (Nhóm 3, CN-08-03, Nhóm 9). Còn lại là viết chương 4, chạy thử, quay video và luận văn |
 
 ```
 [x] T1  Chot de tai, hoi Minh Phu 3 cau
@@ -25,7 +25,7 @@
 [x] T8  Man hinh phan tuyen hoan chinh, ve tuyen len ban do
 [x] T9  Man hinh tai xe, tra cuu, su co
 [~] T10 RPT-03 xong, benchmark Augerat xong — CON LAI: viet chuong 4
-[ ] T11 Seed du lieu, chay thu 3 lan, quay video
+[~] T11 Seed 10 ngay xong — CON LAI: chay thu 3 lan, quay video
 [ ] T12 Bao cao hoan chinh, slide, luyen van dap
 ```
 
@@ -36,14 +36,19 @@
 
 ## Việc tiếp theo — TUẦN 10 (phần còn lại) và TUẦN 11
 
-1. **Viết chương 4 báo cáo** — số liệu đã có đủ ở `docs/07` mục "Kết quả đã chạy thật":
-   bảng gap 10 bài, bảng riêng đóng góp 2-opt, và RPT-03 trên dữ liệu thật
-2. **Seed dữ liệu tuần 11** — `docs/08` yêu cầu **ít nhất 10 ngày, mỗi ngày 12–15 đơn**. Hiện
-   RPT-03 chỉ có 4 ngày và 8 đơn nên bảng còn thưa. Seed xong là báo cáo đầy ngay, đồng thời
-   trả luôn được mấy món ở "Còn nợ nghiệm thu" bên dưới
+1. **Viết chương 4 báo cáo** — số liệu đã có đủ ở `docs/07`: bảng gap 10 bài Augerat, bảng
+   riêng đóng góp 2-opt, và RPT-03 trên **14 ngày / 139 đơn** dữ liệu thật
+2. **Chạy thử kịch bản demo 3 lần** theo `docs/08`, rồi quay video
 3. RPT-01, RPT-02 và xuất Excel (CN-08-01, 02, 05) — **cắt được nếu đuối**, đã quyết từ tuần 7.
    Menu "Báo cáo" hiện chỉ có RPT-03, đủ đúng thứ tự cắt của `docs/04`
-4. Quay video, luyện vấn đáp
+4. Luyện vấn đáp
+
+**Seed lại dữ liệu lịch sử** (bật `mysql-8.0.44` và `osrm-vietnam` trước; ngày nào đã có đơn
+thì tự bỏ qua nên chạy lại nhiều lần không sao):
+
+```
+mvnw.cmd spring-boot:run -Dspring-boot.run.arguments=--mproute.seed-history=true
+```
 
 **Cách chạy lại benchmark** (không cần web, MySQL hay OSRM — bấm Run trong IDE là gọn nhất):
 
@@ -66,7 +71,7 @@ chạy thử thật**. Làm được lúc nào cũng được, muộn nhất là
 |---|---|
 | **CN-03-10 (MSG-08)** tổng nhu cầu > tổng sức chứa | Xe nhỏ nhất đã 500 kg / 6 m³ trong khi các đơn thử chỉ vài trăm kg. Cần một đơn thật to |
 | **`approximate_distance` của bảng `routes`** (CN-03-11) | Phải tắt `osrm-vietnam` rồi chạy tối ưu **với tập điểm chưa có trong `distance_matrix`**. Lần thử trước chỉ chứng minh được phần bản đồ, vì ma trận của các điểm đó đã nằm sẵn trong cache |
-| **BR07-03** tra SĐT chỉ hiện đơn 30 ngày gần nhất | CSDL chưa có đơn nào cũ hơn 30 ngày |
+| **BR07-03** tra SĐT chỉ hiện đơn 30 ngày gần nhất | Đơn cũ nhất mới là 13/08, chưa quá 30 ngày. Seed thêm một ngày thật xa là thử được |
 | **CN-04-08 gửi thư thật** | Mở năm dòng SMTP trong `application.properties`, đặt `MPROUTE_MAIL_USERNAME` / `MPROUTE_MAIL_PASSWORD` bằng mật khẩu ứng dụng Gmail, đổi email một khách thành email thật rồi chốt một tuyến. Nhánh ghi `notifications` và nội dung thư đã kiểm xong |
 | **BR02-11** đơn `ROUTED` ra đúng chữ MSG-07 | Nay đã có đơn `ROUTED` thật trong CSDL nên thử được ngay |
 | **Đo lại `HAVERSINE_FACTOR`** | Đang để 1.3, đo ở tuần 5 thấy **ước lượng thiếu ~24%**. Nay `distance_matrix` đã có nhiều cặp điểm OSRM thật, tính lại được bằng một câu truy vấn |
@@ -144,6 +149,8 @@ nhưng số km là xấp xỉ, **đừng lấy số đó đưa vào báo cáo**.
 Toàn bộ là dữ liệu do các lần kiểm thử tạo ra, **xóa lúc seed lại ở tuần 11**. Giữ đến lúc đó vì
 mỗi thứ đang phục vụ một phép thử:
 
+- **131 đơn lịch sử của 10 ngày 13/08–25/08** do `HistorySeeder` sinh, đã giao xong. Đây là
+  nguồn dữ liệu của RPT-03, **giữ lại đến ngày bảo vệ**
 - 15 đơn thử rải từ 16/08 đến 28/08, đủ mọi trạng thái kể cả `FAILED` và `POSTPONED`
 - Ngày 27/08: tuyến `TT26082702` **đang chạy**, có đơn `DELIVERING` để thử `/track`; tuyến
   `TT26082701` đã đóng sau khi xử lý sự cố

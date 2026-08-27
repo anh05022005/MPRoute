@@ -651,3 +651,41 @@ bước 12–14 (phương án B) cần hai tuyến chạy song song mới dựng
 - **Hai test thêm cho `VrpFileReader`** (ngoài 14 test bắt buộc). Lý do: quy ước làm tròn EUC_2D
   sai thì **không bao giờ báo lỗi** — chương trình vẫn chạy, vẫn in ra bảng, chỉ có mọi con số
   gap là sai. Test kiểm tay `d(kho, điểm 2) = round(√(14² + 32²)) = round(34,93) = 35`
+
+### Seed 10 ngày lịch sử cho RPT-03 (docs/08)
+
+- **`HistorySeeder` chạy đúng pipeline thật**, không chèn số vào `optimization_results`: tạo đơn
+  → duyệt → chạy OR-Tools trên ma trận OSRM → gán tài xế → chốt kế hoạch → giao hàng. Mọi con số
+  của báo cáo do chính thuật toán tính ra. Chèn thẳng vài dòng "nhìn cho hợp lý" vào bảng đó là
+  đúng cái `docs/07` mở đầu bằng lời cảnh báo — hội đồng chỉ cần hỏi *"số này đo ở đâu"* là hỏng
+- **Kết quả:** 10 ngày mới (13/08–25/08), 131 đơn, mỗi ngày 2 tuyến 6–7 điểm.
+  **RPT-03 nay có 14 ngày, 139 đơn, giảm 65,9% so với mốc A và 33,1% so với mốc B, tiết kiệm
+  114 chuyến xe**
+- **★ Khẳng định được điều `docs/08` cảnh báo, bằng số của chính mình:** dữ liệu cũ 3 đơn/ngày
+  cho mốc B **0–18%**, dữ liệu 12–15 đơn/ngày cho **22,6–44,6%**. Tuyến 2 điểm thì mốc B đúng
+  bằng 0 vì ma trận đối xứng, không phải code sai. Đây là câu trả lời vấn đáp có số cho
+  *"quy mô bài toán phải đủ lớn thì tối ưu thứ tự mới có ý nghĩa"*
+- **Mốc A ra 65,9% chứ không phải 40–50% như dự kiến**, vì `baselineA = Σ 2 × d(kho, điểm)` cộng
+  thêm trọn một số hạng cho mỗi đơn, còn tuyến tối ưu gom nhiều đơn vào một vòng nên dài thêm rất
+  ít. Càng nhiều đơn thì hai bên càng giãn. **Khi vấn đáp phải gắn con số với quy mô** — nói
+  trống "hệ thống giảm 66%" là chỗ dễ bị bẻ nhất
+- **Bỏ qua ngày đã có đơn** (17/08, 21/08, 26/08 do các lần kiểm thử trước tạo ra) rồi lùi xa
+  thêm cho đủ 10 ngày sạch, thay vì ghi đè. Ghi đè là mất mấy tình huống đang phục vụ phép thử
+  khác — tuyến đang chạy, sự cố đã xử lý
+- **Ba xe mượn tạm sang `AVAILABLE` rồi trả lại trạng thái cũ trong khối `finally`.** Phân tuyến
+  chỉ nhận xe `AVAILABLE` (CBR-05), mà ba trong bốn xe đang `MAINTENANCE`/`IN_USE` là dàn sẵn cho
+  kịch bản demo bước 2 và 5b. Trả trong `finally` để lỗi giữa chừng cũng không làm hỏng kịch bản
+- **Ngân sách 75% sức chứa đội xe mỗi ngày.** Lấp gần đầy thì bài toán thành xếp thùng gần hoàn
+  hảo, OR-Tools phải bỏ lại vài đơn, và `confirmPlan` từ chối chốt vì còn đơn chưa xếp (đúng theo
+  CN-03-14) — ngày đó sẽ treo giữa chừng
+- **Không gọi được `DeliveryService`** cho ngày đã qua: mọi hàm của nó bắt đầu bằng *"tuyến của
+  tài xế đang đăng nhập TRONG NGÀY HÔM NAY"* (BR05-01). Các bước chuyển trạng thái trong seeder
+  đi theo đúng `confirmPickup` / `markDelivered` / `markFailed` / `finishRouteIfDone`, có ghi chú
+  chéo ở cả hai nơi — sửa luồng trạng thái bên kia thì phải sửa cả bên này
+- **Một chỗ không thật được, đã cân nhắc:** `status_history.changed_at` ghi thời điểm chạy seed
+  chứ không phải thời điểm lịch sử, vì `StatusHistoryService` luôn đặt `LocalDateTime.now()` và
+  sửa chữ ký của một lớp dùng chung chỉ để phục vụ seed thì không đáng. Các mốc **thuộc về nghiệp
+  vụ** (`departed_at`, `completed_at`, `actual_arrival`) đều đặt đúng ngày lịch sử
+- **Tỷ lệ lấp đầy ra 97–99% kg nhưng chỉ 37–52% m³** — đúng đặc thù hàng của Minh Phú: nước giặt
+  và nước lau sàn nặng mà gọn, nên xe đầy tải trọng trước khi đầy thùng. Chính là lý do phải kiểm
+  **cả hai** ràng buộc chứ không chỉ một (CBR-03, CBR-04)

@@ -189,6 +189,34 @@ Tạo dữ liệu cho **ít nhất 10 ngày trước**, **mỗi ngày 12–15 đ
 
 Thêm vài đơn `FAILED` với các lý do khác nhau để báo cáo RPT-02 có dữ liệu.
 
+#### Việc này do `HistorySeeder` làm — đã chạy xong 27/08/2026
+
+```
+mvnw.cmd spring-boot:run -Dspring-boot.run.arguments=--mproute.seed-history=true
+```
+
+Bật cả `mysql-8.0.44` lẫn `osrm-vietnam` trước khi chạy. **Thiếu OSRM thì seed vẫn xong nhưng
+mọi ngày đều mang cờ `approximate_distance`, và RPT-03 xếp hết chúng vào bảng "không tính vào
+trung bình" (BR08-03)** — tức là seed xong mà báo cáo vẫn trống. Chạy lại nhiều lần không sao:
+ngày nào đã có đơn thì bỏ qua.
+
+**`HistorySeeder` không chế số.** Nó chạy đúng đường mà điều phối viên đi mỗi ngày —
+*tạo đơn → duyệt → chạy OR-Tools → gán tài xế → chốt kế hoạch → giao hàng* — nên mọi con số
+trong `optimization_results` đều do chính thuật toán tính trên ma trận OSRM thật. Chèn thẳng
+vài dòng quãng đường "nhìn cho hợp lý" vào bảng đó là đúng cái mà `07-thuc-nghiem.md` mở đầu
+bằng lời cảnh báo, và hội đồng chỉ cần hỏi *"số này đo ở đâu"* là hỏng.
+
+Bộ sinh số ngẫu nhiên dùng hạt giống cố định nên seed lại ra đúng bộ đơn cũ, con số trong luận
+văn đối chiếu lại được.
+
+Ba xe lớn nhất được **mượn tạm** sang `AVAILABLE` trong lúc seed rồi **trả lại trạng thái cũ**
+khi xong — trạng thái bảo trì của chúng là dàn sẵn cho kịch bản demo bước 2 và 5b, không được
+làm hỏng.
+
+**Kết quả thật của lần chạy 27/08/2026:** 10 ngày mới (13/08–25/08, bỏ qua các ngày đã có đơn
+từ những lần kiểm thử trước), 131 đơn, mỗi ngày 2 tuyến 6–7 điểm, giảm **65,9%** so với mốc A
+và **33,1%** so với mốc B, 3 đơn `FAILED` với 3 lý do khác nhau.
+
 #### Vì sao phải 12–15 đơn/ngày chứ không phải 5–8
 
 Đây là chỗ dễ hỏng nhất của chương 4, và hỏng thì tới tuần 10 mới phát hiện.

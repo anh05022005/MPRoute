@@ -26,6 +26,8 @@ import org.springframework.stereotype.Component;
  * cung theo docs/08-du-lieu-mau.md.
  */
 @Component
+// Phai chay TRUOC HistorySeeder: no can san tai khoan dieu phoi va cac tham so he thong
+@org.springframework.core.annotation.Order(1)
 @RequiredArgsConstructor
 @Slf4j
 public class DataSeeder implements CommandLineRunner {
