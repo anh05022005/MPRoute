@@ -20,6 +20,7 @@
     askForPosition();
     setUpCollectedAmount();
     setUpFailureReason();
+    setUpIncidentForm();
 
     // ==================== BR05-08 toa do luc bam nut ====================
 
@@ -95,6 +96,35 @@
                 box.hidden = !isOther;
                 note.required = isOther;
             });
+        });
+    }
+
+    // ==================== BR06-01, BR06-04 bieu mau bao su co ====================
+
+    function setUpIncidentForm() {
+        var typeSelect = document.querySelector('.incident-type');
+        var severitySelect = document.querySelector('.incident-severity');
+        if (!typeSelect || !severitySelect) {
+            return;   // tuyen chua chay thi khong co nut bao su co
+        }
+
+        var noteBox = document.querySelector('.incident-note-box');
+        var note = document.querySelector('.incident-note');
+        var delayBox = document.querySelector('.incident-delay-box');
+        var delay = document.querySelector('.incident-delay');
+
+        // BR06-01 — loai "Khac" thi bat buoc mo ta
+        typeSelect.addEventListener('change', function () {
+            var isOther = typeSelect.value === 'OTHER';
+            noteBox.hidden = !isOther;
+            note.required = isOther;
+        });
+
+        // BR06-04 — muc "Van tiep tuc duoc" thi bat buoc nhap so phut cham tre
+        severitySelect.addEventListener('change', function () {
+            var canContinue = severitySelect.value === 'CAN_CONTINUE';
+            delayBox.hidden = !canContinue;
+            delay.required = canContinue;
         });
     }
 })();

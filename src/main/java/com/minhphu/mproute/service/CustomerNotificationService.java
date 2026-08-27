@@ -18,6 +18,7 @@ import org.springframework.web.context.request.RequestContextHolder;
 import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
 
 import java.time.format.DateTimeFormatter;
+import java.util.List;
 
 /**
  * Gui email bao gio giao du kien cho khach sau khi chot tuyen (CN-04-08, BR04-11, NTF-08).
@@ -44,6 +45,7 @@ import java.time.format.DateTimeFormatter;
 public class CustomerNotificationService {
 
     private static final String EVENT_ROUTE_CONFIRMED = "NTF-08";
+    private static final String EVENT_ETA_CHANGED = "NTF-07";
 
     private static final DateTimeFormatter DAY_MONTH_YEAR = DateTimeFormatter.ofPattern("dd/MM/yyyy");
     private static final DateTimeFormatter HOUR_MINUTE = DateTimeFormatter.ofPattern("HH:mm");
@@ -80,13 +82,13 @@ public class CustomerNotificationService {
 
             // BR04-12 — khach khong co email van phai co ban ghi, de dieu phoi biet ma goi dien
             if (customer.getEmail() == null || customer.getEmail().isBlank()) {
-                record(null, body, link, NotificationSendStatus.NOT_SENT);
+                record(null, body, link, NotificationSendStatus.NOT_SENT, EVENT_ROUTE_CONFIRMED);
                 missingEmail++;
                 continue;
             }
 
             NotificationSendStatus status = send(customer.getEmail(), subject, body);
-            record(customer.getEmail(), body, link, status);
+            record(customer.getEmail(), body, link, status, EVENT_ROUTE_CONFIRMED);
 
             switch (status) {
                 case SENT -> sent++;
@@ -100,7 +102,77 @@ public class CustomerNotificationService {
         return new MailResult(sent, missingEmail, failed);
     }
 
+    /**
+     * Bao gio giao MOI cho cac khach bi anh huong khi tuyen co su co (CN-06-12, BR06-13, NTF-07).
+     *
+     * Goi SAU khi da tinh lai ETA chu khong truoc: thu phai mang con so moi, gui truoc thi khach
+     * nhan duoc dung cai gio cu ma he thong vua bo di.
+     *
+     * @param reason mot cau ngan noi vi sao doi gio, vi du "xe gap su co tren duong". Khach doc
+     *               thu thay gio lui lai ma khong co ly do thi ho goi dien hoi — dung cai ma
+     *               chuc nang nay dinh tranh
+     */
+    @Transactional
+    public MailResult notifyEtaChanged(List<RouteStop> stops, String reason) {
+        int sent = 0;
+        int missingEmail = 0;
+        int failed = 0;
+
+        String trackingBaseUrl = trackingBaseUrl();
+
+        for (RouteStop stop : stops) {
+            Order order = stop.getOrder();
+            Customer customer = order.getCustomer();
+
+            String subject = "Thay đổi giờ giao đơn hàng " + order.getCode();
+            String body = buildEtaChangedBody(order, stop, reason, trackingBaseUrl);
+            String link = trackingBaseUrl + "/track/" + order.getCode();
+
+            if (customer.getEmail() == null || customer.getEmail().isBlank()) {
+                record(null, body, link, NotificationSendStatus.NOT_SENT, EVENT_ETA_CHANGED);
+                missingEmail++;
+                continue;
+            }
+
+            NotificationSendStatus status = send(customer.getEmail(), subject, body);
+            record(customer.getEmail(), body, link, status, EVENT_ETA_CHANGED);
+
+            switch (status) {
+                case SENT -> sent++;
+                case ERROR -> failed++;
+                case NOT_SENT -> missingEmail++;
+            }
+        }
+
+        log.info("Bao ETA moi cho {} khach: {} thu da gui, {} khach khong co email, {} thu loi",
+                stops.size(), sent, missingEmail, failed);
+        return new MailResult(sent, missingEmail, failed);
+    }
+
     // ==================== Ham rieng ====================
+
+    private String buildEtaChangedBody(Order order, RouteStop stop, String reason, String trackingBaseUrl) {
+        StringBuilder body = new StringBuilder();
+        body.append("Kính gửi ").append(order.getCustomer().getName()).append(",\n\n");
+        body.append("Đơn hàng ").append(order.getCode()).append(" của quý khách bị lùi giờ giao");
+        if (reason != null && !reason.isBlank()) {
+            body.append(" do ").append(reason.trim());
+        }
+        body.append(".\n\n");
+
+        if (stop.getEstimatedArrival() != null) {
+            body.append("  Giờ dự kiến mới: khoảng ")
+                    .append(stop.getEstimatedArrival().format(HOUR_MINUTE))
+                    .append(" ngày ").append(order.getDeliveryDate().format(DAY_MONTH_YEAR)).append('\n');
+        }
+        body.append("  Địa chỉ giao   : ").append(order.getDeliveryAddress()).append('\n');
+
+        body.append("\nCông ty Minh Phú thành thật xin lỗi vì sự chậm trễ. ");
+        body.append("Quý khách theo dõi tình trạng đơn tại:\n");
+        body.append("  ").append(trackingBaseUrl).append("/track/").append(order.getCode()).append("\n\n");
+        body.append("Trân trọng,\nCông ty Minh Phú");
+        return body.toString();
+    }
 
     /**
      * Noi dung thu. Van ban thuan chu khong phai HTML.
@@ -161,11 +233,12 @@ public class CustomerNotificationService {
         }
     }
 
-    private void record(String email, String content, String link, NotificationSendStatus status) {
+    private void record(String email, String content, String link,
+                        NotificationSendStatus status, String eventCode) {
         Notification notification = new Notification();
         // recipient de null: nguoi nhan la khach hang chu khong phai tai khoan trong he thong
         notification.setRecipientEmail(email);
-        notification.setEventCode(EVENT_ROUTE_CONFIRMED);
+        notification.setEventCode(eventCode);
         notification.setContent(content);
         notification.setLink(link);
         notification.setSendStatus(status);

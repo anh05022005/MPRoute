@@ -2,8 +2,11 @@ package com.minhphu.mproute.controller;
 
 import com.minhphu.mproute.entity.Route;
 import com.minhphu.mproute.entity.enums.FailureReason;
+import com.minhphu.mproute.entity.enums.IncidentSeverity;
+import com.minhphu.mproute.entity.enums.IncidentType;
 import com.minhphu.mproute.security.CurrentUser;
 import com.minhphu.mproute.service.DeliveryService;
+import com.minhphu.mproute.service.IncidentService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.format.annotation.DateTimeFormat;
@@ -41,6 +44,7 @@ import java.util.Optional;
 public class DeliveryController {
 
     private final DeliveryService deliveryService;
+    private final IncidentService incidentService;
 
     /** CN-05-01 — tuyen hom nay cua chinh tai xe dang dang nhap. */
     @GetMapping("/my-route")
@@ -135,6 +139,37 @@ public class DeliveryController {
         return "redirect:/driver/my-route";
     }
 
+    /** CN-06-01, CN-06-02 — tai xe bao su co tren duong. */
+    @PostMapping("/my-route/incident")
+    public String reportIncident(@RequestParam(required = false) IncidentType incidentType,
+                                 @RequestParam(required = false) IncidentSeverity severity,
+                                 @RequestParam(required = false) String description,
+                                 @RequestParam(required = false) Integer delayMinutes,
+                                 @RequestParam(required = false) Double latitude,
+                                 @RequestParam(required = false) Double longitude,
+                                 @AuthenticationPrincipal CurrentUser currentUser,
+                                 RedirectAttributes redirectAttributes) {
+        try {
+            IncidentService.ReportResult result = incidentService.report(currentUser.getId(),
+                    incidentType, severity, description, delayMinutes, latitude, longitude);
+
+            /*
+             * Hai muc do bao hai cau khac han nhau, vi tai xe phai lam hai viec khac nhau tiep
+             * theo: muc nhe thi cu di tiep, muc nang thi dung lai cho dieu phoi goi.
+             */
+            String message = result.needsDispatcher()
+                    ? String.format("Đã báo sự cố. Điều phối viên đang xử lý %d điểm chưa giao. "
+                            + "Bạn dừng lại chờ hướng dẫn, đừng tự đi tiếp.", result.affectedStopCount())
+                    : String.format("Đã báo sự cố và lùi giờ dự kiến của %d điểm còn lại. "
+                            + "Khách đã được thông báo, bạn cứ tiếp tục giao.", result.affectedStopCount());
+            redirectAttributes.addFlashAttribute("successMessage", message);
+
+        } catch (IllegalArgumentException | IllegalStateException ex) {
+            redirectAttributes.addFlashAttribute("errorMessage", ex.getMessage());
+        }
+        return "redirect:/driver/my-route";
+    }
+
     // ==================== Ham rieng ====================
 
     /**
@@ -164,6 +199,10 @@ public class DeliveryController {
 
         // CN-05-08: danh sach ly do that bai co san, tai xe khong duoc go tu do (BR05-06)
         model.addAttribute("failureReasons", FailureReason.values());
+
+        // CN-06-02: loai su co va muc do, cung nguyen tac chon tu danh sach (BR06-01, BR06-03)
+        model.addAttribute("incidentTypes", IncidentType.values());
+        model.addAttribute("incidentSeverities", IncidentSeverity.values());
 
         // CN-05-09: hoan som nhat la ngay mai, va o chon ngay khong cho chon qua khu (BR05-07)
         model.addAttribute("tomorrow", LocalDate.now().plusDays(1));

@@ -486,6 +486,13 @@ body {
   gap: 8px;
 }
 
+/* The incident button sits last on the screen with a red outline, so it is always the
+   thing under the driver thumb when something goes wrong on the road (CN-06-01). */
+.incident-block {
+  border-top: 1px solid var(--border);
+  padding-top: 14px;
+}
+
 /* On a phone the top bar has to stack, otherwise the logout button falls off the edge */
 @media (max-width: 575px) {
   .app-header {

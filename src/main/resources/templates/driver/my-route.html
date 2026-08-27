@@ -263,6 +263,66 @@
         </div>
 
         <!--
+            ============ CN-06-01, CN-06-02 Bao su co ============
+            Nut vien do, dat cuoi man hinh, chi hien khi tuyen DANG CHAY: truoc do xe con o kho
+            nen chua co gi tren duong de bao, sau do thi tuyen da xong.
+        -->
+        <div th:if="${route.status.name() == 'IN_PROGRESS'}" class="incident-block mt-4">
+            <button type="button" class="btn btn-outline-danger w-100 btn-lg"
+                    data-bs-toggle="collapse" data-bs-target="#incident-form">
+                BÁO SỰ CỐ
+            </button>
+
+            <div class="collapse" id="incident-form">
+                <form th:action="@{/driver/my-route/incident}" method="post"
+                      class="stop-form mt-2 needs-position">
+                    <input type="hidden" name="latitude" class="position-latitude">
+                    <input type="hidden" name="longitude" class="position-longitude">
+
+                    <label class="form-label mb-1 small">Loại sự cố</label>
+                    <select name="incidentType" class="form-select incident-type" required>
+                        <option value="" selected disabled>— Chọn loại —</option>
+                        <option th:each="type : ${incidentTypes}"
+                                th:value="${type}" th:text="${type.displayName}">Tắc đường</option>
+                    </select>
+
+                    <!-- BR06-01 — chon "Khac" thi bat buoc mo ta -->
+                    <div class="incident-note-box mt-2" hidden>
+                        <input type="text" name="description" maxlength="500"
+                               class="form-control incident-note" placeholder="Mô tả cụ thể">
+                    </div>
+
+                    <label class="form-label mb-1 small mt-2">Mức độ</label>
+                    <select name="severity" class="form-select incident-severity" required>
+                        <option value="" selected disabled>— Chọn mức độ —</option>
+                        <option th:each="level : ${incidentSeverities}"
+                                th:value="${level}" th:text="${level.displayName}">Vẫn tiếp tục được</option>
+                    </select>
+
+                    <!--
+                        BR06-04 — chon "Van tiep tuc duoc" thi bat buoc nhap so phut cham tre.
+                        Con so nay he thong dung de cong thang vao ETA cac diem con lai.
+                    -->
+                    <div class="incident-delay-box mt-2" hidden>
+                        <label class="form-label mb-1 small">Chậm khoảng bao nhiêu phút?</label>
+                        <input type="number" name="delayMinutes" min="1" max="480"
+                               class="form-control incident-delay" placeholder="Ví dụ: 30">
+                        <div class="form-text">
+                            Hệ thống sẽ lùi giờ dự kiến của các điểm chưa giao và báo cho khách.
+                        </div>
+                    </div>
+
+                    <div class="form-text mt-2">
+                        Chọn <strong>Không thể tiếp tục</strong> nếu xe không chạy được nữa.
+                        Khi đó bạn dừng lại chờ điều phối viên gọi, đừng tự đi tiếp.
+                    </div>
+
+                    <button type="submit" class="btn btn-danger w-100 mt-2">Gửi báo sự cố</button>
+                </form>
+            </div>
+        </div>
+
+        <!--
             ============ CN-05-10 Man hinh tong ket ============
             Hien khi moi diem da co ket qua. Tong tien cong tu SO THUC THU o tung diem dung
             chu khong phai so phai thu tren don — cuoi ngay doi soat quy thi phai lay so that.
