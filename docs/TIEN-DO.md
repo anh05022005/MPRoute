@@ -11,7 +11,7 @@
 | | |
 |---|---|
 | Theo kế hoạch | Tuần 9 — tài xế, tra cứu, sự cố |
-| Thực tế | **Đúng tiến độ.** Tuần 8 xong trọn. Tuần 9: **xong Nhóm 5 (CN-05-01 → 11) và Nhóm 7 (CN-07-01 → 07)** — đơn hàng đi trọn vòng đời, và khách tra cứu được từ ngoài. Còn email ETA và nhóm sự cố |
+| Thực tế | **Xong tuần 9, sớm hơn kế hoạch.** Nhóm 4, 5, 6, 7 đều xong trọn — **hết chức năng bắt buộc của phần chạy được**. Còn lại là báo cáo, thực nghiệm benchmark và viết luận văn |
 
 ```
 [x] T1  Chot de tai, hoi Minh Phu 3 cau
@@ -22,7 +22,7 @@
 [x] T6  NearestNeighbor chay duoc bang main(), test xanh
 [x] T7  2-opt chay duoc, OR-Tools cam vao, bang so sanh 4 dong
 [x] T8  Man hinh phan tuyen hoan chinh, ve tuyen len ban do
-[~] T9  Man hinh tai xe, tra cuu, su co  <- dang lam
+[x] T9  Man hinh tai xe, tra cuu, su co
 [ ] T10 RPT-03 xong, benchmark Augerat xong, chuong 4 viet xong
 [ ] T11 Seed du lieu, chay thu 3 lan, quay video
 [ ] T12 Bao cao hoan chinh, slide, luyen van dap
@@ -559,6 +559,52 @@ bước 12–14 (phương án B) cần hai tuyến chạy song song mới dựng
     `CAN_CONTINUE` mà không nhập số phút (BR06-04)
   - Nút **BÁO SỰ CỐ** viền đỏ đặt cuối màn hình tài xế, **chỉ hiện khi tuyến `IN_PROGRESS`** —
     trước đó xe còn ở kho nên chưa có gì trên đường để báo, sau đó thì tuyến đã xong
+- **★ CN-06-06 → CN-06-12 — màn hình xử lý sự cố. Nhóm 6 xong trọn, và đây là chức năng
+  cuối cùng của 9 nhóm chức năng bắt buộc.**
+  - **Km phát sinh là thước đo duy nhất dùng để xếp hạng**, và nó phải được tính giống nhau cho
+    cả ba phương án — **mọi con số đều từ MỘT ma trận chung**, nạp một lần cho toàn bộ điểm liên
+    quan. Mỗi phương án một ma trận riêng thì không so sánh được với nhau, mà bảng xếp hạng lại
+    chính là sản phẩm của màn hình này
+  - **Chạy thật, cả ba phương án cùng lúc**, xếp đúng thứ tự:
+
+    ```
+    1. Chen vao tuyen TT26082702 — 29F-555.66      6,44 km   khong can huy dong xe moi
+    2. Dieu xe 29B-222.11 ra sang hang            18,20 km   xe 29B-222.11 va mot tai xe ranh
+    3. Hoan 1 diem con lai sang ngay mai           0,00 km   khach khong nhan duoc hang hom nay
+    ```
+
+    **Phương án C có km bằng 0 mà vẫn xếp cuối** (BR06-08, BR06-11) — không phát sinh km nào
+    nhưng khách không nhận được hàng hôm nay, cái giá đó không đo bằng km được
+  - **★ CN-06-11 áp dụng phương án B, con số dự đoán khớp chính xác con số thật:** trước khi áp
+    dụng màn hình báo phát sinh **6,44 km**; sau khi áp dụng tuyến nhận đi từ `16 637,1 m` lên
+    `23 079,2 m`, đúng **6 442,1 m**. Điểm dừng chuyển sang tuyến mới, tuyến hỏng `COMPLETED`,
+    ETA tính lại (`08:16:38` và `08:48:30`), có dòng `status_history`, sự cố `RESOLVED` kèm
+    `extra_distance`
+  - **★ CN-06-12** khách bị ảnh hưởng nhận **NTF-07** kèm giờ mới và lý do *"xe gặp sự cố trên
+    đường"*
+  - **Chuyển điểm dừng sang tuyến khác chứ không tạo điểm mới** (phương án B): cột
+    `route_stops.order_id` đặt `UNIQUE` toàn bảng (CBR-02), tạo dòng mới mà không xóa dòng cũ là
+    đâm thẳng vào ràng buộc đó — đúng cái bẫy đã làm hỏng chức năng hủy tuyến ở tuần 8
+  - **Phương án C dùng lại đúng hàm hoãn của màn hình tài xế** (CN-05-09) chứ không viết đường
+    hoãn thứ hai. Đã tách phần lõi ra `movePostponed()`: hai đường vào khác nhau (tài xế bấm nút,
+    điều phối chọn phương án) nhưng cùng một phần thân, nên không bao giờ lệch nhau
+  - **`EtaCalculator` thêm tham số điểm xuất phát** thay vì viết hàm tính giờ thứ hai. Xe cứu hộ
+    xuất phát từ điểm sự cố, xe được chèn thêm điểm thì đang ở giữa đường — cả hai đều không bắt
+    đầu từ kho, nhưng **công thức tính giờ không đổi**, chỉ khác mốc xuất phát
+  - **Chỉ hiện phương án khả thi** (BR06-09): xe không đủ sức chứa hoặc tuyến ứng viên không chèn
+    được hết điểm đều bị loại ngay ở tầng service. Điều phối viên đang xử lý sự cố, không có thời
+    gian mở từng cái ra mới biết không dùng được
+  - **Phương án B phải chèn được HẾT** thì mới kể là khả thi — chèn được ba trong bốn điểm không
+    giúp gì: điểm còn lại vẫn không ai giao, mà điều phối lại tưởng đã xong
+  - **Phân quyền:** `admin` xem được nhưng POST áp dụng ra **403**; `taixe02` ra **403** cả hai
+    đường. Áp dụng lần hai trên sự cố đã xử lý bị chặn
+  - **Sửa hai lỗi thật lộ ra khi chạy thử:**
+    - `generateOptions()` để `@Transactional(readOnly = true)` nhưng `loadMatrix()` **có ghi** —
+      nó lưu các ô khoảng cách vừa lấy từ OSRM vào bộ nhớ đệm (CBR-12). MySQL từ chối thẳng với
+      `Connection is read-only`, màn hình sự cố ra **500** đúng lúc cần nó nhất
+    - `th:if="${a or b}"` trong `layout.html` làm **cả trang danh sách sự cố hỏng**: màn hình nào
+      không đặt cờ nào thì biến đó là `null`, mà SpEL không đổi được `null` sang boolean
+      (`EL1001E`). Phải so sánh `!= null` tường minh
 - **Sửa một chỗ bỏ sót của tuần 9:** đơn **chưa bao giờ đi qua trạng thái `DELIVERING`**, nhảy
   thẳng `ROUTED → DELIVERED`, lệch với luồng trạng thái ở `docs/01`. Nay tài xế bấm nhận hàng thì
   mọi đơn của tuyến chuyển sang `DELIVERING` và điểm kế tiếp chuyển sang `DELIVERING`. **Không có
@@ -566,17 +612,21 @@ bước 12–14 (phương án B) cần hai tuyến chạy song song mới dựng
 
 ---
 
-## Việc tiếp theo — TUẦN 9
+## Việc tiếp theo — TUẦN 10
 
-1. **Nửa sau Nhóm 6 — màn hình xử lý sự cố** (CN-06-06 → CN-06-12): điều phối viên xem sự cố và
-   vị trí xe trên bản đồ, hệ thống sinh ba phương án A/B/C xếp theo km phát sinh, chọn một
-   phương án thì cập nhật tuyến, tính lại ETA và báo khách.
-   `CheapestInsertion` đã viết sẵn từ tuần 7 nên phương án B không tốn nhiều.
-   **Đã có sẵn sự cố `PENDING` trong CSDL** (tuyến `TT26082701`, xe hỏng) để bấm thử ngay
-2. **Nghiệm thu BR07-03** — tra bằng SĐT chỉ hiện đơn 30 ngày gần nhất. Code đã lọc đúng nhưng
+1. **RPT-03 Báo cáo hiệu quả tối ưu** (CN-08-03) — **không được cắt**. Nguồn dữ liệu là bảng
+   `optimization_results` đã ghi từ tuần 8, hiện có sẵn vài dòng thật
+2. **Benchmark Augerat** (CN-09-02) — tải bộ dữ liệu, viết hàm đọc file `.vrp`, chạy qua
+   `AlgorithmRunner`, lập bảng gap. **Đây là phần ăn điểm của chương 4, không được cắt**
+3. **Bảng so sánh NN và NN+2-opt** (CN-09-03) — số liệu đã có từ tuần 7, chỉ cần dựng lại bảng
+4. RPT-01, RPT-02 và xuất Excel (CN-08-01, 02, 05) — **cắt được nếu đuối**, đã quyết từ tuần 7
+
+Còn nợ nghiệm thu, làm được lúc nào cũng được:
+
+1. **Nghiệm thu BR07-03** — tra bằng SĐT chỉ hiện đơn 30 ngày gần nhất. Code đã lọc đúng nhưng
    **chưa thử được**: CSDL chưa có đơn nào cũ hơn 30 ngày. Thử luôn khi seed dữ liệu 10 ngày
    trước ở tuần 11
-3. **Gửi thư thật một lần** để nghiệm thu trọn CN-04-08: mở năm dòng SMTP trong
+2. **Gửi thư thật một lần** để nghiệm thu trọn CN-04-08: mở năm dòng SMTP trong
    `application.properties`, đặt `MPROUTE_MAIL_USERNAME` / `MPROUTE_MAIL_PASSWORD` bằng mật khẩu
    ứng dụng của Gmail, đổi email của một khách trong danh mục thành email thật rồi chốt một tuyến.
    Hiện đã kiểm được nhánh ghi `notifications` và nội dung thư, **chưa kiểm được nhánh gửi thật**
