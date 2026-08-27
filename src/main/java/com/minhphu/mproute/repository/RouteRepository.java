@@ -78,4 +78,20 @@ public interface RouteRepository extends JpaRepository<Route, Long> {
                                     @Param("beforeDate") LocalDate beforeDate);
 
     long countByDeliveryDate(LocalDate deliveryDate);
+
+    /**
+     * Cac ngay trong khoang van con it nhat MOT tuyen chua bi huy — dung cho bao cao
+     * RPT-03 de bo di nhung ngay ma moi tuyen deu da huy (BR08-04, CN-08-04).
+     *
+     * Tra ve DANH SACH NGAY chu khong tra ve tuyen: bao cao chi can biet ngay do co
+     * chuyen hang nao thuc su chay khong. Gom nhom ngay trong SQL de ca khoang 365
+     * ngay van chi ton mot cau truy van, thay vi hoi lai CSDL cho tung ngay.
+     */
+    @Query("""
+            SELECT DISTINCT r.deliveryDate FROM Route r
+            WHERE r.deliveryDate BETWEEN :fromDate AND :toDate
+              AND r.status <> com.minhphu.mproute.entity.enums.RouteStatus.CANCELLED
+            """)
+    List<LocalDate> findDatesWithLiveRoutes(@Param("fromDate") LocalDate fromDate,
+                                            @Param("toDate") LocalDate toDate);
 }

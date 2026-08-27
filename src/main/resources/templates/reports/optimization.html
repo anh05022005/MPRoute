@@ -1,0 +1,271 @@
+<!DOCTYPE html>
+<!--
+    SCR-14 — RPT-03 Bao cao hieu qua toi uu (CN-08-03).
+
+    Man hinh nay la cho hoi dong nhin thay ket qua cua ca do an bang so. Thu tu tren
+    duoi co chu dich: khoi chi so tong ket len dau (cau tra loi), roi bieu do (xu the),
+    roi bang chi tiet tung ngay (bang chung). Ai chi xem ba dong dau cung du hieu.
+-->
+<html lang="vi"
+      xmlns:th="http://www.thymeleaf.org"
+      th:replace="~{layout :: main('Báo cáo hiệu quả tối ưu', ~{::content})}">
+<body>
+
+<div th:fragment="content">
+
+    <div class="toolbar">
+        <form th:action="@{/reports/optimization}" method="get" class="d-flex align-items-end gap-2">
+            <div>
+                <label for="fromDate" class="form-label mb-1 small">Từ ngày</label>
+                <input type="date" id="fromDate" name="fromDate"
+                       class="form-control form-control-sm" style="width: 170px;"
+                       th:value="${fromDate}">
+            </div>
+            <div>
+                <label for="toDate" class="form-label mb-1 small">Đến ngày</label>
+                <input type="date" id="toDate" name="toDate"
+                       class="form-control form-control-sm" style="width: 170px;"
+                       th:value="${toDate}">
+            </div>
+            <button type="submit" class="btn btn-sm btn-primary">Xem báo cáo</button>
+        </form>
+    </div>
+
+    <div class="section-label">RPT-03 — Hiệu quả tối ưu tuyến đường</div>
+
+    <!-- ============ Chua co du lieu ============ -->
+    <div th:if="${report.empty}" class="panel">
+        <div class="text-sub small">
+            Chưa có lần chạy phân tuyến nào trong khoảng
+            <strong th:text="${#temporals.format(fromDate, 'dd/MM/yyyy')}">01/08/2026</strong> –
+            <strong th:text="${#temporals.format(toDate, 'dd/MM/yyyy')}">27/08/2026</strong>.
+            Số liệu của báo cáo này được ghi lại mỗi lần chạy tối ưu ở màn hình
+            <a th:href="@{/routing}">Phân tuyến</a>, và không bao giờ được tính lại về sau (CBR-18).
+        </div>
+    </div>
+
+    <div th:unless="${report.empty}">
+
+        <!-- ============ Khoi tong ket toan ky ============ -->
+        <div class="panel panel-info mb-3" th:with="totals=${report.totals}">
+            <div class="metric-row five-up">
+                <div>
+                    <div class="metric-label">Số ngày tính vào báo cáo</div>
+                    <div class="metric-value" th:text="${totals.dayCount}">10</div>
+                </div>
+                <div>
+                    <div class="metric-label">Đơn đã phân tuyến</div>
+                    <div class="metric-value" th:text="${totals.orderCount}">128</div>
+                </div>
+                <div>
+                    <div class="metric-label">Giảm so với mốc A</div>
+                    <div class="metric-value"
+                         th:text="${#numbers.formatDecimal(totals.reductionAPercent, 1, 'POINT', 1, 'COMMA')} + '%'">44,9%</div>
+                    <div class="small text-sub"
+                         th:text="'−' + ${#numbers.formatDecimal(totals.reductionAMeters / 1000, 1, 'POINT', 1, 'COMMA')} + ' km'">−485,0 km</div>
+                </div>
+                <div>
+                    <div class="metric-label">Giảm so với mốc B</div>
+                    <div class="metric-value"
+                         th:text="${#numbers.formatDecimal(totals.reductionBPercent, 1, 'POINT', 1, 'COMMA')} + '%'">12,9%</div>
+                    <div class="small text-sub"
+                         th:text="'−' + ${#numbers.formatDecimal(totals.reductionBMeters / 1000, 1, 'POINT', 1, 'COMMA')} + ' km'">−88,0 km</div>
+                </div>
+                <div>
+                    <div class="metric-label">Chuyến xe tiết kiệm</div>
+                    <div class="metric-value" th:text="${totals.tripsSaved}">98</div>
+                    <div class="small text-sub"
+                         th:text="${totals.orderCount} + ' chuyến còn ' + ${totals.routeCount}">128 chuyến còn 30</div>
+                </div>
+            </div>
+
+            <!--
+                Giai thich hai moc ngay tren man hinh, khong bat nguoi xem mo tai lieu.
+                Day cung la cau tra loi san cho cau hoi "moc A o dau ra" khi van dap.
+            -->
+            <div class="small text-sub mt-2">
+                <strong>Mốc A</strong> — mỗi đơn một chuyến khứ hồi riêng từ kho, mô phỏng cách
+                Minh Phú đang làm.
+                <strong>Mốc B</strong> — vẫn dùng đúng cách chia xe của thuật toán, chỉ giao theo
+                thứ tự nhận đơn; mốc này đo riêng đóng góp của việc sắp thứ tự.
+                Phần trăm toàn kỳ tính từ <em>tổng</em> quãng đường các ngày, không phải trung bình
+                cộng phần trăm từng ngày.
+            </div>
+        </div>
+
+        <!-- ============ Bieu do duong (CN-08-03) ============ -->
+        <div class="panel mb-3" th:with="chart=${report.chart}" th:unless="${report.rows.isEmpty()}">
+            <div class="d-flex justify-content-between align-items-start mb-1">
+                <div class="small"><strong>Mức giảm quãng đường theo ngày</strong></div>
+                <div class="chart-legend small">
+                    <span><i class="legend-line legend-a"></i> So với mốc A</span>
+                    <span><i class="legend-line legend-b"></i> So với mốc B</span>
+                </div>
+            </div>
+
+            <!--
+                Bieu do ve thang bang SVG, toa do do ReportService tinh san. Khong nap thu vien
+                ve bieu do: hai duong va vai chuc diem thi khong dang doi lay 200 KB phai tai ve
+                va mot thu vien nua phai giai thich khi van dap. SVG thi khong can mang.
+            -->
+            <svg class="line-chart" viewBox="0 0 960 220" preserveAspectRatio="xMidYMid meet"
+                 role="img" aria-label="Biểu đồ mức giảm quãng đường theo ngày">
+
+                <g th:each="line : ${chart.gridLines}">
+                    <line class="grid" x1="54" x2="944"
+                          th:attr="y1=${line.y},y2=${line.y}"></line>
+                    <text class="axis-label" x="46" text-anchor="end"
+                          th:attr="y=${line.y} + 4" th:text="${line.label}">50%</text>
+                </g>
+
+                <polyline class="series-b" th:attr="points=${chart.pointsB}"></polyline>
+                <polyline class="series-a" th:attr="points=${chart.pointsA}"></polyline>
+
+                <g th:each="column : ${chart.columns}">
+                    <circle class="dot-b" r="3"
+                            th:attr="cx=${column.x},cy=${column.yB}"></circle>
+                    <circle class="dot-a" r="3.5"
+                            th:attr="cx=${column.x},cy=${column.yA}"></circle>
+                    <text class="axis-label" y="206" text-anchor="middle"
+                          th:attr="x=${column.x}" th:text="${column.label}">27/08</text>
+                </g>
+            </svg>
+        </div>
+
+        <!-- ============ Bang chi tiet theo ngay ============ -->
+        <table class="table table-striped align-middle mb-2" th:unless="${report.rows.isEmpty()}">
+            <thead>
+            <tr>
+                <th style="width: 110px;">Ngày giao</th>
+                <th class="num" style="width: 70px;">Đơn</th>
+                <th class="num" style="width: 75px;">Tuyến</th>
+                <th class="num">Mốc A</th>
+                <th class="num">Mốc B</th>
+                <th class="num">Sau tối ưu</th>
+                <th class="num">Giảm so A</th>
+                <th class="num">Giảm so B</th>
+                <th class="num" style="width: 105px;">Chuyến tiết kiệm</th>
+                <th style="width: 190px;">Thuật toán</th>
+            </tr>
+            </thead>
+            <tbody>
+            <tr th:each="row : ${report.rows}">
+                <td th:text="${#temporals.format(row.deliveryDate, 'dd/MM/yyyy')}">27/08/2026</td>
+                <td class="num" th:text="${row.orderCount}">12</td>
+                <td class="num" th:text="${row.routeCount}">3</td>
+                <td class="num"
+                    th:text="${#numbers.formatDecimal(row.baselineADistance / 1000, 1, 'POINT', 1, 'COMMA')}">108,0</td>
+                <td class="num"
+                    th:text="${#numbers.formatDecimal(row.baselineBDistance / 1000, 1, 'POINT', 1, 'COMMA')}">68,3</td>
+                <td class="num">
+                    <strong th:text="${#numbers.formatDecimal(row.optimizedDistance / 1000, 1, 'POINT', 1, 'COMMA')}">59,5</strong>
+                </td>
+                <td class="num"
+                    th:text="${#numbers.formatDecimal(row.reductionAPercent, 1, 'POINT', 1, 'COMMA')} + '%'">44,9%</td>
+                <td class="num"
+                    th:text="${#numbers.formatDecimal(row.reductionBPercent, 1, 'POINT', 1, 'COMMA')} + '%'">12,9%</td>
+                <td class="num" th:text="${row.tripsSaved}">9</td>
+                <td>
+                    <span th:text="${row.algorithm.displayName}">OR-Tools</span>
+                    <span class="text-sub small" th:if="${row.executionTimeMs != null}"
+                          th:text="'· ' + ${row.executionTimeMs} + ' ms'">· 412 ms</span>
+                </td>
+            </tr>
+            </tbody>
+            <tfoot th:with="totals=${report.totals}">
+            <tr class="total-row">
+                <td><strong>Toàn kỳ</strong></td>
+                <td class="num" th:text="${totals.orderCount}">128</td>
+                <td class="num" th:text="${totals.routeCount}">30</td>
+                <td class="num"
+                    th:text="${#numbers.formatDecimal(totals.baselineADistance / 1000, 1, 'POINT', 1, 'COMMA')}">1.080,0</td>
+                <td class="num"
+                    th:text="${#numbers.formatDecimal(totals.baselineBDistance / 1000, 1, 'POINT', 1, 'COMMA')}">683,0</td>
+                <td class="num">
+                    <strong th:text="${#numbers.formatDecimal(totals.optimizedDistance / 1000, 1, 'POINT', 1, 'COMMA')}">595,0</strong>
+                </td>
+                <td class="num">
+                    <strong th:text="${#numbers.formatDecimal(totals.reductionAPercent, 1, 'POINT', 1, 'COMMA')} + '%'">44,9%</strong>
+                </td>
+                <td class="num">
+                    <strong th:text="${#numbers.formatDecimal(totals.reductionBPercent, 1, 'POINT', 1, 'COMMA')} + '%'">12,9%</strong>
+                </td>
+                <td class="num" th:text="${totals.tripsSaved}">98</td>
+                <td class="text-sub small"
+                    th:text="'Lấp đầy TB ' + ${#numbers.formatDecimal(totals.weightUtilization * 100, 1, 'POINT', 1, 'COMMA')} + '% kg · '
+                             + ${#numbers.formatDecimal(totals.volumeUtilization * 100, 1, 'POINT', 1, 'COMMA')} + '% m³'">
+                    Lấp đầy TB 93,3% kg · 55,0% m³
+                </td>
+            </tr>
+            </tfoot>
+        </table>
+
+        <div class="text-sub small mb-4">
+            Quãng đường tính bằng <strong>km</strong> và đã gồm chặng cuối quay về kho (CBR-01).
+            Mỗi ngày lấy lần chạy gần nhất — chạy lại nhiều lần trong ngày thì chỉ lần cuối là
+            kế hoạch thực sự được chốt.
+        </div>
+
+        <!-- ============ CN-08-04 / BR08-03 — tuyen xap xi hien rieng ============ -->
+        <div th:unless="${report.approximateRows.isEmpty()}">
+            <div class="section-label">Ngày dùng khoảng cách xấp xỉ — không tính vào trung bình</div>
+
+            <div class="panel panel-warning mb-2">
+                <div class="small">
+                    Những ngày dưới đây chạy khi <strong>không kết nối được OSRM</strong>, quãng
+                    đường là ước lượng Haversine nhân hệ số (MSG-09, CBR-11). Sai số của cách ước
+                    lượng này tới hàng chục phần trăm, nên các dòng này
+                    <strong>không được cộng vào số liệu toàn kỳ ở trên</strong> (BR08-03).
+                    Liệt kê ra đây để báo cáo không giấu dữ liệu.
+                </div>
+            </div>
+
+            <table class="table table-striped align-middle mb-4">
+                <thead>
+                <tr>
+                    <th style="width: 110px;">Ngày giao</th>
+                    <th class="num" style="width: 70px;">Đơn</th>
+                    <th class="num" style="width: 75px;">Tuyến</th>
+                    <th class="num">Mốc A</th>
+                    <th class="num">Mốc B</th>
+                    <th class="num">Sau tối ưu</th>
+                    <th class="num">Giảm so A</th>
+                    <th class="num">Giảm so B</th>
+                    <th style="width: 190px;">Thuật toán</th>
+                </tr>
+                </thead>
+                <tbody>
+                <tr th:each="row : ${report.approximateRows}">
+                    <td th:text="${#temporals.format(row.deliveryDate, 'dd/MM/yyyy')}">20/08/2026</td>
+                    <td class="num" th:text="${row.orderCount}">8</td>
+                    <td class="num" th:text="${row.routeCount}">3</td>
+                    <td class="num"
+                        th:text="${#numbers.formatDecimal(row.baselineADistance / 1000, 1, 'POINT', 1, 'COMMA')}">96,4</td>
+                    <td class="num"
+                        th:text="${#numbers.formatDecimal(row.baselineBDistance / 1000, 1, 'POINT', 1, 'COMMA')}">60,1</td>
+                    <td class="num"
+                        th:text="${#numbers.formatDecimal(row.optimizedDistance / 1000, 1, 'POINT', 1, 'COMMA')}">52,7</td>
+                    <td class="num"
+                        th:text="${#numbers.formatDecimal(row.reductionAPercent, 1, 'POINT', 1, 'COMMA')} + '%'">45,3%</td>
+                    <td class="num"
+                        th:text="${#numbers.formatDecimal(row.reductionBPercent, 1, 'POINT', 1, 'COMMA')} + '%'">12,3%</td>
+                    <td th:text="${row.algorithm.displayName}">OR-Tools</td>
+                </tr>
+                </tbody>
+            </table>
+        </div>
+
+        <!-- ============ CN-08-04 / BR08-04 — ngay bi loai vi tuyen da huy ============ -->
+        <div th:unless="${report.cancelledDates.isEmpty()}" class="text-sub small">
+            Đã loại khỏi báo cáo <strong th:text="${report.cancelledDates.size()}">1</strong> ngày
+            có chỉ số nhưng mọi tuyến đều đã hủy (BR08-04):
+            <span th:each="date, iteration : ${report.cancelledDates}">
+                <span th:text="${#temporals.format(date, 'dd/MM/yyyy')}">18/08/2026</span><span
+                    th:if="${!iteration.last}">, </span>
+            </span>
+        </div>
+    </div>
+
+</div>
+</body>
+</html>

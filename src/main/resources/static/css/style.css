@@ -562,34 +562,48 @@ body {
 .timeline .stepper-line { width: 2px; flex: 1; min-height: 26px; background: var(--border); }
 .timeline .stepper-line.is-done { background: #9FE1CB; }
 
-/* ============ Reports: comparison bar chart ============ */
+/* ============ Reports: RPT-03 line chart ============ */
 
-.bar-chart {
-  display: flex;
-  align-items: flex-end;
-  gap: 14px;
-  height: 150px;
-  padding: 0 4px;
-  border-bottom: 1px solid var(--border);
+/* Drawn as inline SVG with the coordinates worked out in ReportService, so the
+   report needs no charting library and still renders with the network down. */
+.line-chart {
+  width: 100%;
+  height: auto;
+  display: block;
 }
-.bar-chart > div {
-  flex: 1;
-  height: 100%;
-  display: flex;
-  align-items: flex-end;
-  justify-content: center;
-  gap: 5px;
+.line-chart .grid { stroke: var(--border); stroke-width: 1; }
+.line-chart .axis-label { fill: var(--text-muted); font-size: 11px; }
+
+/* Baseline A is the headline number, so it gets the solid primary line.
+   Baseline B is dashed as well as differently coloured - the two series stay
+   apart in a black-and-white printout of the report, and for a colour-blind
+   viewer. */
+.line-chart .series-a { fill: none; stroke: var(--blue-500); stroke-width: 2.5; }
+.line-chart .series-b {
+  fill: none;
+  stroke: var(--warning);
+  stroke-width: 2.5;
+  stroke-dasharray: 5 4;
 }
-.bar-chart .bar-before,
-.bar-chart .bar-after { width: 40%; border-radius: 3px 3px 0 0; }
-.bar-chart .bar-before { background: var(--border); }
-.bar-chart .bar-after   { background: var(--blue-500); }
-.bar-labels {
-  display: flex;
-  gap: 14px;
-  padding: 6px 4px 0;
+.line-chart .dot-a { fill: var(--blue-500); }
+.line-chart .dot-b { fill: var(--warning); }
+
+.chart-legend { display: flex; gap: 16px; color: var(--text-secondary); }
+.chart-legend .legend-line {
+  display: inline-block;
+  width: 18px;
+  height: 0;
+  vertical-align: middle;
+  margin-right: 5px;
 }
-.bar-labels > div { flex: 1; text-align: center; font-size: 11.5px; color: var(--text-secondary); }
+.chart-legend .legend-a { border-top: 2.5px solid var(--blue-500); }
+.chart-legend .legend-b { border-top: 2.5px dashed var(--warning); }
+
+/* Period total line of a report table */
+.total-row > * {
+  background-color: var(--surface-header);
+  border-top: 2px solid var(--border);
+}
 
 /* ============ Driver screens (phone) ============ */
 
