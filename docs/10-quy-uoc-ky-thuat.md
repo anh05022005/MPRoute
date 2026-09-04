@@ -356,5 +356,6 @@ chức năng ngoài `04-chuc-nang.md` — phạm vi đã được cân nhắc k�
 | `08-du-lieu-mau.md` | Dữ liệu seed để demo |
 | `09-thay-doi-so-voi-ban-dau.md` | Đã sửa gì so với đặc tả gốc và vì sao — dùng khi vấn đáp |
 | `10-quy-uoc-ky-thuat.md` | File này: công nghệ, cấu trúc thư mục, quy ước đặt tên, kiểm thử, bảo mật, Git |
+| `11-cai-dat.md` | Dựng lại hệ thống từ đầu trên một máy khác. Dùng làm phụ lục cài đặt của báo cáo |
 | `TIEN-DO.md` | Trạng thái hiện tại, việc tiếp theo, nợ kỹ thuật. **Nạp vào mọi phiên nên phải giữ ngắn** |
 | `NHAT-KY.md` | Nhật ký từng tuần: đã làm gì, vì sao làm thế, số liệu chạy thật. Chỉ mở khi cần tra |
