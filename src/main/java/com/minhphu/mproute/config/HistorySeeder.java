@@ -89,7 +89,7 @@ import java.util.Random;
  */
 @Component
 @ConditionalOnProperty(name = "mproute.seed-history", havingValue = "true")
-@org.springframework.core.annotation.Order(2)   // sau DataSeeder: can co san tai khoan va tham so
+@org.springframework.core.annotation.Order(3)   // sau CatalogSeeder: can co san tai khoan, khach, san pham, xe
 @RequiredArgsConstructor
 @Slf4j
 public class HistorySeeder implements CommandLineRunner {

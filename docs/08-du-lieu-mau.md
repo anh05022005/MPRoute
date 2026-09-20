@@ -2,23 +2,27 @@
 
 Dữ liệu này dùng để demo. **Phải seed sẵn, tuyệt đối không nhập tay trước mặt hội đồng.**
 
-Cách nạp: viết class `DataSeeder` implements `CommandLineRunner` trong package `config`, kiểm tra nếu bảng rỗng thì mới nạp.
+## Cách nạp — ba lớp seed chạy nối tiếp
 
-```java
-@Component
-public class DataSeeder implements CommandLineRunner {
-    @Override
-    public void run(String... args) {
-        if (userRepository.count() > 0) {
-            return; // da co du lieu roi, khong nap lai
-        }
-        seedUsers();
-        seedDepot();
-        seedProducts();
-        // ...
-    }
-}
-```
+Toàn bộ dữ liệu dưới đây **sinh ra từ mã nguồn**, không cần mang bản kết xuất MySQL từ máy
+khác sang. Ba lớp `CommandLineRunner` trong package `config`, chạy theo thứ tự do
+`@Order` quy định:
+
+| Thứ tự | Lớp | Nạp gì | Chạy khi nào |
+|---|---|---|---|
+| 1 | `DataSeeder` | 5 tài khoản + 9 tham số hệ thống | Mọi lần khởi động |
+| 2 | `CatalogSeeder` | Kho, 5 sản phẩm, 4 xe, 3 tài xế, 15 khách hàng | Mọi lần khởi động |
+| 3 | `HistorySeeder` | 10 ngày đơn hàng + tuyến đã giao | Chỉ khi bật cờ, xem cuối file |
+
+Cả ba đều **kiểm từng bản ghi trước khi ghi** (`existsByCode`, `existsByLicensePlate`,
+`findByPhone`…) nên chạy lại bao nhiêu lần cũng không sinh trùng, và không đè lên dữ liệu
+đã sửa tay.
+
+**Thứ tự chèn trong `CatalogSeeder` không được đổi.** `HistorySeeder` lấy danh sách khách
+bằng `findByStatus` rồi xáo trộn bằng `Random` hạt giống cố định; `findByStatus` không có
+`ORDER BY` nên MySQL trả về theo thứ tự khóa chính. Đổi thứ tự chèn là đổi ID, đổi ID là đổi
+kết quả xáo trộn, và mười ngày dữ liệu sinh ra sẽ khác — kéo theo mọi con số đã viết trong
+luận văn không còn đúng.
 
 ---
 

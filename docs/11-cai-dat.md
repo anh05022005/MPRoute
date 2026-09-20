@@ -6,10 +6,15 @@ báo cáo.
 
 ---
 
-## Điều quan trọng nhất: clone về là **chưa đủ**
+## Clone về là đủ — trừ bản đồ
 
-Kho git chứa toàn bộ mã nguồn và tài liệu, nhưng **không chứa dữ liệu**. Bảng dưới đây liệt
-kê chính xác cái gì có, cái gì không — đọc kỹ chỗ này thì các bước sau chỉ là làm theo.
+Kho git không chứa dữ liệu, nhưng **dữ liệu sinh lại được từ mã nguồn**: ba lớp seed dựng
+toàn bộ tài khoản, danh mục và mười ngày lịch sử ngay lần khởi động đầu tiên. Không phải
+mang bản kết xuất MySQL từ máy nào sang.
+
+Thứ duy nhất không sinh lại được là dữ liệu bản đồ OSRM, và thiếu nó ứng dụng vẫn chạy.
+
+Bảng dưới đây liệt kê chính xác cái gì có, cái gì không.
 
 | Thứ | Có trong git? | Lấy ở đâu |
 |---|---|---|
@@ -18,19 +23,20 @@ kê chính xác cái gì có, cái gì không — đọc kỹ chỗ này thì c�
 | Mười bài benchmark Augerat (`.vrp`) | ✅ | `git clone` |
 | Maven wrapper (`mvnw.cmd`) | ✅ | `git clone` — tự tải Maven 3.9.16 lần chạy đầu |
 | Thư viện (Spring, OR-Tools, POI) | ❌ | Maven tự tải về `~/.m2`, ~113 MB riêng OR-Tools |
-| **Bảng cơ sở dữ liệu** | ❌ | Hibernate `ddl-auto=update` **tự sinh** khi chạy lần đầu |
-| **Năm tài khoản đăng nhập** | ❌ | `DataSeeder` **tự tạo** khi chạy lần đầu |
-| **Chín tham số hệ thống** | ❌ | `SystemParameterService.seedDefaults()` **tự tạo** |
-| **Danh mục: kho, sản phẩm, xe, tài xế, khách hàng** | ❌ | **Phải mang bản kết xuất MySQL sang** — xem Bước 5 |
-| **Đơn hàng, tuyến, lịch sử 10 ngày** | ❌ | Nằm trong cùng bản kết xuất đó |
+| Bảng cơ sở dữ liệu | ❌ | Hibernate `ddl-auto=update` **tự sinh** khi chạy lần đầu |
+| Năm tài khoản đăng nhập | ❌ | `DataSeeder` **tự tạo** khi chạy lần đầu |
+| Chín tham số hệ thống | ❌ | `SystemParameterService.seedDefaults()` **tự tạo** |
+| Danh mục: kho, sản phẩm, xe, tài xế, khách hàng | ❌ | `CatalogSeeder` **tự tạo** khi chạy lần đầu |
+| Đơn hàng, tuyến, lịch sử 10 ngày | ❌ | `HistorySeeder` **tự sinh** khi bật cờ — xem Bước 5 |
 | Dữ liệu bản đồ OSRM (327 MB + ~1,3 GB) | ❌ | Tải lại từ Geofabrik, xử lý lại — xem Bước 7 |
 | `CLAUDE.md` và thư mục `.claude/` | ❌ | Bị chặn bằng `.git/info/exclude`, chép tay — xem cuối file |
 
-Ba dòng in đậm là ba chỗ dễ mất buổi nhất. Đặc biệt dòng **danh mục**: `DataSeeder` chỉ tạo
-tài khoản và tham số hệ thống, còn kho hàng, năm sản phẩm, bốn xe, ba tài xế và mười lăm
-khách hàng thì được nhập tay qua giao diện trong các tuần 3–5. Chúng chỉ tồn tại trong MySQL
-của máy cũ. Bỏ qua Bước 5 thì ứng dụng vẫn chạy, vẫn đăng nhập được, nhưng mọi màn hình đều
-trống và không phân tuyến được gì.
+Ba lớp seed chạy nối tiếp theo `@Order`: `DataSeeder` (1) tạo tài khoản và tham số hệ thống,
+`CatalogSeeder` (2) tạo danh mục, `HistorySeeder` (3) sinh mười ngày lịch sử. Cả ba kiểm từng
+bản ghi trước khi ghi nên chạy lại bao nhiêu lần cũng không sinh trùng.
+
+Cho đến trước ngày 04/09/2026, danh mục vẫn phải nhập tay qua giao diện và chỉ tồn tại trong
+MySQL của một máy — chuyển máy là mất buổi. `CatalogSeeder` sinh ra để trả món nợ đó.
 
 ---
 
@@ -100,46 +106,41 @@ Không đặt gì thì `application.properties` lùi về mặc định `root` /
 
 ---
 
-## Bước 5 — Mang dữ liệu sang
+## Bước 5 — Sinh mười ngày lịch sử
 
-Đây là bước duy nhất git không làm thay được.
-
-**Trên máy cũ**, kết xuất toàn bộ database ra một file:
-
-```
-docker exec <ten-container-mysql> mysqldump -uroot -p<mat-khau> --default-character-set=utf8mb4 mproute > mproute-full.sql
-```
-
-`--default-character-set=utf8mb4` là bắt buộc, thiếu nó thì tiếng Việt trong file kết xuất
-hỏng. Chép `mproute-full.sql` sang máy mới bằng USB hoặc ổ đám mây — **đừng commit nó lên
-git**, file này chứa dữ liệu và không thuộc về mã nguồn.
-
-**Trên máy mới**, nạp vào:
+Bảng, tài khoản và danh mục thì ba lớp seed tự lo ở Bước 6, không phải làm gì. Riêng mười
+ngày đơn hàng đã giao thì phải **bật cờ** mới sinh, vì nó ghi vào database khá nhiều và không
+nên chạy mỗi lần khởi động:
 
 ```
-docker exec -i <ten-container-mysql> mysql -uroot -p<mat-khau> --default-character-set=utf8mb4 mproute < mproute-full.sql
+mvnw.cmd spring-boot:run "-Dspring-boot.run.arguments=--mproute.seed-history=true"
 ```
 
-Nạp bằng đường này thì có luôn cả bảng, cả danh mục, cả mười ngày lịch sử — Bước 6 chạy phát
-là dùng được ngay, không cần seed lại gì.
+Chạy một lần là đủ. Những lần sau khởi động bình thường, dữ liệu vẫn còn.
 
-### Nếu không mang được file kết xuất
+**Bật OSRM trước khi chạy lệnh này** (Bước 7). Thiếu nó thì quãng đường tính bằng Haversine
+nhân hệ số, và báo cáo RPT-03 sẽ ra những con số khác với những gì đã viết trong luận văn.
 
-Vẫn dựng lại được, nhưng mất khoảng một tiếng nhập tay:
+Bộ sinh ngẫu nhiên dùng hạt giống cố định (`RANDOM_SEED = 20260827L` trong `HistorySeeder`)
+nên máy nào chạy cũng ra đúng bộ đơn như nhau — đó là lý do số liệu trong luận văn tái lập
+được, và cũng là lý do **không được đổi thứ tự chèn khách hàng trong `CatalogSeeder`**.
 
-1. Chạy Bước 6 với database rỗng. Hibernate sinh bảng, `DataSeeder` tạo năm tài khoản
-   (`admin/admin123`, `dieuphoi/dieuphoi123`, `taixe01..03/taixe123`) và chín tham số hệ thống.
-2. Đăng nhập `admin`, nhập tay theo đúng số liệu ở `docs/08-du-lieu-mau.md`: kho Phan Trọng Tuệ,
-   năm sản phẩm, bốn xe, ba tài xế, mười lăm khách hàng.
-3. Sinh mười ngày lịch sử bằng `HistorySeeder`:
+### Muốn giống máy cũ đến từng bản ghi
 
-   ```
-   mvnw.cmd spring-boot:run "-Dspring-boot.run.arguments=--mproute.seed-history=true"
-   ```
+Ba lớp seed đã sinh đúng bộ dữ liệu ấy rồi. Chỉ khi nào máy cũ có dữ liệu **nhập tay thêm
+ngoài `docs/08`** — vài đơn thử, một khách mới thêm — mà muốn giữ, thì mới cần mang bản kết
+xuất sang:
 
-   Bộ sinh ngẫu nhiên dùng hạt giống cố định (`RANDOM_SEED = 20260827L`) nên ra đúng bộ đơn
-   như máy cũ, con số trong luận văn vẫn khớp. Bật OSRM trước khi chạy, thiếu nó thì quãng
-   đường tính bằng Haversine và báo cáo RPT-03 lệch so với số đã viết trong báo cáo.
+```
+# tren may cu
+docker exec <container-mysql> mysqldump -uroot -p<mk> --default-character-set=utf8mb4 mproute > mproute-full.sql
+
+# tren may moi
+docker exec -i <container-mysql> mysql -uroot -p<mk> --default-character-set=utf8mb4 mproute < mproute-full.sql
+```
+
+Cờ `--default-character-set=utf8mb4` bắt buộc ở cả hai đầu, thiếu là tiếng Việt trong file
+hỏng. **Đừng commit file kết xuất lên git** — nó là dữ liệu, không phải mã nguồn.
 
 ---
 
