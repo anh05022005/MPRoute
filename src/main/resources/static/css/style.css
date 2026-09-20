@@ -704,6 +704,9 @@ body {
   overflow: hidden;
 }
 .share-bar-fill { height: 100%; background: var(--danger); }
+/* Tien do giao hang o SCR-10 — mau xanh vi day la viec dang chay dung huong,
+   khong phai canh bao nhu thanh ty le that bai o bao cao */
+.share-bar-fill-done { background: var(--success); }
 
 /* Period total line of a report table */
 .total-row > * {

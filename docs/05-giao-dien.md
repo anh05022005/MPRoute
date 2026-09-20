@@ -171,6 +171,40 @@ Menu hiển thị theo vai trò:
 
 ---
 
+## SCR-10 — Màn hình theo dõi tiến độ giao
+
+Điều phối chọn ngày, xem từng tuyến đã chốt trong ngày đó.
+
+```
+┌────────────────────────────────────────────────────────────┐
+│ Ngay giao [20/09/2026]  [Xem]                              │
+├────────────────────────────────────────────────────────────┤
+│ TONG HOP CA NGAY                                           │
+│  So tuyen  Diem dung  Da giao  That bai·hoan  Con cho      │
+│     2         13        12         1·0           0        │
+│  ████████████████████████████████████████████ 13/13 (100%) │
+├────────────────────────────────────────────────────────────┤
+│ TT26091101 · 29H-123.45 · Nguyen Van Hung · 24,9 km        │
+│ · xuat phat 07:45                          [Hoan thanh]    │
+│  ██████████████████████████████████████████████████████    │
+│  # │ Don        │ Khach          │ ETA  │ That │ Tien thu │
+│  1 │ DH26091101 │ Tap hoa Minh Anh│08:12│08:20 │ 8.220.000d│
+│  2 │ DH26091102 │ Sieu thi Hong Ha│08:35│08:41 │     —     │
+└────────────────────────────────────────────────────────────┘
+```
+
+**Tuyến `DRAFT` và `CANCELLED` không hiện.** Màn hình này theo dõi việc đang chạy; bản nháp
+chưa chốt thì chưa ai giao, đưa vào chỉ làm tiến độ cả ngày bị kéo xuống sai.
+
+Thanh tiến độ đếm **điểm đã xử lý**, gồm cả giao thất bại và hoãn — một điểm giao thất bại vẫn
+là điểm tài xế đã đến và đã xử lý xong, không còn chờ ai. Con số "Đã giao" đếm riêng các điểm
+thành công. Hai con số này khác nhau, đọc lẫn là hiểu sai màn hình.
+
+Khác SCR-13 (`/track`) dành cho khách: ở đây người xem đã đăng nhập nên hiện đầy đủ biển số xe,
+tên tài xế và tiền phải thu — đúng những thứ BR07-04 cấm hiện trên trang công khai.
+
+---
+
 ## SCR-12 — Màn hình tài xế (mobile)
 
 Chiều rộng tối thiểu hỗ trợ: 360px.

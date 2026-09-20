@@ -217,6 +217,7 @@ Những thứ đặc tả viết trên giấy không thể biết trước, ch�
 | `application.properties` | MySQL chạy trong WSL nên đồng hồ máy chủ là **UTC, lệch 7 tiếng** so với giờ ứng dụng ghi vào. Riêng `serverTimezone=` **không đủ** — nó chỉ báo trình điều khiển cách diễn giải giờ. Phải có `forceConnectionTimeZoneToSession=true` thì `NOW()` bên MySQL mới đúng giờ Việt Nam. Chưa sửa thì mọi câu lọc theo `CURDATE()` chạy trong khoảng **0h–7h sáng** sẽ trả về ngày hôm trước |
 | `docs/10-quy-uoc-ky-thuat.md` | Thêm thư mục `security/` vào sơ đồ cấu trúc thư mục |
 | `Product.java` | Đơn vị mặc định `"Thung"` → `"Thùng"`. Đây là chuỗi hiển thị ra giao diện nên phải có dấu |
+| `docs/04` ↔ `docs/05` | **Hai tài liệu mâu thuẫn nhau và không ai phát hiện suốt 11 tuần.** `docs/05` liệt kê `SCR-10 /tracking` trong bảng màn hình và đặt mục "Theo dõi" vào menu điều phối; `docs/04` không có mục chức năng nào tương ứng. Menu được dựng theo `docs/05`, màn hình không được làm vì `docs/04` không yêu cầu — bấm vào ra **404**. Phát hiện ngày 20/09/2026 do bấm thử menu, không phải do rà tài liệu. Đã làm màn hình và thêm mục **CN-04-11** vào `docs/04` |
 
 ---
 
@@ -224,7 +225,7 @@ Những thứ đặc tả viết trên giấy không thể biết trước, ch�
 
 Ghi ra để thấy rõ phạm vi thay đổi là có giới hạn:
 
-- **Phạm vi chức năng**: vẫn **86 chức năng bắt buộc** + 11 tùy chọn. Chỉ thêm đúng một mục CN-03-14
+- **Phạm vi chức năng**: **87 chức năng bắt buộc** + 11 tùy chọn. So với bản gốc chỉ thêm hai mục: CN-03-14, và CN-04-11 (màn hình `docs/05` đã có sẵn mà `docs/04` bỏ sót — xem mục C)
 - **Kế hoạch 12 tuần**: nguyên vẹn
 - **Thuật toán tự cài đặt**: vẫn Nearest Neighbor + 2-opt + Cheapest Insertion, viết tay đầy đủ,
   không cắt bớt dòng nào — chỉ đổi vai trò từ sản phẩm sang mốc so sánh (xem A3)

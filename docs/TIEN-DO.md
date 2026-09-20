@@ -149,7 +149,6 @@ nhưng số km là xấp xỉ, **đừng lấy số đó đưa vào báo cáo**.
 - Máy này lưu thông tin đăng nhập GitHub của **hai tài khoản**. Remote cố ý ghi là
   `https://anh05022005@github.com/...` — xóa phần `anh05022005@` đi là đẩy bằng tài khoản kia,
   báo lỗi 403
-- Menu trỏ tới `/tracking` chưa có Controller → bấm vào ra 404. `/reports` đã đủ cả ba báo cáo
 - Sau khi đăng nhập địa chỉ có đuôi `?continue` — hành vi mặc định của Spring Security 6, vô hại
 
 ### Dữ liệu thử đang có trong CSDL

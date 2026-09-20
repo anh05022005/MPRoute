@@ -276,6 +276,7 @@ Chuẩn bị theo đúng thứ tự này, tập ít nhất 3 lần. **In ra gi�
 | 9 | Khôi phục kết quả tự động, gán tài xế, chốt | Email gửi đi |
 | 10 | Mở tab mới, đăng nhập `taixe01` trên chế độ giả lập điện thoại | Giao diện mobile, một điểm nổi bật |
 | 11 | Bấm "Đã giao" ở điểm có tiền mặt | Hộp thoại nhập tiền |
+| 11b | Quay lại tab điều phối, mở **Theo dõi** | Điểm vừa giao đã sang xanh, thanh tiến độ nhích lên — điều phối biết ngay mà không phải gọi điện hỏi tài xế |
 | 12 | Bấm "Báo sự cố", chọn xe hỏng, không thể tiếp tục | |
 | 13 | Quay lại tab điều phối, mở xử lý sự cố | **Ba phương án kèm km phát sinh — đây là điểm nhấn** |
 | 14 | Chọn phương án B, áp dụng | ETA cập nhật, email gửi khách |

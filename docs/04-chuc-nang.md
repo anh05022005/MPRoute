@@ -180,6 +180,20 @@ Tuyến `CONFIRMED` hủy được, đơn về `APPROVED`, xe về `AVAILABLE`. 
 
 ### ○ CN-04-10 Xuất kết quả phân tuyến ra Excel
 
+### ★ CN-04-11 Màn hình theo dõi tiến độ giao (SCR-10)
+`/tracking`. Chọn ngày → xem từng tuyến đã chốt: biển số, tài xế, tổng km, giờ xuất phát, tỷ lệ
+điểm đã xử lý. Mỗi điểm dừng hiện ETA, giờ đến thực tế, tiền phải thu, trạng thái và lý do thất
+bại nếu có.
+
+Tuyến `DRAFT` và `CANCELLED` **không hiện** — màn hình này theo dõi việc đang chạy, bản nháp chưa
+chốt thì chưa ai giao.
+
+Đặt ở nhóm 4 vì tác nhân là điều phối, dù nội dung phản ánh hành động của tài xế ở nhóm 5.
+
+**Bổ sung ngày 20/09/2026.** `docs/05` có SCR-10 và mục "Theo dõi" trong menu điều phối ngay từ
+đầu, nhưng `docs/04` thiếu mục tương ứng nên màn hình không bao giờ được làm — bấm vào menu ra
+404. Xem `docs/09` mục C.
+
 ---
 
 ## Nhóm 5 — Tài xế (UC05)

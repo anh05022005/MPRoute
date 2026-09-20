@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<!-- SCR-10 — Theo doi tien do giao hang trong ngay (CN-04-11). Danh cho dieu phoi. -->
+<html lang="vi"
+      xmlns:th="http://www.thymeleaf.org"
+      th:replace="~{layout :: main('Theo dõi', ~{::content})}">
+<body>
+
+<div th:fragment="content">
+
+    <form class="toolbar" method="get" th:action="@{/tracking}">
+        <label for="date">Ngày giao</label>
+        <input type="date" id="date" name="date" class="form-control"
+               th:value="${date}">
+        <button type="submit" class="btn btn-primary">Xem</button>
+    </form>
+
+    <!-- Ngay khong co tuyen nao: noi ro la KHONG CO TUYEN, khong phai loi he thong.
+         Phan biet duoc hai thu nay la khac biet giua "yen tam" va "goi nguoi xem giup" -->
+    <div th:if="${board.routes.isEmpty()}" class="panel">
+        <div class="text-sub small">
+            Ngày này chưa có tuyến nào được chốt. Tuyến còn ở trạng thái
+            <strong>Nháp</strong> chưa hiện ở đây — chốt kế hoạch ở màn hình
+            <a th:href="@{/routing}">Phân tuyến</a> thì tuyến mới vào diện theo dõi.
+        </div>
+    </div>
+
+    <th:block th:unless="${board.routes.isEmpty()}">
+
+        <div class="section-label">Tổng hợp cả ngày</div>
+
+        <div class="panel">
+            <div class="metric-row five-up">
+                <div>
+                    <div class="metric-label">Số tuyến</div>
+                    <div class="metric-value" th:text="${board.totals.routeCount}">3</div>
+                </div>
+                <div>
+                    <div class="metric-label">Điểm dừng</div>
+                    <div class="metric-value" th:text="${board.totals.stopCount}">14</div>
+                </div>
+                <div>
+                    <div class="metric-label">Đã giao</div>
+                    <div class="metric-value" th:text="${board.totals.delivered}">11</div>
+                </div>
+                <div>
+                    <div class="metric-label">Thất bại · hoãn</div>
+                    <div class="metric-value"
+                         th:text="${board.totals.failed} + ' · ' + ${board.totals.postponed}">1 · 0</div>
+                </div>
+                <div>
+                    <div class="metric-label">Còn chờ</div>
+                    <div class="metric-value" th:text="${board.totals.pending}">2</div>
+                </div>
+            </div>
+
+            <div class="share-bar mt-3">
+                <div class="share-bar-fill share-bar-fill-done"
+                     th:style="'width: ' + ${board.totals.percentHandled} + '%'"></div>
+            </div>
+            <div class="small text-sub mt-2"
+                 th:text="'Đã xử lý ' + ${board.totals.handled} + '/' + ${board.totals.stopCount}
+                          + ' điểm (' + ${#numbers.formatDecimal(board.totals.percentHandled, 1, 'POINT', 1, 'COMMA')} + '%)'">
+                Đã xử lý 12/14 điểm (85,7%)
+            </div>
+        </div>
+
+        <!-- Mot bang rieng cho tung tuyen thay vi mot bang gop: dieu phoi goi dien cho TAI XE,
+             nen thong tin phai gom theo tuyen de nhin mot cai la biet goi ai -->
+        <div th:each="route : ${board.routes}">
+
+            <div class="section-label">
+                <strong th:text="${route.code}">TT26092001</strong>
+                · <span th:text="${route.vehiclePlate}">29H-123.45</span>
+                · <span th:text="${route.driverName != null} ? ${route.driverName} : 'Chưa gán tài xế'">Nguyễn Văn Hùng</span>
+                · <span th:text="${#numbers.formatDecimal(route.totalDistanceKm, 1, 'POINT', 1, 'COMMA')} + ' km'">32,5 km</span>
+                <span th:if="${route.departedAt != null}"
+                      th:text="'· xuất phát ' + ${#temporals.format(route.departedAt, 'HH:mm')}">· xuất phát 07:45</span>
+                <span class="status-tag"
+                      th:classappend="${route.status.name() == 'COMPLETED'} ? 'status-tag-success'
+                                    : (${route.status.name() == 'INCIDENT'} ? 'status-tag-danger'
+                                    : (${route.status.name() == 'CONFIRMED'} ? 'status-tag-muted' : 'status-tag-info'))"
+                      th:text="${route.status.displayName}">Đang chạy</span>
+            </div>
+
+            <div class="share-bar mb-2">
+                <div class="share-bar-fill share-bar-fill-done"
+                     th:style="'width: ' + ${route.percentHandled} + '%'"></div>
+            </div>
+
+            <table class="table table-striped align-middle mb-4">
+                <thead>
+                <tr>
+                    <th style="width: 44px;">#</th>
+                    <th style="width: 130px;">Đơn</th>
+                    <th>Khách hàng</th>
+                    <th style="width: 78px;">ETA</th>
+                    <th style="width: 78px;">Thực tế</th>
+                    <th style="width: 120px;">Tiền thu</th>
+                    <th style="width: 150px;">Trạng thái</th>
+                </tr>
+                </thead>
+                <tbody>
+                <tr th:each="stop : ${route.stops}">
+                    <td th:text="${stop.sequence}">1</td>
+                    <td th:text="${stop.orderCode}">DH26092001</td>
+                    <td>
+                        <div th:text="${stop.customerName}">Tạp hóa Minh Anh</div>
+                        <div class="small text-sub" th:text="${stop.address}">24 Láng Hạ, Đống Đa</div>
+                    </td>
+                    <td th:text="${stop.estimatedArrival != null}
+                                 ? ${#temporals.format(stop.estimatedArrival, 'HH:mm')} : '—'">08:12</td>
+                    <td th:text="${stop.actualArrival != null}
+                                 ? ${#temporals.format(stop.actualArrival, 'HH:mm')} : '—'">08:20</td>
+                    <!-- Tien phai thu in dam khi lon hon 0, giong man hinh tai xe: day la con so
+                         dieu phoi doi chieu cuoi ngay khi tai xe nop tien -->
+                    <td>
+                        <strong th:if="${stop.amountToCollect.signum() > 0}"
+                                th:text="${#numbers.formatInteger(stop.amountToCollect, 0, 'POINT')} + 'đ'">1.440.000đ</strong>
+                        <span th:unless="${stop.amountToCollect.signum() > 0}" class="text-sub">—</span>
+                    </td>
+                    <td>
+                        <span class="status-tag"
+                              th:classappend="${stop.status.name() == 'DELIVERED'} ? 'status-tag-success'
+                                            : (${stop.status.name() == 'FAILED'} ? 'status-tag-danger'
+                                            : (${stop.status.name() == 'POSTPONED'} ? 'status-tag-warning'
+                                            : (${stop.status.name() == 'PENDING'} ? 'status-tag-muted' : 'status-tag-info')))"
+                              th:text="${stop.status.displayName}">Đã giao</span>
+                        <div class="small text-sub" th:if="${stop.failureReason != null}"
+                             th:text="${stop.failureReason}">Khách không có mặt</div>
+                    </td>
+                </tr>
+                </tbody>
+            </table>
+
+        </div>
+
+    </th:block>
+
+</div>
+
+</body>
+</html>
