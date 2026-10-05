@@ -41,3 +41,6 @@ build/
 # Classpath sinh ra boi "mvnw dependency:build-classpath", dung de chay
 # AlgorithmRunner va BenchmarkRunner bang lenh java -cp. Sinh lai luc nao cung duoc.
 cp.txt
+
+# Thu muc nhap: script dung mot lan, ket qua trung gian. Khong phai code cua he thong.
+.work/
