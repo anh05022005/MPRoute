@@ -163,6 +163,39 @@
         }
 
         /** Tinh lai tung dong roi cong thanh tong (CN-02-03). */
+        /**
+         * Hien so thung con ranh duoi o chon san pham.
+         *
+         * CHI LA SO THAM KHAO, co y nhu vay. Don dang cho duyet chua giu hang, nen hai
+         * nguoi tao hai don cung luc deu nhin thay cung mot con so va co the cong lai
+         * vuot ton kho. Giu cho o buoc duyet don moi tru kho that va chan cung (MSG-17):
+         * giu cho tu luc tao don thi phai nho nha cho khi don bi huy, va quen nha la nguon
+         * sai so kinh dien cua moi he ton kho.
+         *
+         * Cung vi the o day khong tru phan cac dong khac trong cung don dang chiem.
+         */
+        function showStockHint(row, selectedOption, boxCount) {
+            var hint = row.querySelector('.line-stock');
+            if (!hint) {
+                return;
+            }
+
+            var stock = parseInt(selectedOption.getAttribute('data-stock'), 10);
+            if (isNaN(stock)) {
+                hint.textContent = '';
+                hint.className = 'line-stock text-sub d-block mt-1';
+                return;
+            }
+
+            if (!isNaN(boxCount) && boxCount > stock) {
+                hint.textContent = 'Chỉ còn rảnh ' + stock + ' thùng — sẽ bị chặn khi duyệt đơn';
+                hint.className = 'line-stock text-danger d-block mt-1';
+            } else {
+                hint.textContent = 'Còn rảnh ' + stock + ' thùng';
+                hint.className = 'line-stock text-sub d-block mt-1';
+            }
+        }
+
         function recalculateAll() {
             var totalWeight = 0;
             var totalVolume = 0;
@@ -178,6 +211,8 @@
                 var weightPerBox = parseFloat(selected.getAttribute('data-weight'));
                 var volumePerBox = parseFloat(selected.getAttribute('data-volume'));
                 var pricePerBox = parseFloat(selected.getAttribute('data-price'));
+
+                showStockHint(row, selected, boxCount);
 
                 if (isNaN(weightPerBox) || isNaN(boxCount) || boxCount <= 0) {
                     row.querySelector('.line-weight').textContent = '—';

@@ -98,5 +98,54 @@
     </ul>
 </div>
 
+<!--
+    Ban rieng cho so kho (CN-01-11). Bo o loc cua so kho la san pham, loai phat sinh
+    va khoang ngay — khong trung voi hai manh tren.
+
+    Viet manh thu ba thay vi them tham so vao manh dau, cung mot ly do da ghi o tren:
+    sang trang ma rot mat dieu kien loc la loi nguoi dung khong nhin ra ngay, ho chi
+    thay so lieu khac di ma khong hieu tai sao.
+
+    Cach dung:
+        <div th:replace="~{fragments/pagination :: stock-pager(
+                 pageResult   = ${pageResult},
+                 productId    = ${productId},
+                 movementType = ${movementType},
+                 fromDate     = ${fromDate},
+                 toDate       = ${toDate})}"></div>
+-->
+<div th:fragment="stock-pager(pageResult, productId, movementType, fromDate, toDate)"
+     class="d-flex justify-content-between align-items-center"
+     th:if="${pageResult.totalPages > 1}">
+
+    <span class="text-sub small">
+        Trang <span th:text="${pageResult.number + 1}">1</span>/<span th:text="${pageResult.totalPages}">1</span>
+        — tổng <span th:text="${pageResult.totalElements}">0</span> phát sinh
+    </span>
+
+    <ul class="pagination pagination-sm mb-0">
+
+        <li class="page-item" th:classappend="${pageResult.first} ? 'disabled'">
+            <a class="page-link"
+               th:href="@{/admin/stock/movements(page=${pageResult.number - 1}, productId=${productId},
+                                  movementType=${movementType}, fromDate=${fromDate}, toDate=${toDate})}">Trước</a>
+        </li>
+
+        <li class="page-item" th:each="i : ${#numbers.sequence(0, pageResult.totalPages - 1)}"
+            th:classappend="${i == pageResult.number} ? 'active'">
+            <a class="page-link"
+               th:href="@{/admin/stock/movements(page=${i}, productId=${productId},
+                                  movementType=${movementType}, fromDate=${fromDate}, toDate=${toDate})}"
+               th:text="${i + 1}">1</a>
+        </li>
+
+        <li class="page-item" th:classappend="${pageResult.last} ? 'disabled'">
+            <a class="page-link"
+               th:href="@{/admin/stock/movements(page=${pageResult.number + 1}, productId=${productId},
+                                  movementType=${movementType}, fromDate=${fromDate}, toDate=${toDate})}">Sau</a>
+        </li>
+    </ul>
+</div>
+
 </body>
 </html>

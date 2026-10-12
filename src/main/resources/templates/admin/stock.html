@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<!-- SCR-21 — Ton kho thanh pham (CN-01-10) -->
+<html lang="vi"
+      xmlns:th="http://www.thymeleaf.org"
+      xmlns:sec="http://www.thymeleaf.org/extras/spring-security"
+      th:replace="~{layout :: main('Tồn kho', ~{::content})}">
+<body>
+
+<div th:fragment="content">
+
+    <!--
+        Canh bao doi chieu. Chi hien khi cong so kho KHONG ra dung so ton dang luu —
+        day la loi trong code chu khong phai loi nhap lieu, nen phai thay ngay.
+    -->
+    <div th:if="${!reconcileProblems.isEmpty()}" class="alert alert-danger py-2">
+        <strong>Sổ kho không khớp số tồn đang lưu.</strong> Đây là lỗi của hệ thống, không phải
+        lỗi nhập liệu — vui lòng báo lại:
+        <ul class="mb-0 mt-1">
+            <li th:each="problem : ${reconcileProblems}" th:text="${problem}">Chi tiết</li>
+        </ul>
+    </div>
+
+    <div class="toolbar d-flex justify-content-between align-items-end flex-wrap gap-2">
+        <p class="text-sub small mb-0" style="max-width: 640px;">
+            <strong>Còn rảnh</strong> là số thùng được phép hứa cho đơn mới.
+            <strong>Đã cam kết</strong> là hàng của các đơn đã duyệt, vẫn nằm trong kho chờ tài xế lấy.
+            <strong>Trong kho</strong> là tổng hai số đó — con số nhân viên kho đếm được khi đi vào kho.
+        </p>
+        <a th:href="@{/admin/stock/movements}" class="btn btn-sm btn-outline-secondary">Xem sổ kho</a>
+    </div>
+
+    <table class="table table-bordered table-striped table-sm align-middle">
+        <thead>
+        <tr>
+            <th style="width: 90px;">Mã</th>
+            <th>Sản phẩm</th>
+            <th style="width: 120px;" class="num">Còn rảnh</th>
+            <th style="width: 130px;" class="num">Đã cam kết</th>
+            <th style="width: 120px;" class="num">Trong kho</th>
+            <th style="width: 210px;">Thao tác</th>
+        </tr>
+        </thead>
+        <tbody>
+
+        <tr th:if="${levels.isEmpty()}">
+            <td colspan="6" class="text-center text-sub py-3">Chưa có sản phẩm nào đang sử dụng.</td>
+        </tr>
+
+        <tr th:each="level : ${levels}">
+            <td th:text="${level.product.code}">SP001</td>
+            <td th:text="${level.product.name}">Tên</td>
+
+            <td class="num">
+                <span th:class="${level.low} ? 'status-tag status-tag-warning' : ''"
+                      th:text="${#numbers.formatInteger(level.availableBoxes, 1, 'POINT')}">800</span>
+            </td>
+            <td class="num" th:text="${#numbers.formatInteger(level.committedBoxes, 1, 'POINT')}">0</td>
+            <td class="num" th:text="${#numbers.formatInteger(level.physicalBoxes, 1, 'POINT')}">800</td>
+
+            <td>
+                <!--
+                    Nhap kho: dieu phoi vien lam duoc. Dung POST chu khong dung link GET —
+                    link GET doi du lieu la ai gui duong dan cho minh bam cung doi duoc (CSRF).
+                -->
+                <button type="button" class="btn btn-sm btn-primary py-0"
+                        data-bs-toggle="modal"
+                        th:data-bs-target="'#receiveModal-' + ${level.product.id}">Nhập kho</button>
+
+                <!-- Kiem ke: chi quan tri vien. An nut o day VA chan that o @PreAuthorize (CBR-15) -->
+                <button type="button" class="btn btn-sm btn-outline-secondary py-0"
+                        sec:authorize="hasRole('ADMIN')"
+                        data-bs-toggle="modal"
+                        th:data-bs-target="'#stocktakeModal-' + ${level.product.id}">Kiểm kê</button>
+
+                <a class="btn btn-sm btn-outline-secondary py-0"
+                   th:href="@{/admin/stock/movements(productId=${level.product.id})}">Sổ</a>
+            </td>
+        </tr>
+        </tbody>
+    </table>
+
+    <!-- ============ Hop thoai Nhap kho, mot cai cho moi san pham ============ -->
+    <div th:each="level : ${levels}" class="modal fade"
+         th:id="'receiveModal-' + ${level.product.id}" tabindex="-1">
+        <div class="modal-dialog modal-dialog-centered">
+            <form th:action="@{/admin/stock/receive}" method="post" class="modal-content">
+                <input type="hidden" name="productId" th:value="${level.product.id}">
+
+                <div class="modal-header py-2">
+                    <h6 class="modal-title">Nhập kho — <span th:text="${level.product.name}">Tên</span></h6>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label mb-1 small">Số thùng nhập vào kho</label>
+                        <input type="number" name="boxCount" min="1" step="1" required
+                               class="form-control form-control-sm" placeholder="Ví dụ: 500">
+                    </div>
+                    <div>
+                        <label class="form-label mb-1 small">Ghi chú</label>
+                        <input type="text" name="note" maxlength="500"
+                               class="form-control form-control-sm"
+                               placeholder="Ví dụ: lô sản xuất ngày 11/10">
+                    </div>
+                    <p class="text-sub small mb-0 mt-2">
+                        Hiện còn rảnh <strong th:text="${level.availableBoxes}">0</strong> thùng.
+                    </p>
+                </div>
+
+                <div class="modal-footer py-2">
+                    <button type="button" class="btn btn-sm btn-outline-secondary" data-bs-dismiss="modal">Hủy</button>
+                    <button type="submit" class="btn btn-sm btn-primary">Nhập kho</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- ============ Hop thoai Kiem ke ============ -->
+    <div th:each="level : ${levels}" sec:authorize="hasRole('ADMIN')" class="modal fade"
+         th:id="'stocktakeModal-' + ${level.product.id}" tabindex="-1">
+        <div class="modal-dialog modal-dialog-centered">
+            <form th:action="@{/admin/stock/stocktake}" method="post" class="modal-content">
+                <input type="hidden" name="productId" th:value="${level.product.id}">
+
+                <div class="modal-header py-2">
+                    <h6 class="modal-title">Kiểm kê — <span th:text="${level.product.name}">Tên</span></h6>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label mb-1 small">Số thùng đếm được trong kho</label>
+                        <input type="number" name="countedBoxes" min="0" step="1" required
+                               class="form-control form-control-sm"
+                               th:placeholder="'Hệ thống đang tính là ' + ${level.physicalBoxes}">
+                    </div>
+                    <div>
+                        <label class="form-label mb-1 small">Lý do điều chỉnh (bắt buộc)</label>
+                        <input type="text" name="note" maxlength="500" required
+                               class="form-control form-control-sm"
+                               placeholder="Ví dụ: 5 thùng bị ướt, loại bỏ">
+                    </div>
+
+                    <!--
+                        Giai thich phep tru ngay tren man hinh. Day la cho de nham nhat cua
+                        ca phan ton kho: nguoi dung go so VAT LY dem duoc, he thong tu tru
+                        phan da cam ket de ra so con ranh.
+                    -->
+                    <div class="alert alert-light border small mt-3 mb-0">
+                        Nhập <strong>số thùng đếm được trong kho</strong>, không phải số còn rảnh.
+                        Hệ thống tự trừ <strong th:text="${level.committedBoxes}">0</strong> thùng
+                        đã cam kết cho các đơn đã duyệt để ra số còn rảnh mới.
+                    </div>
+                </div>
+
+                <div class="modal-footer py-2">
+                    <button type="button" class="btn btn-sm btn-outline-secondary" data-bs-dismiss="modal">Hủy</button>
+                    <button type="submit" class="btn btn-sm btn-primary">Ghi điều chỉnh</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+</div>
+
+</body>
+</html>

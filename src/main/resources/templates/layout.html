@@ -66,6 +66,16 @@
                 <li><a class="dropdown-item" th:href="@{/admin/depot}">Kho</a></li>
             </ul>
         </li>
+
+        <!--
+            Ton kho KHONG nam trong menu Danh muc, du cung o duong dan /admin.
+            Ly do: nhap kho la viec van hanh lam hang ngay, giong don hang chu khong giong
+            danh muc — va dieu phoi vien SUA duoc o day trong khi danh muc thi chi xem.
+            Gop vao mot menu la mo duong cho nham lan ve quyen.
+        -->
+        <li class="nav-item" sec:authorize="hasAnyRole('ADMIN', 'DISPATCHER')">
+            <a class="nav-link" th:href="@{/admin/stock}">Tồn kho</a>
+        </li>
         <li class="nav-item" sec:authorize="hasRole('ADMIN')">
             <a class="nav-link" th:href="@{/admin/users}">Tài khoản</a>
         </li>

@@ -4,6 +4,7 @@ import com.minhphu.mproute.dto.DeliveryReport;
 import com.minhphu.mproute.dto.OptimizationReport;
 import com.minhphu.mproute.dto.OrderReport;
 import com.minhphu.mproute.dto.ProductBoxCount;
+import com.minhphu.mproute.entity.StockMovement;
 import com.minhphu.mproute.entity.enums.OrderStatus;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.poi.ss.usermodel.BorderStyle;
@@ -26,6 +27,7 @@ import java.io.UncheckedIOException;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
+import java.util.List;
 
 /**
  * Xuat ba bao cao ra file .xlsx (CN-08-05, BR08-05).
@@ -49,6 +51,10 @@ import java.time.format.DateTimeFormatter;
 public class ReportExcelExporter {
 
     private static final DateTimeFormatter DAY_MONTH_YEAR = DateTimeFormatter.ofPattern("dd/MM/yyyy");
+
+    // So kho ghi ca gio phut: trong mot ngay co nhieu phat sinh, thieu gio thi khong
+    // doc ra duoc thu tu cac dong
+    private static final DateTimeFormatter DATE_TIME = DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm");
 
     /** Kieu MIME cua .xlsx. Sai chuoi nay thi trinh duyet tai ve mot file khong mo duoc. */
     public static final String XLSX_CONTENT_TYPE =
@@ -256,6 +262,56 @@ public class ReportExcelExporter {
         number(sheetRow, 8, row.tripsSaved(), styles.integer);
         text(sheetRow, 9, row.algorithm().getDisplayName(), styles.text);
         return rowIndex + 1;
+    }
+
+    // ==================== So kho ====================
+
+    /**
+     * Xuat so kho ra Excel.
+     *
+     * Dat o day chu khong viet mot lop xuat file rieng de dung lai nguyen bo dinh dang
+     * va cac ham writeTitle / writeHeader / autoSize — hai bo dinh dang song song la hai
+     * cho phai sua moi khi doi mot thu, va chung se lech nhau.
+     *
+     * Cot "Phát sinh" mang dau: +500 la hang vao kho, -220 la hang di. Nguoi mo file
+     * khong co man hinh ben canh de doan dau, nen phai ghi ro trong chinh file.
+     */
+    public byte[] exportStockLedger(List<StockMovement> movements,
+                                    LocalDate fromDate, LocalDate toDate) {
+        try (Workbook workbook = new XSSFWorkbook()) {
+
+            Styles styles = new Styles(workbook);
+            Sheet sheet = workbook.createSheet("Sổ kho");
+
+            int rowIndex = writeTitle(sheet, styles, "Sổ kho thành phẩm", fromDate, toDate, 8);
+            rowIndex = writeHeader(sheet, styles, rowIndex,
+                    "Thời điểm", "Mã SP", "Sản phẩm", "Loại phát sinh",
+                    "Phát sinh (thùng)", "Tồn sau (thùng)", "Đơn hàng", "Người thực hiện");
+
+            for (StockMovement movement : movements) {
+                Row row = sheet.createRow(rowIndex++);
+                text(row, 0, movement.getCreatedAt().format(DATE_TIME), styles.text);
+                text(row, 1, movement.getProduct().getCode(), styles.text);
+                text(row, 2, movement.getProduct().getName(), styles.text);
+                text(row, 3, movement.getMovementType().getDisplayName(), styles.text);
+                number(row, 4, movement.getSignedBoxCount(), styles.integer);
+                number(row, 5, movement.getStockAfter(), styles.integer);
+                text(row, 6, movement.getOrder() == null ? "" : movement.getOrder().getCode(), styles.text);
+                text(row, 7, movement.getCreatedBy() == null
+                        ? "Hệ thống" : movement.getCreatedBy().getFullName(), styles.text);
+            }
+
+            Row noteRow = sheet.createRow(rowIndex + 1);
+            text(noteRow, 0, "Sổ kho chỉ ghi thêm, không sửa và không xóa dòng nào. "
+                    + "Ghi sai được sửa bằng một dòng kiểm kê đảo lại, nên mọi dấu vết đều còn.",
+                    styles.note);
+
+            autoSize(sheet, 8);
+            return toBytes(workbook);
+
+        } catch (IOException e) {
+            throw new IllegalStateException("Không xuất được sổ kho ra Excel", e);
+        }
     }
 
     // ==================== Ham dung chung ====================

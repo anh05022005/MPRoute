@@ -53,6 +53,25 @@ public class Product {
     @Column(name = "unit_price", nullable = false, precision = 15, scale = 2)
     private BigDecimal unitPrice = BigDecimal.ZERO;
 
+    /*
+     * So thung CON RANH de nhan don moi — KHONG phai so thung dang nam trong kho.
+     *
+     * Hai con so nay khac nhau: hang da duyet cho mot don thi van nam trong kho cho
+     * tai xe den lay, nhung khong duoc hua cho khach khac nua. Quan he:
+     *     trong kho = con ranh + da cam ket
+     * trong do "da cam ket" KHONG luu o dau ca, no dem duoc tu order_items cua cac don
+     * dang APPROVED / ROUTED / DELIVERING. So nao suy ra duoc thi khong luu, vi luu la
+     * them mot cho co the lech.
+     *
+     * Khong co man hinh nao go truc tiep vao cot nay. No chi doi khi StockService ghi
+     * mot dong vao stock_movements — co lam the thi cong ca so moi luon khop con so nay.
+     *
+     * columnDefinition co DEFAULT 0 de ddl-auto=update them duoc cot NOT NULL vao bang
+     * products dang co san du lieu ma khong chet luc khoi dong.
+     */
+    @Column(name = "stock_boxes", nullable = false, columnDefinition = "INT NOT NULL DEFAULT 0")
+    private Integer stockBoxes = 0;
+
     @Enumerated(EnumType.STRING)
     @JdbcTypeCode(SqlTypes.VARCHAR)
     @Column(name = "status", nullable = false, length = 20)

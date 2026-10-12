@@ -26,6 +26,25 @@ public interface OrderRepository extends JpaRepository<Order, Long> {
      */
     List<Order> findByDeliveryDateAndStatus(LocalDate deliveryDate, OrderStatus status);
 
+    /**
+     * Don dang giu hang trong kho, NAP SAN ca cac dong chi tiet — dung khi khoi tao ton kho
+     * lan dau (StockOpeningSeeder).
+     *
+     * Phai JOIN FETCH chu khong dung findByStatusIn thuong: StockOpeningSeeder la
+     * CommandLineRunner nen khong co session mo san, doc order.getItems() tren thuc the
+     * da roi session se nem LazyInitializationException. Nap san o day gon hon la mo mot
+     * giao dich dai bao ca vong lap khoi tao.
+     *
+     * DISTINCT vi JOIN FETCH mot collection lam moi don lap lai dung bang so dong chi tiet.
+     */
+    @Query("""
+            SELECT DISTINCT o FROM Order o
+            LEFT JOIN FETCH o.items i
+            LEFT JOIN FETCH i.product
+            WHERE o.status IN :statuses
+            """)
+    List<Order> findByStatusInWithItems(@Param("statuses") List<OrderStatus> statuses);
+
     Page<Order> findByDeliveryDate(LocalDate deliveryDate, Pageable pageable);
 
     /**

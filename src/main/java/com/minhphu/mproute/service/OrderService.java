@@ -56,6 +56,7 @@ public class OrderService {
     private final VehicleRepository vehicleRepository;
     private final UserRepository userRepository;
     private final StatusHistoryService statusHistoryService;
+    private final StockService stockService;
 
     @Transactional(readOnly = true)
     public Page<Order> search(LocalDate deliveryDate, OrderStatus status, Long customerId,
@@ -275,6 +276,21 @@ public class OrderService {
         applyTotals(order);
 
         Order saved = orderRepository.save(order);
+
+        /*
+         * Don DA DUYET thi dang giu hang, sua so thung phai bu tru lai ton kho.
+         * Don con cho duyet thi chua giu gi nen khong co gi phai bu.
+         *
+         * Khong can chup anh so luong cu truoc dong getItems().clear() o tren: StockService
+         * dem so thung don dang giu tu SO KHO (tong OUT tru tong RETURN cua don nay) chu
+         * khong doc tu danh sach dong hang — nen danh sach cu mat khoi bo nho cung khong sao.
+         */
+        if (saved.getStatus() == OrderStatus.APPROVED) {
+            stockService.recommit(saved, updatedById).ifPresent(shortage -> {
+                throw new IllegalStateException(shortage);
+            });
+        }
+
         log.info("Sua don {} (nguoi sua #{}): {} dong, {} kg, {} m3, {} d",
                 saved.getCode(), updatedById, saved.getItems().size(),
                 saved.getTotalWeight(), saved.getTotalVolume(), saved.getTotalAmount());
@@ -301,6 +317,21 @@ public class OrderService {
 
         order.setStatus(OrderStatus.APPROVED);
         Order saved = orderRepository.save(order);
+
+        /*
+         * Tru kho NGAY LUC DUYET, khong doi den luc tai xe chat hang len xe.
+         *
+         * Vi tu thoi diem nay so thung do da thuoc ve don: khach khac goi den thi khong
+         * duoc hua nua. Tru luc chat hang thi giua duyet va chat hang he thong van tuong
+         * hang con ranh, va se cho duyet tiep mot don thu hai bang chinh so hang do.
+         *
+         * Day cung la cho CHAN CUNG khi khong du hang. Controller da kiem truoc de hien
+         * cau thong bao tu te, nhung ham nay van tu bao ve minh: den duoc day ma thieu
+         * hang nghia la co duong goi khac khong di qua man hinh.
+         */
+        stockService.commit(saved, approvedById).ifPresent(shortage -> {
+            throw new IllegalStateException(shortage);
+        });
 
         statusHistoryService.recordChange(EntityType.ORDER, saved.getId(),
                 OrderStatus.PENDING_APPROVAL.name(), OrderStatus.APPROVED.name(),
@@ -334,6 +365,13 @@ public class OrderService {
         order.setStatus(OrderStatus.CANCELLED);
         order.setCancelReason(reason.trim());
         Order saved = orderRepository.save(order);
+
+        /*
+         * Hoan hang ve kho. Goi khong dieu kien duoc vi StockService dem phan dang giu
+         * tu so kho: don chua tung duyet thi khong co dong nao, cam ket bang rong, khong
+         * ghi gi. Khong phai viet if theo trang thai cu — mot nhanh if la mot cho co the sai.
+         */
+        stockService.release(saved, cancelledById, "Huy don " + saved.getCode());
 
         statusHistoryService.recordChange(EntityType.ORDER, saved.getId(),
                 previousStatus, OrderStatus.CANCELLED.name(), cancelledById, reason.trim());

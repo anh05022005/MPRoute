@@ -96,6 +96,9 @@ public class CatalogSeeder implements CommandLineRunner {
         seedProduct("SP003", "Nước giặt 3.5L", 21.5, 0.028, 720_000);
         seedProduct("SP004", "Nước lau sàn 2L", 24.8, 0.031, 380_000);
         seedProduct("SP005", "Nước rửa tay 500ml", 14.2, 0.024, 450_000);
+
+        // So thung ton dau ky KHONG dat o day — xem StockOpeningSeeder, no phai chay sau
+        // HistorySeeder de con tru kho cho cac don lich su dang o trang thai da duyet
     }
 
     private void seedProduct(String code, String name, double weightPerBox, double volumePerBox,

@@ -78,6 +78,7 @@ public class DeliveryService {
     private final NotificationRepository notificationRepository;
     private final StatusHistoryService statusHistoryService;
     private final OrderService orderService;
+    private final StockService stockService;
 
     /** Ho so tai xe cua tai khoan dang dang nhap. Rong khi tai khoan chua duoc gan tai xe nao. */
     @Transactional(readOnly = true)
@@ -300,6 +301,14 @@ public class DeliveryService {
                 previousStatus, OrderStatus.FAILED.name(), userId,
                 "Giao that bai: " + reason.getDisplayName());
 
+        /*
+         * Giao khong duoc thi hang theo xe ve kho, hoan lai phan con ranh.
+         *
+         * Khong hoan thi so ton cu tut dan sau moi lan giao that bai, va chi vai ngay
+         * la he thong tuong het hang trong khi kho van day — loi am tham, chay van chay.
+         */
+        stockService.release(order, userId, "Giao that bai don " + order.getCode());
+
         // NTF-03 — dieu phoi phai biet ngay de con goi lai cho khach trong ngay
         notifyDispatchers("NTF-03", String.format("Đơn %s (%s) giao thất bại: %s.%s",
                 order.getCode(), order.getCustomer().getName(), reason.getDisplayName(),
@@ -371,6 +380,18 @@ public class DeliveryService {
                 previousStatus, OrderStatus.POSTPONED.name(), userId,
                 "Hoan sang ngay " + newDeliveryDate);
 
+        /*
+         * Hoan hang cua don cu ve kho TRUOC khi tao don moi.
+         *
+         * Thu tu quan trong: don moi duoc tao thang o trang thai APPROVED nen no se tru
+         * kho ngay. Neu tru truoc khi hoan thi dung so hang nay bi doi hai lan, va don
+         * hoan se bi chan oan vi "khong du hang" trong khi hang chinh la cua no.
+         *
+         * Hoan roi tru lai dung bang nhau nen so ton cuoi cung khong doi — nhung so kho
+         * ghi lai ca hai buoc, nen van doc ra duoc la hang da ve kho roi di lai.
+         */
+        stockService.release(order, userId, "Hoan don " + order.getCode());
+
         Order reissued = reissueForNewDate(order, newDeliveryDate, userId);
 
         notifyDispatchers("NTF-06", String.format(
@@ -409,6 +430,19 @@ public class DeliveryService {
         }
 
         Order saved = orderRepository.save(copy);
+
+        /*
+         * Don moi vao thang APPROVED (khong qua approveOrder) nen phai tu tru kho o day.
+         *
+         * Khong the thieu hang: don cu vua hoan dung so thung nay ve kho ngay truoc do
+         * trong movePostponed. Van kiem va nem loi thay vi bo qua — thieu hang o day
+         * nghia la thu tu hoan/tru da bi dao, va do la loi phai biet ngay.
+         */
+        stockService.commit(saved, userId).ifPresent(shortage -> {
+            throw new IllegalStateException(
+                    "Tạo lại đơn hoãn nhưng không đủ hàng, nhẽ ra không thể xảy ra: " + shortage);
+        });
+
         statusHistoryService.recordChange(EntityType.ORDER, saved.getId(),
                 null, OrderStatus.APPROVED.name(), userId,
                 "Tao lai tu don hoan " + source.getCode());

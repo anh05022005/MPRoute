@@ -2,6 +2,7 @@ package com.minhphu.mproute.controller;
 
 import com.minhphu.mproute.dto.CustomerForm;
 import com.minhphu.mproute.dto.OrderForm;
+import com.minhphu.mproute.dto.OrderItemForm;
 import com.minhphu.mproute.dto.OrderTotals;
 import com.minhphu.mproute.entity.Customer;
 import com.minhphu.mproute.entity.Order;
@@ -16,6 +17,7 @@ import com.minhphu.mproute.security.CurrentUser;
 import com.minhphu.mproute.service.CustomerService;
 import com.minhphu.mproute.service.OrderService;
 import com.minhphu.mproute.service.StatusHistoryService;
+import com.minhphu.mproute.service.StockService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
@@ -38,6 +40,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Optional;
 import java.util.stream.Collectors;
 
 /**
@@ -81,6 +84,7 @@ public class OrderController {
     private final CustomerRepository customerRepository;
     private final ProductRepository productRepository;
     private final StatusHistoryService statusHistoryService;
+    private final StockService stockService;
 
     @ModelAttribute("orderStatuses")
     public OrderStatus[] orderStatuses() {
@@ -229,6 +233,23 @@ public class OrderController {
             return "redirect:/orders/" + id;
         }
 
+        /*
+         * MSG-17 — khong du hang trong kho thi khong duyet.
+         *
+         * Chan o day de nguoi dung nhan mot cau thong bao tu te thay vi trang 500.
+         * approveOrder() cung tu kiem lai va nem loi: hai lop, giong cach lam voi phan
+         * quyen (CBR-15), sua nham mot ben thi ben con lai van giu.
+         *
+         * Day moi la cho chan cung. Luc TAO don chi canh bao, vi don PENDING_APPROVAL
+         * chua giu hang — khach goi dat truoc trong khi xuong san xuat con dang chay la
+         * chuyen binh thuong, chan ngay luc do thi khong ghi noi don.
+         */
+        Optional<String> shortage = stockService.checkAvailability(order);
+        if (shortage.isPresent()) {
+            redirectAttributes.addFlashAttribute("errorMessage", shortage.get());
+            return "redirect:/orders/" + id;
+        }
+
         Order approved = orderService.approveOrder(id, currentUser.getId());
         redirectAttributes.addFlashAttribute("successMessage",
                 "Đã duyệt đơn " + approved.getCode() + ". Đơn đã vào danh sách chờ phân tuyến.");
@@ -372,7 +393,42 @@ public class OrderController {
             OrderTotals totals = orderService.calculateTotals(form);
             orderService.checkCapacity(totals)
                     .ifPresent(message -> binding.reject("capacityExceeded", message));
+
+            validateStockForApprovedOrder(form, binding);
         }
+    }
+
+    /**
+     * MSG-17 khi SUA mot don DA DUYET: don dang giu hang, tang so thung len thi phai co
+     * du hang cho phan tang them.
+     *
+     * Chi kiem voi don da duyet. Don con cho duyet chua giu hang nen sua thoai mai, phan
+     * chan cung nam o buoc bam Duyet don.
+     *
+     * Kiem o day chu khong de updateOrder() nem loi, de nguoi dung nhan loi ngay tren form
+     * va khong mat nhung gi vua go.
+     */
+    private void validateStockForApprovedOrder(OrderForm form, BindingResult binding) {
+        if (form.getId() == null) {
+            return;
+        }
+
+        Order existing = orderService.getById(form.getId());
+        if (existing.getStatus() != OrderStatus.APPROVED) {
+            return;
+        }
+
+        // Gop theo san pham: chon cung mot san pham o hai dong la hop le, khong gop thi
+        // dong sau ghi de dong truoc va phep kiem bo sot phan chenh
+        Map<Long, Integer> requested = new LinkedHashMap<>();
+        for (OrderItemForm line : form.getItems()) {
+            if (!line.isBlank()) {
+                requested.merge(line.getProductId(), line.getBoxCount(), Integer::sum);
+            }
+        }
+
+        stockService.checkAvailability(form.getId(), requested)
+                .ifPresent(message -> binding.reject("stockShortage", message));
     }
 
     /**
@@ -407,6 +463,9 @@ public class OrderController {
     private void loadFormData(Model model) {
         model.addAttribute("customers", activeCustomers());
         model.addAttribute("products", activeProducts());
+        // So thung con ranh theo productId, de form hien ngay canh o chon san pham —
+        // dieu phoi vien dang nghe dien thoai can tra loi "hang con khong" tai cho
+        model.addAttribute("availableStock", stockService.availableBoxesByProduct());
         model.addAttribute(NEEDS_MAP, true);
         model.addAttribute(NEEDS_ORDER_JS, true);
     }

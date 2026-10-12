@@ -172,8 +172,20 @@
                                 th:text="${product.name} + ' (' + ${product.unit} + ')'"
                                 th:attr="data-weight=${product.weightPerBox},
                                          data-volume=${product.volumePerBox},
-                                         data-price=${product.unitPrice}">Bông tẩy trang</option>
+                                         data-price=${product.unitPrice},
+                                         data-stock=${availableStock.get(product.id)}">Bông tẩy trang</option>
                     </select>
+
+                    <!--
+                        So thung con ranh, hien ngay duoi o chon san pham.
+                        Dieu phoi vien dang nghe dien thoai can tra loi "hang con khong" tai cho —
+                        bat ho mo man hinh khac de tra la khong ai dung.
+
+                        Day chi la so THAM KHAO: don con cho duyet chua giu hang, nen hai don cung
+                        luc deu nhin thay cung mot con so. Cho chan cung la buoc bam Duyet don,
+                        o do moi tru kho that (MSG-17).
+                    -->
+                    <small class="line-stock text-sub d-block mt-1"></small>
                 </td>
                 <td>
                     <input type="number" min="1" step="1" class="form-control form-control-sm line-box-count"
