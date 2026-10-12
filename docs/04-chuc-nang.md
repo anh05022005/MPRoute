@@ -12,7 +12,7 @@ Ký hiệu: **★ bắt buộc** — **○ tùy chọn, cắt được**
 `GET /` trả về trang chào, ứng dụng khởi động không lỗi, kết nối MySQL thành công, log hiện câu SQL.
 
 ### ★ CN-00-02 Tạo toàn bộ entity và repository
-Chạy ứng dụng, MySQL tự sinh đủ 16 bảng theo `02-co-so-du-lieu.md`. Kiểm bằng `SHOW TABLES`.
+Chạy ứng dụng, MySQL tự sinh đủ 17 bảng theo `02-co-so-du-lieu.md`. Kiểm bằng `SHOW TABLES`.
 
 ### ★ CN-00-03 Đăng nhập, đăng xuất
 - Sai tài khoản → MSG-12, không nói rõ sai gì
@@ -59,6 +59,24 @@ Sửa được 9 tham số trong `02-co-so-du-lieu.md`. **Đổi `AVERAGE_SPEED`
 
 ### ○ CN-01-09 Nhật ký hoạt động
 Bảng xem log, lọc theo người dùng và khoảng thời gian.
+
+### ★ CN-01-10 Quản lý tồn kho thành phẩm
+Màn hình `/admin/stock` hiện ba con số cho mỗi sản phẩm: **còn rảnh**, **đã cam kết**, **trong kho**.
+Nhập kho ghi phát sinh `IN`; kiểm kê nhập *số thùng đếm được trong kho* và hệ thống tự trừ phần
+đã cam kết để ra số còn rảnh (BR01-15).
+
+DoD: nhập kho 100 thùng → số còn rảnh tăng đúng 100 và sổ kho có một dòng mới. Đăng nhập
+`DISPATCHER` thấy nút Nhập kho, **không** thấy nút Kiểm kê; gửi thẳng `POST /admin/stock/stocktake`
+bằng công cụ ngoài trình duyệt → ra trang 403 (CBR-15).
+
+### ★ CN-01-11 Sổ kho
+Màn hình `/admin/stock/movements`: lọc theo sản phẩm, loại phát sinh, khoảng ngày; xuất Excel giữ
+đúng bộ lọc đang xem. Nút **Hoàn tác** ghi một dòng đảo trỏ về dòng gốc, **không xóa dòng nào**
+(CBR-17, BR01-13).
+
+DoD: cộng toàn bộ số thùng có dấu của một sản phẩm ra đúng `products.stock_boxes` — màn hình tồn
+kho tự đối chiếu mỗi lần mở và hiện cảnh báo đỏ nếu lệch. Hoàn tác một lần nhập kho → tồn về đúng
+số cũ, **sổ có thêm một dòng chứ không mất dòng nào**. Hai loại `OUT`/`RETURN` không có nút hoàn tác.
 
 ---
 

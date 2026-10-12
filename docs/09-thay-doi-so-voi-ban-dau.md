@@ -121,6 +121,92 @@ Muốn ghim tay chính xác thì vào màn hình Khách hàng sửa lại sau �
 
 ---
 
+### A5. Bổ sung quản lý tồn kho thành phẩm — lỗ hổng bỏ sót trong đặc tả gốc
+
+**Đặc tả gốc không có tồn kho.** `Product` chỉ có `weight_per_box`, `volume_per_box`, `unit_price`.
+Luồng đơn hàng kiểm đúng một thứ: đơn có vượt sức chứa xe lớn nhất không (BR02-05). Không ở đâu hỏi
+*kho có đủ hàng không*.
+
+Hậu quả: khách gọi đặt 220 thùng → nhập đơn → duyệt → phân tuyến → gửi email hẹn giờ cho khách →
+tài xế ra kho chất hàng → **phát hiện kho còn 80 thùng**. Lúc đó tuyến đã chốt, ETA đã gửi đi.
+
+**Chỗ chí tử nằm trong chính `docs/00`:** phần Bốn tác nhân viết khách *"quen gọi điện để vừa đặt
+vừa hỏi giá, **hỏi hàng còn không**"*. Đặc tả nói thẳng rằng điều phối viên cần biết tồn kho để trả
+lời điện thoại — rồi hệ thống không cho họ biết. Hai chỗ này đọc cạnh nhau là thấy ngay.
+
+**Không trái mục Ngoài phạm vi.** Mục đó loại trừ *"quản lý sản xuất, tồn kho **nguyên vật liệu**"*
+— nguyên vật liệu, không phải thành phẩm. Tồn kho thành phẩm chưa bị loại trừ ở đâu cả, nó chỉ bị
+**bỏ sót**. Sản xuất và nguyên vật liệu vẫn ngoài phạm vi.
+
+**Quyết:** thêm `CN-01-10` và `CN-01-11`, một cột `products.stock_boxes` và một bảng `stock_movements`.
+
+#### Bốn quyết định thiết kế cần giải thích được
+
+**1. Lưu một con số, không lưu ba.** `stock_boxes` là số thùng *còn rảnh*. Hai con số kia suy ra
+được: `đã cam kết` đếm từ `order_items` của đơn `APPROVED`/`ROUTED`/`DELIVERING`, `trong kho` là
+tổng hai số. Số nào suy ra được thì không lưu — lưu là thêm một chỗ có thể lệch, và phải nhớ cập
+nhật ở mọi bước chuyển trạng thái.
+
+**2. Sổ kho chỉ ghi thêm.** Ghi sai thì ghi **bút toán đảo**, không sửa, không xóa. Ba lý do ở
+`docs/02` bảng 17. Lý do mạnh nhất: xóa một dòng sổ là vi phạm thẳng **CBR-17**, mà đồ án đã áp
+CBR-17 cho sản phẩm, xe, khách hàng, tài khoản — kho lại cho xóa cứng thì hệ thống tự mâu thuẫn.
+
+**3. Trừ kho lúc duyệt đơn, không lúc tài xế lấy hàng.** Từ lúc duyệt, số hàng đó đã thuộc về đơn:
+khách khác gọi đến thì không được hứa nữa. Trừ lúc lấy hàng thì giữa duyệt và lấy hàng hệ thống vẫn
+tưởng hàng còn rảnh, và sẽ cho duyệt tiếp một đơn thứ hai bằng chính số hàng đó.
+
+Đối xứng lại: lúc **tạo** đơn chỉ cảnh báo, vẫn lưu được. Giữ chỗ cho đơn chưa duyệt thì phải nhớ
+nhả chỗ khi đơn bị hủy, và quên nhả là nguồn sai số kinh điển của mọi hệ tồn kho.
+
+**4. Số thùng một đơn đang giữ được đếm từ SỔ KHO, không đọc từ dòng hàng của đơn.** Ba hậu quả,
+cả ba đều có lợi: `updateOrder` gọi `getItems().clear()` trước khi dựng lại danh sách nên số lượng
+cũ đã mất khỏi bộ nhớ — đọc từ sổ thì không cần chụp ảnh trước; gọi hai lần không hỏng gì vì lần
+hai thấy cam kết đã bằng 0; và hủy một đơn chưa từng duyệt cũng không hoàn kho oan.
+
+#### Số dư đầu kỳ — một giả định phải nói rõ
+
+Tồn kho được thêm vào khi CSDL đã có sẵn năm sản phẩm và hàng trăm đơn, một số đơn đang ở trạng
+thái đã duyệt tức là **đang giữ hàng**. `StockOpeningSeeder` (chạy sau `HistorySeeder`) làm hai
+bước trong **một giao dịch**: ghi tồn đầu kỳ bằng số thùng *vật lý* trong kho, rồi trừ ngay phần
+các đơn đang giữ.
+
+Nhờ bước hai, đơn cũ hành xử y hệt đơn mới: hủy hoặc giao thất bại thì hoàn đúng số thùng đó về
+kho. Không có bước hai thì chúng là một nhóm đơn đặc biệt không tham gia tồn kho, và `trong kho`
+sẽ phóng lên (839 thay vì 800 với SP001) — đúng kiểu con số phải giải thích vòng vo khi vấn đáp.
+
+**Không dựng lại mười ngày đơn hàng lịch sử thành các dòng xuất kho.** Đó là dữ liệu sinh ra trước
+khi hệ thống theo dõi tồn kho, dựng lại cũng không dựa trên lần nhập kho thật nào. Mọi hệ thống
+thật đều làm đúng thế khi đi vào hoạt động: chốt một con số ngày khai trương rồi ghi sổ từ đó.
+Câu hỏi *"sao đơn tháng trước không trừ kho"* có câu trả lời sẵn, và nó là câu trả lời đúng chứ
+không phải chống chế.
+
+#### Phân quyền cố ý khác danh mục
+
+Ma trận `docs/01` cho điều phối viên **chỉ xem** danh mục. Tồn kho tách khỏi quy tắc đó: nhập kho
+là việc *vận hành* làm hàng ngày, giống đơn hàng chứ không giống danh mục. Nhưng *sửa lại* số tồn —
+kiểm kê, hoàn tác — thì chỉ quản trị viên: người gõ số hàng ngày không nên là người được âm thầm
+viết lại con số đó. Gõ nhầm 500 thành 5000 thì cách chữa đúng là báo lên để kiểm kê có lý do ghi
+sổ, không phải tự kéo con số về.
+
+Vì lý do đó **Tồn kho là một mục menu riêng**, không nhét vào menu Danh mục — gộp vào một chỗ là
+mở đường cho nhầm lẫn về quyền.
+
+#### Không đụng một dòng nào trong `service/optimization/`
+
+Thuật toán chỉ nhận đơn `APPROVED` và không cần biết tồn kho tồn tại. UC03 và UC08 — hai phần làm
+nên giá trị học thuật — rủi ro bằng không. Đây là lý do chính khiến việc bổ sung này đáng làm ở
+giai đoạn muộn của đồ án.
+
+#### Giới hạn đã biết, nói trước cho đỡ bị hỏi bất ngờ
+
+| Giới hạn | Vì sao chấp nhận |
+|---|---|
+| Số tồn chỉ đúng nếu có người nhập kho | Chức năng Kiểm kê là van cứu khi số liệu lệch, nhưng nó là van, không phải nguồn dữ liệu |
+| Số thùng còn rảnh hiện trên form tạo đơn chỉ là **tham khảo** | Hai đơn chưa duyệt cùng lúc đều thấy cùng một con số. Cửa chặn thật ở bước duyệt — có chủ ý, xem quyết định 3 |
+| Không có lô sản xuất, hạn dùng, nhiều kho | Ngoài phạm vi. Nhiều kho còn là bài toán MDVRP, khác hẳn |
+
+---
+
 ## B. Sửa lỗi logic tìm ra khi rà soát đặc tả
 
 Bốn chỗ dưới đây là đặc tả gốc **sai hoặc thiếu**, không phải chuyện phong cách. Đây là phần quan

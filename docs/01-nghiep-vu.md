@@ -90,6 +90,7 @@ DRAFT ──> CONFIRMED ──> IN_PROGRESS ──┬──> COMPLETED
 | Nhóm chức năng | Quản trị | Điều phối | Tài xế | Khách |
 |---|---|---|---|---|
 | Quản lý danh mục | Toàn quyền | Chỉ xem | — | — |
+| Quản lý tồn kho | Toàn quyền | Xem + nhập kho | — | — |
 | Quản lý tài khoản | Toàn quyền | — | — | — |
 | Cấu hình tham số | Toàn quyền | — | — | — |
 | Quản lý đơn hàng | Chỉ xem | Toàn quyền | Xem đơn trong tuyến | Tra cứu đơn của mình |
@@ -97,6 +98,12 @@ DRAFT ──> CONFIRMED ──> IN_PROGRESS ──┬──> COMPLETED
 | Cập nhật giao hàng | — | — | Toàn quyền | — |
 | Xử lý sự cố | Chỉ xem | Toàn quyền | Chỉ báo sự cố | — |
 | Báo cáo | Toàn quyền | Chỉ xem | — | — |
+
+**Tồn kho cố ý khác các nhóm danh mục khác.** Nhập kho là việc *vận hành* làm hàng ngày,
+giống đơn hàng chứ không giống danh mục: bắt quản trị viên đăng nhập mỗi ngày chỉ để gõ
+"sản xuất xong 500 thùng" là sai người — người ngồi bàn cả ngày nghe điện thoại là điều phối viên.
+Nhưng *sửa lại* số tồn (kiểm kê, hoàn tác) thì chỉ quản trị viên, vì người gõ số hàng ngày không
+nên là người được âm thầm viết lại con số đó (BR01-14).
 
 Vai trò trong hệ thống — `Role`: `ADMIN`, `DISPATCHER`, `DRIVER`.
 
@@ -122,6 +129,11 @@ Spring Security cần tiền tố `ROLE_` khi tạo `GrantedAuthority`, nên `AD
 | BR01-08 | Số điện thoại đúng 10 chữ số, bắt đầu bằng 0 |
 | BR01-09 | Bản ghi đã dùng trong nghiệp vụ chỉ chuyển `INACTIVE`, không xóa |
 | BR01-10 | Chỉ một kho được đánh dấu `active = true` |
+| BR01-11 | `products.stock_boxes` là số thùng **còn rảnh** để nhận đơn mới, không phải số thùng trong kho. `trong kho = còn rảnh + đã cam kết`, trong đó `đã cam kết` đếm từ `order_items` của đơn `APPROVED`/`ROUTED`/`DELIVERING` |
+| BR01-12 | Không màn hình nào gõ trực tiếp vào `stock_boxes`. Nó chỉ đổi cùng lúc với một dòng `stock_movements`, nên cộng cả sổ luôn ra đúng con số đang lưu |
+| BR01-13 | Sổ kho **chỉ ghi thêm** — không sửa, không xóa dòng nào (CBR-17). Ghi sai thì ghi một dòng đảo trỏ về dòng gốc |
+| BR01-14 | Nhập kho: điều phối viên làm được. Kiểm kê và hoàn tác: **chỉ quản trị viên** — người gõ số hàng ngày không nên là người được âm thầm viết lại con số đó |
+| BR01-15 | Kiểm kê nhập **số thùng đếm được trong kho**, hệ thống tự trừ phần đã cam kết để ra số còn rảnh. Đếm được ít hơn phần đã cam kết → chặn, phải hủy hoặc giảm đơn trước |
 
 ### UC02 — Tiếp nhận đơn hàng
 
@@ -144,6 +156,11 @@ Spring Security cần tiền tố `ROLE_` khi tạo `GrantedAuthority`, nên `AD
 | BR02-15 | Hình thức thanh toán điền sẵn theo khách hàng, sửa được cho riêng đơn, không đổi danh mục |
 | BR02-16 | Đổi hình thức thanh toán thì tính lại `amount_to_collect` ngay |
 | BR02-17 | Sau khi lưu, hiện khối tóm tắt đơn để điều phối viên đọc lại cho khách qua điện thoại |
+| BR02-18 | Form đơn hàng hiện số thùng còn rảnh cạnh ô chọn sản phẩm. Vượt thì **chỉ cảnh báo**, vẫn lưu được — đơn `PENDING_APPROVAL` chưa giữ hàng |
+| BR02-19 | **Duyệt đơn trừ kho và là chỗ chặn cứng:** không đủ hàng → báo MSG-17, không duyệt. Trừ lúc duyệt chứ không lúc tài xế lấy hàng, vì từ lúc duyệt số hàng đó đã thuộc về đơn |
+| BR02-20 | Thiếu **một** sản phẩm thì không trừ sản phẩm nào — trừ một phần rồi báo lỗi để lại dữ liệu bẩn trong sổ kho |
+| BR02-21 | Sửa đơn đã duyệt thì bù trừ đúng phần chênh lệch, và chỉ cần đủ hàng cho **phần tăng thêm** |
+| BR02-22 | Hủy đơn đã duyệt → hoàn hàng về kho (`RETURN`). Hủy đơn chưa duyệt → không hoàn gì, vì chưa giữ gì |
 
 ### UC03 — Phân tuyến tự động
 
@@ -198,6 +215,8 @@ Spring Security cần tiền tố `ROLE_` khi tạo `GrantedAuthority`, nên `AD
 | BR05-12 | Thu khác số phải thu → bắt buộc ghi chú lý do, gửi thông báo cho điều phối |
 | BR05-13 | Đơn `FAILED` hoặc `POSTPONED` giữ trạng thái thanh toán `UNPAID` |
 | BR05-14 | Đơn công nợ giao thành công → trạng thái thanh toán `DEBT` |
+| BR05-15 | Giao thất bại → hàng theo xe về kho, hoàn lại số còn rảnh (`RETURN`). Không hoàn thì số tồn tụt dần sau mỗi lần giao hụt trong khi kho vẫn đầy |
+| BR05-16 | Hoãn đơn: hoàn hàng của đơn cũ **trước** khi tạo đơn mới. Đơn mới vào thẳng `APPROVED` nên trừ kho ngay — hoàn rồi trừ lại bằng nhau nên số tồn không đổi, nhưng sổ kho ghi lại cả hai bước |
 
 ### UC06 — Xử lý sự cố
 
@@ -267,6 +286,7 @@ Nội dung hiển thị cho người dùng nên **giữ nguyên tiếng Việt c
 | MSG-14 | Cảnh báo | Tuyến {0} vượt quá {1} cho phép của xe. |
 | MSG-15 | Xác nhận | Bạn có chắc chắn muốn thực hiện thao tác này? |
 | MSG-16 | Cảnh báo | Còn {0} đơn chưa xếp được vào tuyến nào. Vui lòng chọn thêm xe. |
+| MSG-17 | Lỗi | Không đủ hàng trong kho: {0}. Vui lòng giảm số thùng hoặc nhập thêm hàng trước khi duyệt. |
 
 ## Sự kiện sinh thông báo
 

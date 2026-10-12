@@ -65,6 +65,26 @@ hai màn hình hiện hai tên khác nhau cho cùng một người.
 | SP004 | Nước lau sàn 2L | Thùng | 24.8 | 0.031 | 380.000 |
 | SP005 | Nước rửa tay 500ml | Thùng | 14.2 | 0.024 | 450.000 |
 
+### Tồn kho đầu kỳ
+
+`StockOpeningSeeder` (chạy sau `HistorySeeder`) ghi số thùng **vật lý trong kho** lúc bắt đầu
+theo dõi tồn kho, rồi trừ ngay phần các đơn đang ở `APPROVED`/`ROUTED`/`DELIVERING` đã giữ:
+
+| Mã | Trong kho đầu kỳ |
+|---|---|
+| SP001 | 800 thùng |
+| SP002 | 800 thùng |
+| SP003 | 500 thùng |
+| SP004 | 500 thùng |
+| SP005 | 500 thùng |
+
+Hai mặt hàng nhẹ và cồng kềnh để 800, ba mặt hàng nước để 500. Đủ để kịch bản demo chạy mượt,
+mà vẫn đủ nhỏ để dựng được tình huống **thiếu hàng** cho CN-03-10 bằng một đơn lớn.
+
+Chỉ chạy khi bảng `stock_movements` **rỗng hoàn toàn**, nên chạy lại bao nhiêu lần cũng không
+sinh trùng và không đè lên số liệu đã sửa tay. Sản phẩm thêm mới qua giao diện về sau không được
+ghi tồn đầu kỳ — đúng như vậy, sản phẩm mới thật sự có 0 thùng cho đến khi có người nhập kho.
+
 **Chú ý sự tương phản:** bông tẩy trang 6 kg nhưng 0.085 m³ (nhẹ, cồng kềnh); nước lau sàn 24.8 kg nhưng 0.031 m³ (nặng, gọn). Đây là dữ liệu để chứng minh vì sao cần hai ràng buộc — khi demo nhớ chỉ vào chỗ này.
 
 ---

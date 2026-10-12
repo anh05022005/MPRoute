@@ -117,8 +117,23 @@ Dùng từ **depot** thay vì *warehouse* vì đây là thuật ngữ chuẩn c�
 | `weight_per_box` | DECIMAL(10,2) | NOT NULL, > 0 | kg — **đầu vào thuật toán** |
 | `volume_per_box` | DECIMAL(10,3) | NOT NULL, > 0 | m³ — **đầu vào thuật toán** |
 | `unit_price` | DECIMAL(15,2) | NOT NULL DEFAULT 0 | Giá một thùng |
+| `stock_boxes` | INT | NOT NULL DEFAULT 0 | Số thùng **còn rảnh** — xem ghi chú dưới |
 | `status` | VARCHAR(20) | NOT NULL | `ACTIVE`, `INACTIVE` |
 | `note` | VARCHAR(500) | | |
+
+**`stock_boxes` là số thùng còn rảnh để nhận đơn mới, không phải số thùng đang nằm trong kho.**
+Hàng đã duyệt cho một đơn thì vẫn nằm trong kho chờ tài xế lấy, nhưng không được hứa cho khách
+khác nữa. Quan hệ:
+
+```
+trong kho  =  còn rảnh  +  đã cam kết
+```
+
+trong đó `đã cam kết` **không lưu ở đâu cả** — đếm từ `order_items` của các đơn đang `APPROVED`,
+`ROUTED`, `DELIVERING`. Số nào suy ra được thì không lưu, vì lưu là thêm một chỗ có thể lệch.
+
+Không có màn hình nào gõ trực tiếp vào cột này. Nó chỉ đổi cùng lúc với một dòng
+`stock_movements` (bảng 17), nhờ vậy cộng cả sổ luôn ra đúng con số đang lưu.
 
 ### 4. `vehicles` — phương tiện
 
@@ -370,11 +385,61 @@ Giá trị khởi tạo:
 | `PAGE_SIZE` | `20` | Số dòng mỗi trang |
 | `LOOKUP_RATE_LIMIT` | `20` | lần/phút/IP |
 
+### 17. `stock_movements` — sổ kho thành phẩm
+
+| Cột | Kiểu | Mô tả |
+|---|---|---|
+| `id` | BIGINT | PK, AI |
+| `product_id` | BIGINT | FK → `products.id`, NOT NULL |
+| `movement_type` | VARCHAR(20) | `IN`, `OUT`, `RETURN`, `ADJUST_UP`, `ADJUST_DOWN` |
+| `box_count` | INT | NOT NULL, **luôn dương** — dấu nằm trong `movement_type` |
+| `stock_after` | INT | NOT NULL — tồn sau dòng này |
+| `order_id` | BIGINT | FK → `orders.id`, NULL trừ khi là `OUT`/`RETURN` |
+| `reversal_of_id` | BIGINT | FK → `stock_movements.id`, NULL trừ khi là dòng đảo |
+| `note` | VARCHAR(500) | Bắt buộc với kiểm kê và dòng đảo |
+| `created_by_id` | BIGINT | FK → `users.id`, NULL nếu hệ thống tự ghi |
+| `created_at` | DATETIME | NOT NULL |
+
+Index: `idx_stock_movements_product` trên (`product_id`, `created_at`),
+`idx_stock_movements_order` trên (`order_id`).
+
+**Bảng này chỉ ghi thêm — không sửa, không xóa dòng nào.** Ba lý do, cả ba đều là đúng/sai
+chứ không phải phong cách:
+
+1. Sửa một dòng cũ là phá mọi dòng sau nó — `stock_after` của chúng tính từ dòng này.
+2. Xóa một dòng `OUT` trong khi đơn vẫn `DELIVERED` thì hệ thống mất dấu trừ kho, tưởng hàng
+   vẫn còn, rồi cho duyệt đơn khác bằng số hàng đã đi mất.
+3. Xóa là vi phạm thẳng **CBR-17**: dòng sổ kho chính là dữ liệu nghiệp vụ đã phát sinh — nó
+   là lý do con số tồn hiện tại bằng con số đó.
+
+Ghi sai thì ghi một **dòng đảo** trỏ về dòng gốc qua `reversal_of_id`, đúng nguyên tắc bút toán
+đảo của kế toán. Con số cuối cùng giống như đã xóa, nhưng vẫn còn dấu vết ai ghi sai gì lúc nào.
+
+Mỗi loại phát sinh mang **một dấu cố định**, nhờ vậy `box_count` luôn dương và công thức tính
+tồn chỉ còn một công thức duy nhất: `stock_after = stock_before + sign × box_count`. Đây là lý
+do kiểm kê phải tách thành hai loại tăng/giảm chứ không để một loại `ADJUST` mang số âm.
+
+| Loại | Dấu | Khi nào | Ai ghi |
+|---|---|---|---|
+| `IN` | + | Sản xuất xong, nhập kho | Người bấm nút |
+| `OUT` | − | Duyệt đơn — cam kết hàng cho đơn | Hệ thống tự ghi |
+| `RETURN` | + | Hủy đơn / giao thất bại / hoãn | Hệ thống tự ghi |
+| `ADJUST_UP` | + | Kiểm kê thừa, hoặc đảo một dòng giảm | Người bấm nút |
+| `ADJUST_DOWN` | − | Kiểm kê thiếu, hoặc đảo một dòng tăng | Người bấm nút |
+
+`OUT` và `RETURN` **không có màn hình nào gõ trực tiếp.** Chúng chỉ sinh ra như hệ quả của
+chuyển trạng thái đơn hàng — đây là điều giữ cho sổ kho và bảng `orders` không bao giờ nói hai
+chuyện khác nhau.
+
+**Bất biến phải luôn đúng:** cộng tất cả `box_count` có dấu của một sản phẩm phải ra đúng
+`products.stock_boxes`. Lệch nhau là lỗi trong code, không phải lỗi nhập liệu. Màn hình tồn kho
+tự đối chiếu mỗi lần mở và hiện cảnh báo đỏ nếu lệch.
+
 ---
 
 ## Danh sách enum Java cần tạo
 
-Đặt trong package `entity.enums`. **18 enum.**
+Đặt trong package `entity.enums`. **19 enum.**
 
 ```
 Role                  : ADMIN, DISPATCHER, DRIVER
@@ -397,9 +462,10 @@ EntityType            : ORDER, ROUTE                      <- bang status_history
 NotificationSendStatus: NOT_SENT, SENT, ERROR             <- bang notifications
 AlgorithmType         : OR_TOOLS, NN, NN_2OPT, MANUAL
 DistanceSource        : OSRM, HAVERSINE
+StockMovementType     : IN, OUT, RETURN, ADJUST_UP, ADJUST_DOWN   <- bang stock_movements
 ```
 
-Bốn enum có dấu `<-` là các cột trạng thái nằm rải trong bảng, rất dễ bỏ sót khi tạo entity vì chúng không nằm trong nhóm trạng thái chính.
+Năm enum có dấu `<-` là các cột trạng thái nằm rải trong bảng, rất dễ bỏ sót khi tạo entity vì chúng không nằm trong nhóm trạng thái chính.
 
 `RecordStatus` dùng chung cho `products`, `customers` và `drivers` — cả ba đều chỉ cần ACTIVE/INACTIVE nên không tách riêng.
 

@@ -754,3 +754,83 @@ bước 12–14 (phương án B) cần hai tuyến chạy song song mới dựng
 - **Phân quyền:** `taixe02` gõ cả ba đường `/excel` đều ra **403**
 
 **Đến đây là xong toàn bộ 86 chức năng bắt buộc của `docs/04-chuc-nang.md`.**
+
+---
+
+## Tuần 11 (bổ sung) — Tồn kho thành phẩm · 11/10/2026
+
+### ★ CN-01-10, CN-01-11 — lấp một lỗ hổng bỏ sót trong đặc tả gốc
+
+**Phát hiện thế nào.** Rà lại luồng đơn hàng thì thấy hệ thống không ở đâu hỏi *kho có đủ hàng
+không*. Khách đặt 220 thùng → nhập đơn → duyệt → phân tuyến → gửi email hẹn giờ → tài xế ra kho
+mới phát hiện còn 80 thùng. Và `docs/00` tự nói ra điều đó: khách *"gọi điện để vừa đặt vừa hỏi
+giá, hỏi hàng còn không"* — đặc tả bảo điều phối viên cần biết tồn kho, rồi hệ thống không cho
+họ biết. Lý lẽ đầy đủ ở `docs/09` mục **A5**.
+
+**Bốn quyết định thiết kế** (chi tiết và lý do ở `docs/09` A5):
+
+- **Lưu một con số, không lưu ba.** `stock_boxes` = *còn rảnh*; `đã cam kết` đếm lại từ
+  `order_items` mỗi lần cần; `trong kho` = tổng hai số. Số nào suy ra được thì không lưu
+- **Sổ kho chỉ ghi thêm.** Ghi sai thì ghi bút toán đảo. Xóa một dòng sổ là vi phạm thẳng CBR-17
+- **Trừ kho lúc duyệt đơn**, không lúc tài xế lấy hàng. Lúc *tạo* đơn chỉ cảnh báo
+- **Số thùng một đơn đang giữ đếm từ SỔ KHO**, không đọc từ dòng hàng của đơn
+
+**Quyết định cuối là cái tự trả công nhiều nhất.** Ban đầu tôi định chụp ảnh số lượng cũ trước
+dòng `order.getItems().clear()` trong `updateOrder` rồi truyền vào để so sánh. Đếm từ sổ kho
+(`tổng OUT − tổng RETURN` của chính đơn đó) xóa luôn ba vấn đề cùng lúc: không cần chụp ảnh gì
+cả, gọi hai lần không hỏng vì lần hai thấy cam kết đã bằng 0, và hủy một đơn **chưa từng duyệt**
+cũng không hoàn kho oan. Ba nghiệp vụ — duyệt, sửa, hủy — thành **một hàm duy nhất** chỉ khác
+nhau ở hai Map đầu vào.
+
+**Tách phần tính toán ra khỏi phần ghi đĩa.** `StockSettlementPlanner` nhận ba Map số nguyên và
+trả về danh sách ý định, **không đọc CSDL, không biết Spring tồn tại**. Nhờ vậy toàn bộ phần dễ
+sai test được bằng JUnit thuần với dữ liệu cứng tính tay được — 7 test, không cần MySQL. Cùng một
+đường lối đồ án đã áp cho `service/optimization/`.
+
+Test đáng nhất là `approvalIsRejectedWhenAnyProductIsShort`: thiếu **một** sản phẩm thì không
+được trừ sản phẩm nào. Trừ một phần rồi báo lỗi là loại lỗi để lại dữ liệu bẩn mà không ai thấy ngay.
+
+### Ba chỗ vấp khi chạy thật
+
+- **`ddl-auto=update` thêm cột `NOT NULL` vào bảng đã có dữ liệu.** Lường trước nên khai
+  `columnDefinition = "INT NOT NULL DEFAULT 0"` — app khởi động sạch, không phải `ALTER` tay
+- **Tồn đầu kỳ đặt sai chỗ.** Lần đầu tôi để trong `CatalogSeeder`, mà lớp đó bỏ qua sản phẩm đã
+  tồn tại, nên trên máy đang phát triển năm sản phẩm giữ nguyên tồn 0 và sổ kho trống. Loại lỗi
+  **chỉ xuất hiện trên một máy** là loại khó lần ra nhất. Chuyển sang `StockOpeningSeeder` riêng,
+  `@Order(4)` — chạy sau `HistorySeeder` để còn thấy hết đơn đã duyệt
+- **`LazyInitializationException` trên `Order.items`.** `CommandLineRunner` không có session mở,
+  đọc collection nạp lười của thực thể đã rời session là chết. Chữa bằng `JOIN FETCH`.
+  **Và lần chạy lỗi đó dạy thêm một điều:** nó đã kịp ghi xong bước 1 rồi mới chết ở bước 2, để
+  lại trạng thái nửa vời — lần khởi động sau điều kiện *"sổ kho rỗng"* không còn đúng nên seeder
+  bỏ qua luôn, và các đơn đang mở mãi mãi không được trừ kho. Hỏng im lặng. Đã bọc `run()` trong
+  `@Transactional` để hai bước nguyên vẹn hoặc không gì cả
+
+### Số dư đầu kỳ — hai bước, không phải một
+
+`StockOpeningSeeder` ghi tồn đầu kỳ bằng số thùng **vật lý**, rồi trừ ngay phần các đơn đang ở
+`APPROVED`/`ROUTED`/`DELIVERING`. Chạy thật: tồn đầu kỳ 5 sản phẩm, trừ kho cho **8 đơn** đang
+giữ 59 thùng.
+
+Không có bước hai thì SP001 hiện *trong kho 839* trong khi kho thật có 800 — con số phóng lên
+đúng bằng phần chưa trừ, và phải giải thích vòng vo khi vấn đáp. Có bước hai: **còn rảnh 761 ·
+cam kết 39 · trong kho 800**, và đơn cũ hành xử y hệt đơn mới khi bị hủy hay giao thất bại.
+
+### Đã nghiệm thu bằng HTTP thật
+
+Đăng nhập `admin`, Docker + MySQL bật:
+
+- `/admin/stock`, `/admin/stock/movements` → 200, hiện đúng ba con số
+- Nhập kho 100 thùng → 761 → **861**, sổ có một dòng mới, `created_by_id` đúng người bấm
+- Hoàn tác dòng đó → tồn về **761**, **dòng gốc vẫn còn**, dòng đảo có `reversal_of_id` trỏ về nó
+- Hoàn tác lần hai → bị chặn. Hoàn tác một dòng `OUT` → bị chặn vì là dòng hệ thống sinh
+- Cộng sổ khớp `stock_boxes` cho **cả 5 sản phẩm**
+
+Lúc dọn hai dòng kiểm thử thì **khóa ngoại tự chặn**: không xóa được dòng gốc khi dòng đảo còn
+trỏ tới. Một xác nhận ngoài dự tính rằng ràng buộc `reversal_of_id` đang thật sự có hiệu lực.
+
+**Không đụng một dòng nào trong `service/optimization/`.** Thuật toán chỉ nhận đơn `APPROVED` nên
+không cần biết tồn kho tồn tại — UC03 và UC08 rủi ro bằng không. Đây là lý do chính khiến việc bổ
+sung này đáng làm ở giai đoạn muộn.
+
+**Còn nợ một phép thử:** phân quyền với vai trò `DISPATCHER` — mật khẩu `dieuphoi` đã bị đổi nên
+chưa đăng nhập được để thử. Xem `TIEN-DO.md` mục Còn nợ nghiệm thu.

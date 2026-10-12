@@ -3,7 +3,7 @@
 > Trạng thái hiện tại và việc tiếp theo. **Giữ ngắn** — file này được nạp vào mọi phiên làm việc.
 > Nhật ký chi tiết từng tuần nằm ở `NHAT-KY.md`, không đưa vào đây.
 
-**Cập nhật lần cuối:** 27/08/2026 · Kho: `github.com/anh05022005/MPRoute` (riêng tư), nhánh `main`
+**Cập nhật lần cuối:** 11/10/2026 · Kho: `github.com/anh05022005/MPRoute` (riêng tư), nhánh `main`
 
 ---
 
@@ -12,11 +12,11 @@
 | | |
 |---|---|
 | Theo kế hoạch | Tuần 10 — báo cáo, thực nghiệm benchmark |
-| Thực tế | **XONG TOÀN BỘ 86 CHỨC NĂNG BẮT BUỘC.** Ba báo cáo chạy trên dữ liệu thật và xuất Excel được, benchmark Augerat có số. Còn lại là viết chương 4, chạy thử, quay video và luận văn |
+| Thực tế | **XONG TOÀN BỘ 88 CHỨC NĂNG BẮT BUỘC.** Ba báo cáo chạy trên dữ liệu thật và xuất Excel được, benchmark Augerat có số. Vừa bổ sung **tồn kho thành phẩm** (CN-01-10, CN-01-11) — lỗ hổng bỏ sót trong đặc tả gốc, xem `09` mục A5. Còn lại là viết chương 4, chạy thử, quay video và luận văn |
 
 ```
 [x] T1  Chot de tai, hoi Minh Phu 3 cau
-[x] T2  Project chay, 16 bang sinh ra, dang nhap duoc
+[x] T2  Project chay, 17 bang sinh ra, dang nhap duoc
 [x] T3  CRUD 7 danh muc xong + tim toa do Nominatim
 [x] T4  Tao don hang, tu tinh kg/m3/tien — xong tron Nhom 2
 [x] T5  OSRM chay, ma tran co cache, ban do hien diem
@@ -29,8 +29,14 @@
 [ ] T12 Bao cao hoan chinh, slide, luyen van dap
 ```
 
-**14/14 test bắt buộc xanh** (`mvnw.cmd test` → **17 test**: 14 bắt buộc + 2 test cho
-`VrpFileReader` + 1 lần nạp Spring context).
+**14/14 test bắt buộc xanh** (`mvnw.cmd test` → **24 test**: 14 bắt buộc + 2 test cho
+`VrpFileReader` + 7 test cho `StockSettlementPlanner` + 1 lần nạp Spring context).
+
+**Tồn kho thành phẩm vừa xong.** `products.stock_boxes` = số thùng *còn rảnh*; bảng thứ 17
+`stock_movements` là sổ **chỉ ghi thêm**, ghi sai thì ghi bút toán đảo chứ không xóa (CBR-17).
+Trừ kho lúc duyệt đơn (MSG-17 chặn cứng), hoàn kho khi hủy / giao thất bại / hoãn. Phần tính
+toán nằm trong `StockSettlementPlanner` — lớp thuần, không JPA, test bằng JUnit không cần MySQL.
+Không đụng một dòng nào trong `service/optimization/`.
 
 **`HAVERSINE_FACTOR` đã đo lại: 1.45** (trước để 1.3). Đo trên 264 cặp điểm OSRM thật trong
 `distance_matrix` — xem `NHAT-KY.md`. Chỉ ảnh hưởng lúc OSRM chết, nhưng đúng lúc đó thì con số
@@ -80,6 +86,13 @@ chạy thử thật**. Làm được lúc nào cũng được, muộn nhất là
 | **BR07-03** tra SĐT chỉ hiện đơn 30 ngày gần nhất | Đơn cũ nhất mới là 13/08, chưa quá 30 ngày. Seed thêm một ngày thật xa là thử được |
 | **CN-04-08 gửi thư thật** | Mở năm dòng SMTP trong `application.properties`, đặt `MPROUTE_MAIL_USERNAME` / `MPROUTE_MAIL_PASSWORD` bằng mật khẩu ứng dụng Gmail, đổi email một khách thành email thật rồi chốt một tuyến. Nhánh ghi `notifications` và nội dung thư đã kiểm xong |
 | **BR02-11** đơn `ROUTED` ra đúng chữ MSG-07 | Nay đã có đơn `ROUTED` thật trong CSDL nên thử được ngay |
+| **Phân quyền tồn kho với vai trò `DISPATCHER`** (CN-01-10) | Mật khẩu tài khoản `dieuphoi` đã bị đổi, không đăng nhập được để thử. Cần đặt lại mật khẩu qua `/admin/users` rồi: vào `/admin/stock` phải thấy nút Nhập kho, **không** thấy nút Kiểm kê; gửi thẳng `POST /admin/stock/stocktake` → phải ra 403 |
+
+**Đã nghiệm thu bằng HTTP thật** (đăng nhập `admin`, Docker + MySQL bật): `/admin/stock` và
+`/admin/stock/movements` trả 200 và hiện đúng ba con số (SP001: còn rảnh 761 · cam kết 39 ·
+trong kho 800); nhập kho 100 thùng → tồn 761→861 và sổ có một dòng mới; hoàn tác dòng đó → tồn
+về 761, **dòng gốc vẫn còn** và dòng đảo trỏ về nó; hoàn tác lần hai bị chặn; hoàn tác một dòng
+`OUT` bị chặn vì là dòng hệ thống sinh. Cộng sổ khớp `stock_boxes` cho cả 5 sản phẩm.
 
 **Chưa mở file Excel bằng Excel thật.** Ba file `.xlsx` đã kiểm bằng chương trình: đúng
 định dạng zip OOXML, đúng tên trang tính, tiếng Việt có dấu không hỏng, số khớp với màn hình.
