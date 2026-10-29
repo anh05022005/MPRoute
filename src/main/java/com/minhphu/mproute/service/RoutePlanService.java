@@ -17,7 +17,6 @@ import com.minhphu.mproute.repository.DriverRepository;
 import com.minhphu.mproute.repository.NotificationRepository;
 import com.minhphu.mproute.repository.OrderRepository;
 import com.minhphu.mproute.repository.RouteRepository;
-import com.minhphu.mproute.repository.VehicleRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -54,13 +53,20 @@ public class RoutePlanService {
 
     private static final DateTimeFormatter DAY_MONTH_YEAR = DateTimeFormatter.ofPattern("dd/MM/yyyy");
 
+    /*
+     * Tuyen o hai trang thai nay khong con giu tai xe (CBR-06): huy thi chua tung chay, xong thi
+     * tai xe da ve kho va nhan duoc chuyen tiep theo trong ngay — xem docs/09 muc B7.
+     */
+    private static final Set<RouteStatus> STATUSES_RELEASING_DRIVER =
+            Set.of(RouteStatus.CANCELLED, RouteStatus.COMPLETED);
+
     private final RouteRepository routeRepository;
     private final DriverRepository driverRepository;
-    private final VehicleRepository vehicleRepository;
     private final OrderRepository orderRepository;
     private final NotificationRepository notificationRepository;
     private final StatusHistoryService statusHistoryService;
     private final RoutingService routingService;
+    private final VehicleService vehicleService;
     private final CustomerNotificationService customerNotificationService;
 
     // ==================== Doc ====================
@@ -68,15 +74,15 @@ public class RoutePlanService {
     /**
      * Tai xe con chon duoc cho mot tuyen trong ngay (BR04-07, CBR-06).
      *
-     * Loai san nhung nguoi da co tuyen khac cung ngay ra khoi o chon, chu khong de nguoi dung
-     * chon xong roi moi bao loi. Tai xe cua CHINH tuyen dang xet thi giu lai, neu khong thi mo
-     * o chon ra la thay trong, tuong nhu chua gan ai.
+     * Loai san nhung nguoi dang co tuyen CHUA XONG khac cung ngay ra khoi o chon, chu khong de
+     * nguoi dung chon xong roi moi bao loi. Tai xe cua CHINH tuyen dang xet thi giu lai, neu
+     * khong thi mo o chon ra la thay trong, tuong nhu chua gan ai.
      */
     @Transactional(readOnly = true)
     public List<Driver> selectableDriversFor(LocalDate deliveryDate, Route route) {
         Set<Long> takenDriverIds = new HashSet<>();
         for (Route other : routeRepository.findByDeliveryDate(deliveryDate)) {
-            if (other.getStatus() == RouteStatus.CANCELLED || other.getDriver() == null) {
+            if (STATUSES_RELEASING_DRIVER.contains(other.getStatus()) || other.getDriver() == null) {
                 continue;
             }
             if (route == null || !other.getId().equals(route.getId())) {
@@ -122,16 +128,17 @@ public class RoutePlanService {
         }
 
         /*
-         * CBR-06 — mot tai xe toi da mot tuyen mot ngay. Kiem lai o day chu khong tin vao o
-         * chon: gui thang driverId cua nguoi da co tuyen len thi van phai bi tu choi.
+         * CBR-06 — mot tai xe khong cam hai tuyen chua xong trong cung mot ngay. Kiem lai o day
+         * chu khong tin vao o chon: gui thang driverId cua nguoi dang co tuyen len thi van phai
+         * bi tu choi.
          */
         for (Route other : routeRepository.findByDeliveryDate(route.getDeliveryDate())) {
-            if (other.getId().equals(route.getId()) || other.getStatus() == RouteStatus.CANCELLED) {
+            if (other.getId().equals(route.getId()) || STATUSES_RELEASING_DRIVER.contains(other.getStatus())) {
                 continue;
             }
             if (other.getDriver() != null && other.getDriver().getId().equals(driverId)) {
                 throw new IllegalStateException(String.format(
-                        "Tài xế %s đã được giao tuyến %s trong ngày này rồi.",
+                        "Tài xế %s đang có tuyến %s chưa xong trong ngày này.",
                         driver.getFullName(), other.getCode()));
             }
         }
@@ -356,6 +363,23 @@ public class RoutePlanService {
                             + ". Mỗi tuyến phải có một tài xế trước khi chốt.");
         }
 
+        /*
+         * Xe co the vao bao tri SAU luc chay toi uu — vd. hong tren tuyen hom nay (BR06-14) trong
+         * khi tuyen nhap ngay mai da xep cho no. Chot ke hoach voi xe hong la hua giao hang bang
+         * mot chiec xe khong chay duoc.
+         */
+        List<String> routesWithBrokenVehicle = new ArrayList<>();
+        for (Route route : draftRoutes) {
+            if (route.getVehicle().getStatus() == VehicleStatus.MAINTENANCE) {
+                routesWithBrokenVehicle.add(route.getCode() + " (" + route.getVehicle().getLicensePlate() + ")");
+            }
+        }
+        if (!routesWithBrokenVehicle.isEmpty()) {
+            throw new IllegalStateException(
+                    "Xe của tuyến " + String.join(", ", routesWithBrokenVehicle)
+                            + " đang bảo trì. Bỏ chọn xe đó rồi chạy lại phân tuyến trước khi chốt.");
+        }
+
         List<Order> stillUnassigned =
                 orderRepository.findByDeliveryDateAndStatus(deliveryDate, OrderStatus.APPROVED);
         if (!stillUnassigned.isEmpty()) {
@@ -376,15 +400,11 @@ public class RoutePlanService {
                     currentUserId, "Chot ke hoach giao ngay " + deliveryDate);
 
             /*
-             * Xe bi khoa NGAY LUC CHOT chu khong doi tai xe nhan hang (docs/01 muc trang thai xe):
-             * ke hoach da chot thi chiec xe do coi nhu da co viec, khong duoc dua vao lan phan
-             * tuyen nao khac nua. Tuyen thi van la CONFIRMED cho toi khi tai xe bam nhan hang.
+             * KHONG doi trang thai xe o day. Tuyen CONFIRMED cua ngay D tu no da giu xe cho
+             * ngay D (VehicleService.findSchedulableOn), con xe chi thanh "Dang chay" khi tai xe
+             * bam nhan hang. Truoc day khoa xe ngay luc chot nen chot ngay 29 vao ngay 28 la
+             * ca doi xe bi khoa tu ngay 28 — xem docs/09 muc B6.
              */
-            Vehicle vehicle = route.getVehicle();
-            if (vehicle.getStatus() == VehicleStatus.AVAILABLE) {
-                vehicle.setStatus(VehicleStatus.IN_USE);
-                vehicleRepository.save(vehicle);
-            }
 
             if (notifyDriver(route, "NTF-01", String.format(
                     "Tuyến %s ngày %s đã được chốt. Bạn có %d điểm giao.",
@@ -417,8 +437,9 @@ public class RoutePlanService {
     /**
      * Huy mot tuyen (CN-04-09, BR04-09, BR04-10).
      *
-     * Tra don ve APPROVED va xe ve AVAILABLE — dung thu tu nguoc lai voi luc chot. Khong tra don
-     * ve thi cac don do treo o ROUTED ma khong tuyen nao chua, khong bao gio duoc phan tuyen lai.
+     * Tra don ve APPROVED — khong tra thi cac don do treo o ROUTED ma khong tuyen nao chua,
+     * khong bao gio duoc phan tuyen lai. Huy xong thi xe tu dong ranh lai cho ngay do vi khong
+     * con tuyen CONFIRMED nao giu no (VehicleService.findSchedulableOn).
      */
     @Transactional
     public Route cancelRoute(Long routeId, String reason, Long currentUserId) {
@@ -453,12 +474,8 @@ public class RoutePlanService {
             }
         }
 
-        // Xe chi ve AVAILABLE khi chinh tuyen nay dang giu no. Tuyen nhap thi xe von van ranh
-        Vehicle vehicle = route.getVehicle();
-        if (vehicle.getStatus() == VehicleStatus.IN_USE) {
-            vehicle.setStatus(VehicleStatus.AVAILABLE);
-            vehicleRepository.save(vehicle);
-        }
+        // Xe dang ngoai duong voi chinh tuyen nay thi ve kho; dang chay tuyen khac thi giu nguyen
+        vehicleService.releaseIfIdle(route);
 
         /*
          * XOA CAC DIEM DUNG CUA TUYEN BI HUY — bat buoc, khong phai don dep cho gon.

@@ -67,6 +67,7 @@ public class IncidentService {
     private final StatusHistoryService statusHistoryService;
     private final CustomerNotificationService customerNotificationService;
     private final RoutingService routingService;
+    private final VehicleService vehicleService;
 
     /** Ket qua mot lan bao su co, du de man hinh tai xe biet phai hien gi tiep theo. */
     public record ReportResult(Incident incident, int affectedStopCount, boolean needsDispatcher) {}
@@ -312,10 +313,11 @@ public class IncidentService {
         Vehicle rescue = vehicleRepository.findById(vehicleId).orElseThrow(() ->
                 new IllegalArgumentException("Không tìm thấy xe cứu hộ được chọn."));
 
-        if (rescue.getStatus() != VehicleStatus.AVAILABLE) {
+        // Phai dang o kho VA chua co tuyen trong ngay nay — xe da chot cho ngay mai van di duoc
+        if (!vehicleService.isAtDepotAndFreeOn(rescue, route.getDeliveryDate())) {
             throw new IllegalStateException(String.format(
-                    "Xe %s đang ở trạng thái \"%s\" nên không điều đi cứu hộ được.",
-                    rescue.getLicensePlate(), rescue.getStatus().getDisplayName()));
+                    "Xe %s đang không ở kho hoặc đã có tuyến trong ngày nên không điều đi cứu hộ được.",
+                    rescue.getLicensePlate()));
         }
 
         double beforeDistance = route.getTotalDistance();

@@ -24,6 +24,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
+import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.LinkedHashMap;
@@ -68,6 +69,7 @@ public class IncidentSolutionService {
     private final VehicleRepository vehicleRepository;
     private final DistanceMatrixService distanceMatrixService;
     private final SystemParameterService systemParameterService;
+    private final VehicleService vehicleService;
 
     /** Gio du kien moi cua mot khach, de hien trong tung phuong an (BR06-10). */
     public record StopEta(String customerName, String orderCode, LocalDateTime estimatedArrival) {}
@@ -116,7 +118,7 @@ public class IncidentSolutionService {
         // Mot ma tran chung cho tat ca: kho, diem su co, diem con lai, va diem cua cac tuyen ung vien
         MatrixContext context = buildMatrix(incident, brokenRoute, remainingStops, candidateRoutes);
 
-        buildRescueOption(remainingStops, context).ifPresent(options::add);
+        buildRescueOption(remainingStops, context, brokenRoute.getDeliveryDate()).ifPresent(options::add);
         options.addAll(buildInsertionOptions(remainingStops, candidateRoutes, context));
 
         // BR06-05, BR06-10 — xep theo km phat sinh tang dan
@@ -138,7 +140,8 @@ public class IncidentSolutionService {
      * nhung km cua no roi, so met cua xe cuu ho la met chay THEM that su.
      */
     private java.util.Optional<SolutionOption> buildRescueOption(List<RouteStop> remainingStops,
-                                                                 MatrixContext context) {
+                                                                 MatrixContext context,
+                                                                 LocalDate incidentDate) {
         double neededWeight = 0;
         double neededVolume = 0;
         for (RouteStop stop : remainingStops) {
@@ -153,6 +156,10 @@ public class IncidentSolutionService {
          */
         Vehicle rescue = null;
         for (Vehicle vehicle : vehicleRepository.findByStatus(VehicleStatus.AVAILABLE)) {
+            // Xe dang o kho nhung da co tuyen trong ngay su co thi khong rut ra duoc
+            if (!vehicleService.isAtDepotAndFreeOn(vehicle, incidentDate)) {
+                continue;
+            }
             if (vehicle.getMaxWeight() < neededWeight || vehicle.getMaxVolume() < neededVolume) {
                 continue;   // BR06-09: khong du suc chua thi loai khoi danh sach
             }

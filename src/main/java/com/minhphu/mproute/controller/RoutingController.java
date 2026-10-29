@@ -10,15 +10,14 @@ import com.minhphu.mproute.entity.Vehicle;
 import com.minhphu.mproute.entity.enums.AlgorithmType;
 import com.minhphu.mproute.entity.enums.OrderStatus;
 import com.minhphu.mproute.entity.enums.RouteStatus;
-import com.minhphu.mproute.entity.enums.VehicleStatus;
 import com.minhphu.mproute.repository.OrderRepository;
-import com.minhphu.mproute.repository.VehicleRepository;
 import com.minhphu.mproute.security.CurrentUser;
 import com.minhphu.mproute.service.DepotService;
 import com.minhphu.mproute.service.RouteGeometryService;
 import com.minhphu.mproute.service.RoutePlanService;
 import com.minhphu.mproute.service.RoutingService;
 import com.minhphu.mproute.service.SystemParameterService;
+import com.minhphu.mproute.service.VehicleService;
 import com.minhphu.mproute.service.optimization.DistanceMatrixService;
 import com.minhphu.mproute.service.optimization.OptimizationPoint;
 import lombok.RequiredArgsConstructor;
@@ -63,7 +62,7 @@ public class RoutingController {
     private static final String NEEDS_ROUTING_JS = "needsRoutingJs";
 
     private final OrderRepository orderRepository;
-    private final VehicleRepository vehicleRepository;
+    private final VehicleService vehicleService;
     private final DepotService depotService;
     private final DistanceMatrixService distanceMatrixService;
     private final RoutingService routingService;
@@ -102,8 +101,8 @@ public class RoutingController {
         Depot depot = findActiveDepot(model);
         model.addAttribute("depot", depot);
 
-        // CN-03-03: chi xe AVAILABLE moi duoc dua ra cho tich chon (CBR-05, BR03-02)
-        List<Vehicle> vehicles = vehicleRepository.findByStatus(VehicleStatus.AVAILABLE);
+        // CN-03-03: xe khong bao tri va chua co tuyen chot trong CHINH ngay nay (CBR-05, BR03-02)
+        List<Vehicle> vehicles = vehicleService.findSchedulableOn(targetDate);
         model.addAttribute("vehicles", vehicles);
 
         // CN-03-04: ba bo giai, MANUAL khong phai thuat toan chay tu dong nen khong liet ke
@@ -140,6 +139,7 @@ public class RoutingController {
                 .filter(route -> route.getStatus() == RouteStatus.DRAFT)
                 .allMatch(route -> route.getDriver() != null);
         model.addAttribute("canConfirmPlan", hasDraft && everyDraftHasDriver && orders.isEmpty());
+        model.addAttribute("hasDraftRoute", hasDraft);
 
         /*
          * CN-03-14: don con o trang thai APPROVED trong khi da co tuyen nhap chinh la don
@@ -160,6 +160,17 @@ public class RoutingController {
                 .anyMatch(route -> route.getAlgorithm() == AlgorithmType.MANUAL);
         model.addAttribute("manuallyEdited", manuallyEdited);
         model.addAttribute("automaticDistance", metrics == null ? null : metrics.getOptimizedDistance());
+
+        /*
+         * Ve phia "chinh tay" CHI cong tuyen NHAP, khong cong tuyen da chot. Lan chay moi
+         * xoa nhap cu va chi xep don APPROVED (BR03-09), nen tuyen nhap tren man hinh chinh la
+         * dau ra cua lan chay gan nhat — dung tap ma automaticDistance do. Cong ca tuyen da chot
+         * tu lan chay truoc vao thi "chenh lech" bang dung quang duong cua tuyen da chot do.
+         */
+        model.addAttribute("draftRouteDistance", routes.stream()
+                .filter(route -> route.getStatus() == RouteStatus.DRAFT)
+                .mapToDouble(Route::getTotalDistance)
+                .sum());
 
         // CN-04-01/02: ma tran de trinh duyet hien ngay con so moi khi keo tha, chi la xem truoc
         model.addAttribute("planJson", toJson(buildPlanData(depot, routes), "null"));
@@ -472,7 +483,8 @@ public class RoutingController {
         return new PlanData(matrix.meters(), planPoints,
                 systemParameterService.getDouble(SystemParameterService.AVERAGE_SPEED),
                 systemParameterService.getInt(SystemParameterService.LOADING_TIME),
-                routingService.departureTime().toString());
+                // Cung moc xuat phat voi may chu, khong thi tuyen hom nay xem truoc mot gio, luu xong ra gio khac
+                routingService.plannedDepartureOn(routes.get(0).getDeliveryDate()).toLocalTime().toString());
     }
 
     /**

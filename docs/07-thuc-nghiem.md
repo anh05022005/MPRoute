@@ -300,10 +300,10 @@ Viết rõ ý nghĩa của từng mốc, đừng chỉ đưa hai con số. Ví d
 - 2-opt chỉ cải thiện **thứ tự trong từng tuyến**, không thay đổi được cách phân đơn cho xe. Sai số lớn nhất của lời giải nằm ở khâu phân đơn, mà 2-opt không chạm tới được
 - 2-opt chỉ tìm được cực trị địa phương, không thoát ra được bằng chính nó
 - Giả định khoảng cách đối xứng — bảo đảm bằng cách lấy trung bình cộng hai chiều của ma trận OSRM, đổi lại làm mất một phần thông tin về đường một chiều
-- **Trạng thái xe là cờ toàn cục, chưa gắn với từng ngày.** Xe được đặt `IN_USE` khi chốt tuyến và chỉ trở lại `AVAILABLE` khi tuyến hoàn thành, nên hệ thống chưa lập kế hoạch trước cho nhiều ngày cùng lúc được. Đây là lựa chọn có ý thức để giữ mô hình đơn giản trong phạm vi đồ án
+- **Mỗi xe một tuyến mỗi ngày, và xe hỏng không tự dời lịch các ngày sau.** Hệ thống lập kế hoạch trước cho nhiều ngày được (xe giữ lịch theo từng ngày, `09` mục B6), nhưng xe hỏng hôm nay thì tuyến đã chốt cho ngày mai vẫn nằm đó: hệ thống chỉ chặn nhận hàng và cảnh báo, điều phối viên phải tự hủy và phân lại
 - **Chưa ràng buộc thời gian làm việc tối đa của tài xế** — tuyến dài bao nhiêu giờ cũng được chấp nhận
 - Chưa xử lý khung giờ nhận hàng của khách (VRPTW). Dữ liệu có ghi chú kiểu *"chỉ nhận hàng buổi sáng"* nhưng thuật toán chỉ lưu, không ràng buộc
-- Chưa xử lý nhiều chuyến mỗi xe mỗi ngày (multi-trip). Với bán kính giao hàng 5–15 km, một tuyến thường kết thúc trước trưa và xe không được dùng lại trong ngày
+- Chưa **tối ưu** nhiều chuyến mỗi xe mỗi ngày (multi-trip). Xe và tài xế giao xong chuyến trước thì được phân chuyến tiếp (`09` mục B7), nhưng mỗi lần chạy thuật toán chỉ xếp một chuyến cho mỗi xe — không tự chia đơn trong ngày thành chuyến sáng và chuyến chiều
 - Chưa tính đến tình trạng giao thông theo giờ, tốc độ trung bình lấy cố định từ tham số hệ thống
 
 Mỗi hạn chế nêu ra chính là một ý cho mục "Hướng phát triển".

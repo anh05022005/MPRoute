@@ -8,15 +8,15 @@
 | CBR-02 | Một đơn hàng chỉ thuộc đúng một tuyến. Không tách đơn ra nhiều xe. |
 | CBR-03 | Tổng khối lượng các đơn trong tuyến ≤ tải trọng tối đa của xe. |
 | CBR-04 | Tổng thể tích các đơn trong tuyến ≤ thể tích thùng xe. **Kiểm tra đồng thời với CBR-03.** |
-| CBR-05 | Chỉ xe trạng thái `AVAILABLE` được đưa vào phân tuyến. |
-| CBR-06 | Một tài xế chỉ được gán tối đa một tuyến trong cùng ngày. |
+| CBR-05 | Xe được đưa vào phân tuyến ngày D khi không ở trạng thái `MAINTENANCE` **và** chưa có tuyến `CONFIRMED` / `IN_PROGRESS` / `INCIDENT` nào trong ngày D. Trạng thái `IN_USE` không chặn phân tuyến cho ngày khác — xem `09` mục B6. |
+| CBR-06 | Trong cùng một ngày, một tài xế không được cầm hai tuyến chưa xong cùng lúc. Tuyến trước đã `COMPLETED` (hoặc `CANCELLED`) thì nhận được chuyến tiếp theo — xem `09` mục B7. |
 | CBR-07 | Đơn hàng phải có tọa độ hợp lệ trước khi phân tuyến. Thiếu tọa độ thì bị loại khỏi danh sách chờ và hiện cảnh báo. |
 | CBR-08 | Ngày giao không được là ngày trong quá khứ. |
 | CBR-09 | Đơn chỉ sửa/hủy được khi ở trạng thái `PENDING_APPROVAL` hoặc `APPROVED`. |
 | CBR-10 | Tuyến đã chốt không sửa được, trừ khi hủy tuyến hoặc xử lý sự cố. |
 | CBR-11 | Khoảng cách lấy từ OSRM. OSRM lỗi thì dùng Haversine × hệ số (mặc định 1.3) và ghi log. |
 | CBR-12 | Ma trận khoảng cách phải được lưu vào DB. Tra DB trước, chỉ gọi OSRM khi chưa có. |
-| CBR-13 | ETA điểm thứ N = giờ xuất phát + (quãng đường tích lũy ÷ tốc độ TB) + (N−1) × thời gian bốc dỡ. |
+| CBR-13 | ETA điểm thứ N = giờ xuất phát + (quãng đường tích lũy ÷ tốc độ TB) + (số chỗ dừng đã dỡ xong trước nó) × thời gian bốc dỡ. Nhiều đơn cùng một chỗ tính là một lần dừng (`09` mục B5). Giờ xuất phát là tham số `DEPARTURE_TIME`; tuyến của hôm nay xếp sau giờ đó thì lấy giờ hiện tại; tài xế đã nhận hàng thì lấy giờ rời kho thật (`09` mục B7). |
 | CBR-14 | Mọi thay đổi trạng thái đơn hàng và tuyến phải ghi lại: thời điểm, người thực hiện. |
 | CBR-15 | Kiểm tra quyền ở phía server cho mọi endpoint, không chỉ ẩn nút trên giao diện. |
 | CBR-16 | Mật khẩu băm bằng BCrypt, không lưu văn bản thuần. |
@@ -69,11 +69,11 @@ DRAFT ──> CONFIRMED ──> IN_PROGRESS ──┬──> COMPLETED
 
 | Mã | Tên | Ai chuyển |
 |---|---|---|
-| `AVAILABLE` | Sẵn sàng | Mặc định, hoặc hệ thống khi tuyến hoàn thành/hủy |
-| `IN_USE` | Đang chạy | Hệ thống khi tuyến được chốt |
+| `AVAILABLE` | Sẵn sàng | Mặc định, hoặc hệ thống khi xe về kho (tuyến hoàn thành) |
+| `IN_USE` | Đang chạy | Hệ thống khi tài xế xác nhận nhận hàng, hoặc khi xe được điều đi cứu hộ |
 | `MAINTENANCE` | Bảo trì | Quản trị viên, hoặc hệ thống khi có sự cố "không thể tiếp tục" |
 
-**Lưu ý:** tuyến dùng `IN_PROGRESS` còn xe dùng `IN_USE`. Hai khái niệm khác nhau — xe bị khóa ngay khi tuyến được **chốt**, trong khi tuyến chỉ chuyển `IN_PROGRESS` khi tài xế **xác nhận nhận hàng**.
+**Lưu ý:** trạng thái xe chỉ mô tả **lúc này** xe đang ở đâu — ở kho, ngoài đường hay trong xưởng. Việc xe đã có lịch ngày nào thì tra theo tuyến đã chốt của ngày đó, không ghi lên trạng thái xe. Nhờ vậy một xe có thể được chốt tuyến cho ngày 29 và ngày 30 cùng lúc, trong khi hôm nay vẫn "Sẵn sàng" ở kho (`09` mục B6).
 
 ## Trạng thái thanh toán đơn hàng — `PaymentStatus`
 
@@ -167,7 +167,7 @@ Spring Security cần tiền tố `ROLE_` khi tạo `GrantedAuthority`, nên `AD
 | Mã | Nội dung |
 |---|---|
 | BR03-01 | Chỉ lấy đơn `APPROVED` có `delivery_date` trùng ngày được chọn |
-| BR03-02 | Chỉ dùng xe `AVAILABLE` và được điều phối tích chọn |
+| BR03-02 | Chỉ dùng xe thỏa CBR-05 cho ngày giao được chọn và được điều phối tích chọn |
 | BR03-03 | Ràng buộc khối lượng và thể tích kiểm đồng thời |
 | BR03-04 | Tổng nhu cầu > tổng sức chứa → báo MSG-08, không sinh tuyến |
 | BR03-05 | Mỗi tuyến khép kín kho → các điểm → kho |
@@ -191,8 +191,8 @@ Spring Security cần tiền tố `ROLE_` khi tạo `GrantedAuthority`, nên `AD
 | BR04-05 | Hiện song song quãng đường phương án tự động và phương án chỉnh tay |
 | BR04-06 | Nút "Khôi phục kết quả tự động" |
 | BR04-07 | Tài xế đã gán không xuất hiện trong danh sách chọn của tuyến khác cùng ngày |
-| BR04-08 | Chốt tuyến → đơn sang `ROUTED`, xe sang `IN_USE` |
-| BR04-09 | Hủy tuyến `CONFIRMED` → đơn về `APPROVED`, xe về `AVAILABLE` |
+| BR04-08 | Chốt tuyến → đơn sang `ROUTED`; xe không đổi trạng thái, chỉ bị giữ cho đúng ngày giao đó. Xe đang `MAINTENANCE` thì không chốt được |
+| BR04-09 | Hủy tuyến `CONFIRMED` → đơn về `APPROVED`, xe được nhả lịch ngày đó |
 | BR04-10 | Không hủy được tuyến `IN_PROGRESS`, phải theo luồng sự cố |
 | BR04-11 | Chốt tuyến → gửi email cho khách có địa chỉ email, gồm mã đơn, ETA, link tra cứu |
 | BR04-12 | Khách không có email → vẫn ghi thông báo với trạng thái `NOT_SENT` để điều phối chủ động gọi |
@@ -203,13 +203,13 @@ Spring Security cần tiền tố `ROLE_` khi tạo `GrantedAuthority`, nên `AD
 |---|---|
 | BR05-01 | Tài xế chỉ thấy tuyến của mình trong ngày hiện tại |
 | BR05-02 | Tài xế không đổi được thứ tự điểm giao |
-| BR05-03 | Phải bấm "Xác nhận nhận hàng" mới cập nhật được điểm giao. Tuyến sang `IN_PROGRESS` |
+| BR05-03 | Phải bấm "Xác nhận nhận hàng" mới cập nhật được điểm giao. Tuyến sang `IN_PROGRESS`, xe sang `IN_USE`, ETA tính lại từ giờ bấm. Xe đang `MAINTENANCE` thì không nhận hàng được |
 | BR05-04 | Giao diện làm nổi bật đúng một điểm đang xử lý |
 | BR05-05 | Cập nhật theo đúng thứ tự, không nhảy cóc |
 | BR05-06 | "Giao thất bại" bắt buộc chọn lý do: `CUSTOMER_ABSENT`, `CUSTOMER_REFUSED`, `WRONG_ADDRESS`, `DAMAGED_GOODS`, `OTHER`. Chọn `OTHER` thì bắt nhập mô tả |
 | BR05-07 | "Hoãn" bắt buộc chọn ngày giao mới, không được ngày quá khứ |
 | BR05-08 | Mọi cập nhật ghi kèm thời điểm và tọa độ GPS (nếu trình duyệt cho phép) |
-| BR05-09 | Điểm cuối xong → tuyến `COMPLETED`, xe `AVAILABLE` |
+| BR05-09 | Điểm cuối xong → tuyến `COMPLETED`, xe về `AVAILABLE` |
 | BR05-10 | Nút gọi dạng `tel:`, nút chỉ đường mở bản đồ ngoài với tọa độ |
 | BR05-11 | Đơn có `amount_to_collect > 0` → khi bấm "Đã giao" bắt buộc nhập số tiền thực thu và hình thức |
 | BR05-12 | Thu khác số phải thu → bắt buộc ghi chú lý do, gửi thông báo cho điều phối |
@@ -227,7 +227,7 @@ Spring Security cần tiền tố `ROLE_` khi tạo `GrantedAuthority`, nên `AD
 | BR06-03 | Mức độ: `CAN_CONTINUE` hoặc `CANNOT_CONTINUE` |
 | BR06-04 | `CAN_CONTINUE`: nhập số phút chậm trễ, hệ thống chỉ cộng vào ETA các điểm còn lại, không sinh phương án |
 | BR06-05 | `CANNOT_CONTINUE`: sinh 3 nhóm phương án, xếp theo km phát sinh tăng dần |
-| BR06-06 | **Phương án A** (`A_RESCUE_VEHICLE`) — điều xe `AVAILABLE` từ kho ra sang hàng. Km phát sinh = kho → điểm sự cố + phần lộ trình còn lại |
+| BR06-06 | **Phương án A** (`A_RESCUE_VEHICLE`) — điều xe `AVAILABLE` đang ở kho và chưa có tuyến trong ngày sự cố ra sang hàng. Km phát sinh = kho → điểm sự cố + phần lộ trình còn lại |
 | BR06-07 | **Phương án B** (`B_INSERT_OTHER_ROUTE`) — chèn các điểm còn lại vào tuyến khác đang chạy, dùng Cheapest Insertion. Phải kiểm sức chứa còn lại |
 | BR06-08 | **Phương án C** (`C_POSTPONE`) — hoãn sang hôm sau. Km phát sinh = 0 nhưng luôn xếp cuối |
 | BR06-09 | Chỉ hiện phương án khả thi. Vi phạm sức chứa thì loại |

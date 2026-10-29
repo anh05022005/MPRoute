@@ -290,6 +290,85 @@ Kèm theo hai thay đổi nữa trong cùng file:
 
 ---
 
+### B5. Hai đơn cùng một chỗ bị tính hai lần bốc dỡ
+
+Phát hiện ngày 27/10/2026 khi chạy thật. Tạp hóa Đức Lợi có hai đơn trong ngày 28/10, xếp cạnh
+nhau trong tuyến, chặng giữa hai đơn **0,00 km**, nhưng ETA lệch nhau đúng **15 phút** (08:31
+và 08:46). Nguyên nhân: công thức gốc nhân thời gian bốc dỡ với **số đơn** đã giao (`i`), mà
+ngoài thực tế xe dừng **một lần** và dỡ cả hai đơn. Khách nhận hai email báo hai giờ cho cùng
+một lần giao, và mọi điểm phía sau bị đẩy muộn thêm 15 phút.
+
+Đã đổi sang đếm **số chỗ dừng** đã dỡ xong: chặng 0 m thì không tăng bộ đếm. Nhận biết "cùng
+chỗ" bằng chặng 0 m trong ma trận chứ không so tọa độ, để `routing-arrange.js` (chỉ có ma trận)
+xem trước kéo thả ra đúng con số mà máy chủ lưu.
+
+Test chặn tái phát: `ordersAtSameLocationShareOneEtaAndOneLoadingTime`.
+
+Giới hạn còn lại: hai đơn cùng khách **không** đứng cạnh nhau trong tuyến (thuật toán chen một
+điểm khác vào giữa) thì vẫn là hai lần dừng. Thực tế khó xảy ra vì khoảng cách giữa chúng bằng
+0 nên cả NN, 2-opt lẫn OR-Tools đều có lợi khi xếp chúng liền nhau.
+
+### B6. Chốt kế hoạch ngày mai làm khóa xe của mọi ngày
+
+Phát hiện ngày 28/10/2026 khi chạy thật. Bản gốc (BR04-08) đặt xe sang `IN_USE` **ngay lúc chốt
+tuyến**, còn CBR-05 chỉ cho xe `AVAILABLE` vào phân tuyến. Hôm nay 28/10 chốt kế hoạch cho cả 5
+xe ngày 29/10 thì 5 xe cùng hiện "Đang chạy" dù vẫn nằm trong kho, và màn hình phân tuyến ngày
+30/10 **không còn xe nào để chọn**. Nghĩa là hệ thống chỉ lập kế hoạch được cho đúng một ngày
+tiếp theo — trong khi đơn của khách vẫn đặt trước nhiều ngày.
+
+Gốc của lỗi: một cờ `status` trên xe đang phải trả lời **hai câu hỏi khác nhau**:
+
+| Câu hỏi | Trả lời bằng gì sau khi sửa |
+|---|---|
+| Lúc này xe đang ở đâu — kho, ngoài đường hay xưởng? | `vehicles.status`: `IN_USE` chỉ đặt khi tài xế **xác nhận nhận hàng** (xe thật sự rời kho), về `AVAILABLE` khi tuyến hoàn thành |
+| Ngày D xe đã có lịch chưa? | Tra bảng `routes`: xe có tuyến `CONFIRMED` / `IN_PROGRESS` / `INCIDENT` trong ngày D thì đã bận ngày D |
+
+Phân tuyến ngày D giờ lấy mọi xe **trừ** xe `MAINTENANCE` và xe đã bận ngày D (CBR-05 viết lại).
+Một xe được chốt cho cả 29 lẫn 30 mà vẫn "Sẵn sàng" ở kho hôm nay. Toàn bộ logic gom vào
+`VehicleService` để mọi chỗ dùng đến (phân tuyến, chốt, hủy, nhận hàng, hoàn thành, cứu hộ)
+cùng một định nghĩa.
+
+**Trường hợp khó: xe đã chốt cho ngày 29 và 30, rồi hỏng giữa đường ngày 29.**
+
+1. Sự cố ngày 29 xử lý như cũ: BR06-14 đưa xe sang `MAINTENANCE`, điều phối chọn phương án A/B/C.
+2. Tuyến đã chốt ngày 30 của xe đó **vẫn giữ nguyên** — hệ thống không tự hủy, vì có thể xe sửa
+   kịp trong đêm, và tự hủy là tự đẩy hàng loạt đơn về hàng chờ sau lưng điều phối viên.
+3. Nhưng nó không thể lặng lẽ chạy tiếp: màn hình phân tuyến hiện cảnh báo trên tuyến đó,
+   màn hình tài xế báo xe đang bảo trì, và máy chủ **chặn "Xác nhận nhận hàng"** khi xe đang
+   `MAINTENANCE`. Tuyến nháp dùng xe bảo trì cũng không chốt được.
+4. Điều phối viên chọn một trong hai: hủy tuyến ngày 30 (đơn về `APPROVED`, BR04-09) rồi chạy lại
+   phân tuyến bằng xe khác; hoặc chờ quản trị viên chuyển xe về "Sẵn sàng" sau khi sửa xong.
+5. Xe cứu hộ ngày 29 (phương án A) được phép là xe chỉ có lịch ngày 30 — điều kiện là đang ở kho
+   và chưa có tuyến trong ngày 29.
+
+Dữ liệu cũ: các xe đã bị đặt `IN_USE` theo quy tắc cũ mà tuyến chưa chạy thì vẫn hiện "Đang
+chạy" cho tới khi tuyến của chúng hoàn thành, và quản trị viên không đổi tay được (BR01-04).
+Dọn một lần bằng câu `UPDATE` đưa về `AVAILABLE` những xe không có tuyến `IN_PROGRESS` /
+`INCIDENT` nào.
+
+### B7. Tài xế giao xong chuyến sáng không nhận được chuyến chiều
+
+Phát hiện ngày 28/10/2026 khi chạy thật. Ba tài xế giao xong tuyến buổi sáng, sau đó phát sinh
+thêm đơn trong ngày. Chạy phân tuyến lại thì ô chọn tài xế chỉ còn một người: CBR-06 bản gốc
+(*"một tài xế tối đa một tuyến trong cùng ngày"*) đếm cả tuyến **đã hoàn thành**. Xe thì vẫn
+chọn được, vì giao xong là xe về kho. Kết quả là xe rảnh mà không có người lái.
+
+Đã sửa ba chỗ, vì chỉ nới quy tắc thì hai chỗ còn lại hỏng theo:
+
+| Chỗ | Trước | Sau |
+|---|---|---|
+| CBR-06 (`RoutePlanService`) | Mọi tuyến trong ngày trừ tuyến hủy đều giữ tài xế | Chỉ tuyến **chưa xong** giữ tài xế; `COMPLETED` và `CANCELLED` thì nhả |
+| Màn tài xế (`DeliveryService`) | Lấy đại một tuyến trong ngày — có thể ra tổng kết chuyến sáng, che mất chuyến chiều | Tuyến chưa xong luôn đứng trước; hết chuyến thì hiện chuyến xong gần nhất |
+| Giờ xuất phát tính ETA | Luôn là `DEPARTURE_TIME` (08:00), kể cả chuyến xếp lúc 14:00 | Tuyến hôm nay xếp sau 08:00 thì lấy giờ hiện tại; tài xế bấm nhận hàng thì **tính lại ETA từ giờ rời kho thật** |
+
+Dòng thứ ba là cái giá phải trả của dòng thứ nhất: khi một tài xế chạy được hai chuyến, chuyến
+thứ hai không bao giờ xuất phát lúc 08:00, và khách nhận email báo *"dự kiến 08:24"* lúc 2 giờ
+chiều. Công thức ETA (CBR-13) **không đổi** — chỉ đổi mốc xuất phát, và vẫn gọi đúng
+`EtaCalculator` qua `RoutingService.recalculate`, không có công thức thứ hai.
+
+Giới hạn còn lại: email ETA gửi lúc chốt kế hoạch. Tài xế nhận hàng muộn hơn giờ chốt thì trang
+`/track` và màn tài xế có giờ mới, còn email đã gửi vẫn mang giờ cũ.
+
 ## C. Chi tiết kỹ thuật phát sinh khi code thật
 
 Những thứ đặc tả viết trên giấy không thể biết trước, chỉ lộ ra khi chạy.
@@ -301,6 +380,9 @@ Những thứ đặc tả viết trên giấy không thể biết trước, ch�
 | `pom.xml` | Máy dùng JDK 23. Từ JDK 21, javac **không còn tự chạy annotation processor** tìm thấy trên classpath. Thiếu khối `annotationProcessorPaths` thì **Lombok im lặng không sinh getter**, code báo `cannot find symbol` mà không nói lý do |
 | `pom.xml` | Hạ Spring Boot **4.1.0 → 3.5.16**. Bản 4.x có nhiều thay đổi phá vỡ, trong khi gần như toàn bộ giáo trình và câu trả lời tra cứu được đều viết cho 3.x |
 | `application.properties` | MySQL chạy trong WSL nên đồng hồ máy chủ là **UTC, lệch 7 tiếng** so với giờ ứng dụng ghi vào. Riêng `serverTimezone=` **không đủ** — nó chỉ báo trình điều khiển cách diễn giải giờ. Phải có `forceConnectionTimeZoneToSession=true` thì `NOW()` bên MySQL mới đúng giờ Việt Nam. Chưa sửa thì mọi câu lọc theo `CURDATE()` chạy trong khoảng **0h–7h sáng** sẽ trả về ngày hôm trước |
+| `DistanceMatrixService` | Hai đơn cùng tọa độ là hai chỉ số khác nhau trong ma trận nhưng **cùng một khóa** của bảng `distance_matrix`. Bản đầu lưu theo từng ô nên chèn trùng khóa, vi phạm `uk_coordinate_pair`, và nút **Chạy tối ưu ra lỗi 500**. Phát hiện ngày 27/10/2026. Đã gom theo khóa tọa độ trước khi `saveAll` |
+| `routing.html`, `incident-detail.html` | Dữ liệu JSON cho JavaScript từng đặt trong `<script type="application/json" th:text=...>`. `th:text` luôn escape `"` thành `&quot;`, mà `<script>` là thẻ *raw text* nên trình duyệt **không giải mã** — `JSON.parse` hỏng, script dừng im lặng. Hậu quả: bản đồ phân tuyến không có ghim, **kéo thả chỉnh tay không chạy**, dù biểu tượng ⠿ vẫn hiện. Phát hiện ngày 28/10/2026. Đã chuyển sang `<div hidden th:text=...>` — thẻ thường thì trình duyệt giải mã đúng, và vẫn được escape nên tên khách không chèn được mã. Không dùng `th:utext` vì tên khách do người dùng nhập |
+| CN-04-04 | Ô "Phương án hiện tại" cộng **mọi** tuyến trong ngày, kể cả tuyến đã chốt từ lần chạy trước, rồi đem so với quãng đường của **lần chạy gần nhất** — vốn chỉ gồm các đơn chưa có tuyến. Ngày 29/10/2026 có một tuyến đã chốt 27,38 km và một tuyến nháp 25,21 km: màn hình báo "dài hơn 27,38 km" dù chưa ai chỉnh gì. Đã đổi sang chỉ cộng **tuyến nháp** (đúng tập tuyến lần chạy đó sinh ra, vì mỗi lần chạy xóa nháp cũ và chỉ xếp đơn chưa có tuyến), và ẩn khung so sánh khi không còn tuyến nháp |
 | `docs/10-quy-uoc-ky-thuat.md` | Thêm thư mục `security/` vào sơ đồ cấu trúc thư mục |
 | `Product.java` | Đơn vị mặc định `"Thung"` → `"Thùng"`. Đây là chuỗi hiển thị ra giao diện nên phải có dấu |
 | `docs/04` ↔ `docs/05` | **Hai tài liệu mâu thuẫn nhau và không ai phát hiện suốt 11 tuần.** `docs/05` liệt kê `SCR-10 /tracking` trong bảng màn hình và đặt mục "Theo dõi" vào menu điều phối; `docs/04` không có mục chức năng nào tương ứng. Menu được dựng theo `docs/05`, màn hình không được làm vì `docs/04` không yêu cầu — bấm vào ra **404**. Phát hiện ngày 20/09/2026 do bấm thử menu, không phải do rà tài liệu. Đã làm màn hình và thêm mục **CN-04-11** vào `docs/04` |

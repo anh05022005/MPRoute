@@ -44,6 +44,12 @@
     var draggedRow = null;
     var changed = false;
 
+    // Ghi nho nut nao may chu khoa san TRUOC lan tinh lai dau tien, vi updateButtons se ghi de
+    document.querySelectorAll('button[form="arrange-form"], #confirm-plan-button')
+        .forEach(function (button) {
+            button.dataset.lockedByServer = String(button.disabled);
+        });
+
     blocks.forEach(setUpRoute);
     form.addEventListener('submit', fillFormBeforeSubmit);
     refreshEverything();
@@ -128,17 +134,22 @@
 
     function refreshEverything() {
         var totalMeters = 0;
+        var draftMeters = 0;
         var anyOverCapacity = false;
 
         blocks.forEach(function (block) {
             var result = refreshRoute(block);
             totalMeters += result.meters;
+            // Tuyen da chot thuoc lan chay truoc, khong duoc cong vao phia so voi thuat toan
+            if (block.dataset.editable === 'true') {
+                draftMeters += result.meters;
+            }
             if (result.overCapacity) {
                 anyOverCapacity = true;
             }
         });
 
-        updateTotals(totalMeters);
+        updateTotals(totalMeters, draftMeters);
         updateButtons(anyOverCapacity);
     }
 
@@ -156,7 +167,10 @@
 
             var previous = (position === 0) ? DEPOT_INDEX : indexes[position - 1];
             row.querySelector('.stop-leg').textContent = formatKm(distance(previous, indexes[position]));
-            row.querySelector('.stop-eta').textContent = etas[position];
+            // Tuyen da chot giu ETA may chu da luu: xe co the roi kho muon hon gio ke hoach (docs/09 B7)
+            if (block.dataset.editable === 'true') {
+                row.querySelector('.stop-eta').textContent = etas[position];
+            }
         });
 
         // Chang cuoi ve kho, hien rieng mot dong o tfoot (CBR-01)
@@ -205,20 +219,28 @@
      *
      *     ETA(diem thu N) = gio xuat phat
      *                     + quang duong tich luy / toc do
-     *                     + (N - 1) x thoi gian boc do
+     *                     + so cho dung da do xong x thoi gian boc do
+     *
+     * Chang 0 m (hai don cung mot khach dung canh nhau) khong tinh them lan boc do,
+     * dung nhu EtaCalculator.java — lech nhau thi gio xem truoc khac gio luc Luu.
      */
     function arrivalTimes(indexes) {
         var startMinutes = departureMinutes();
         var cumulativeMeters = 0;
+        var completedLocations = 0;
         var times = [];
 
         for (var i = 0; i < indexes.length; i++) {
             var previous = (i === 0) ? DEPOT_INDEX : indexes[i - 1];
-            cumulativeMeters += distance(previous, indexes[i]);
+            var legMeters = distance(previous, indexes[i]);
+            cumulativeMeters += legMeters;
+            if (i > 0 && legMeters > 0) {
+                completedLocations++;
+            }
 
             var travelMinutes = (cumulativeMeters / 1000) / plan.speedKmh * 60;
-            // Nhan voi i chu khong phai (i + 1): den diem dau tien thi xe chua do hang o dau ca
-            var loadingMinutes = i * plan.loadingMinutes;
+            // Den cho dung dau tien thi xe chua do hang o dau ca nen completedLocations = 0
+            var loadingMinutes = completedLocations * plan.loadingMinutes;
             times.push(formatClock(startMinutes + travelMinutes + loadingMinutes));
         }
         return times;
@@ -292,7 +314,12 @@
         return true;
     }
 
-    function updateTotals(totalMeters) {
+    /**
+     * totalMeters: moi tuyen trong ngay, ke ca tuyen da chot — dong "Tong quang duong".
+     * draftMeters: chi tuyen nhap — cung tap tuyen ma lan chay thuat toan gan nhat sinh ra,
+     * nen moi dem so duoc voi con so "Thuat toan tim ra" (CN-04-04).
+     */
+    function updateTotals(totalMeters, draftMeters) {
         var total = document.getElementById('total-distance');
         if (total) {
             total.textContent = formatKm(totalMeters);
@@ -304,11 +331,11 @@
             return;
         }
 
-        manual.textContent = formatKm(totalMeters);
+        manual.textContent = formatKm(draftMeters);
 
         // CN-04-04: chenh lech so voi quang duong thuat toan tim ra, luu tai thoi diem chay
         var automatic = parseFloat(gap.dataset.auto) || 0;
-        var difference = totalMeters - automatic;
+        var difference = draftMeters - automatic;
         if (Math.abs(difference) < 1) {
             gap.textContent = 'Bằng nhau';
             gap.style.color = 'var(--text-secondary)';
@@ -333,7 +360,9 @@
         document.querySelectorAll('button[form="arrange-form"], #confirm-plan-button')
             .forEach(function (button) {
                 if (button !== saveButton) {
-                    button.disabled = anyOverCapacity;
+                    // Nut may chu da khoa san (vd. tuyen chua giao tai xe) thi giu khoa,
+                    // khong duoc vi het vuot suc chua ma mo lai
+                    button.disabled = anyOverCapacity || button.dataset.lockedByServer === 'true';
                 }
             });
 
@@ -403,10 +432,15 @@
         });
     }
 
+    /*
+     * Lam tron toi GIAY roi CAT phan giay, dung nhu may chu: EtaCalculator.java lam tron
+     * offset theo giay, template hien HH:mm thi bo giay. Lam tron theo phut o day thi
+     * 08:41:36 thanh 08:42 trong khi tai xe va email cua khach thay 08:41.
+     */
     function formatClock(totalMinutes) {
-        var rounded = Math.round(totalMinutes);
-        var hours = Math.floor(rounded / 60) % 24;
-        var minutes = rounded % 60;
+        var wholeMinutes = Math.floor(Math.round(totalMinutes * 60) / 60);
+        var hours = Math.floor(wholeMinutes / 60) % 24;
+        var minutes = wholeMinutes % 60;
         return pad(hours) + ':' + pad(minutes);
     }
 

@@ -52,6 +52,21 @@ public interface RouteRepository extends JpaRepository<Route, Long> {
     // Kiem tai xe da duoc gan tuyen nao trong ngay chua (CBR-06)
     boolean existsByDriverIdAndDeliveryDate(Long driverId, LocalDate deliveryDate);
 
+    // Xe nao da co viec trong ngay (CBR-05). Tra ve id de loc ca doi xe bang MOT cau truy van
+    @Query("""
+            SELECT DISTINCT r.vehicle.id FROM Route r
+            WHERE r.deliveryDate = :deliveryDate AND r.status IN :statuses
+            """)
+    List<Long> findVehicleIdsByDeliveryDateAndStatusIn(@Param("deliveryDate") LocalDate deliveryDate,
+                                                       @Param("statuses") Collection<RouteStatus> statuses);
+
+    boolean existsByVehicleIdAndDeliveryDateAndStatusIn(Long vehicleId, LocalDate deliveryDate,
+                                                        Collection<RouteStatus> statuses);
+
+    // Xe con dang ngoai duong voi mot tuyen KHAC khong — truoc khi tra xe ve San sang
+    boolean existsByVehicleIdAndStatusInAndIdNot(Long vehicleId, Collection<RouteStatus> statuses,
+                                                 Long routeId);
+
     /**
      * Lich su cac tuyen tai xe da chay, moi nhat truoc (CN-05-11).
      *

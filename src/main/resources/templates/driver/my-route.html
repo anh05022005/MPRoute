@@ -72,12 +72,16 @@
             biet "tuyen da len ke hoach" voi "xe da roi kho", va departed_at chinh la moc de
             doi chieu voi ETA khi do do chinh xac cua mo hinh o chuong 4.
         -->
+        <!-- Xe hong o tuyen hom truoc van giu tuyen da chot hom nay; may chu se chan nhan hang -->
+        <div th:if="${route.status.name() == 'CONFIRMED' and route.vehicle.status.name() == 'MAINTENANCE'}"
+             class="panel panel-warning mb-3"
+             th:text="'Xe ' + ${route.vehicle.licensePlate} + ' đang bảo trì nên chưa nhận hàng được. Vui lòng liên hệ điều phối viên.'">
+            Xe 29H-123.45 đang bảo trì nên chưa nhận hàng được. Vui lòng liên hệ điều phối viên.
+        </div>
+
         <form th:if="${route.status.name() == 'CONFIRMED'}"
               th:action="@{/driver/my-route/pickup}" method="post" class="mb-3">
             <button type="submit" class="btn btn-primary w-100 btn-lg">Xác nhận đã nhận hàng</button>
-            <div class="form-text">
-                Bấm khi đã xếp đủ hàng lên xe. Chưa bấm thì chưa cập nhật được điểm giao nào.
-            </div>
         </form>
 
         <div th:if="${route.departedAt != null}" class="text-sub small mb-3"
@@ -245,11 +249,6 @@
                                th:value="${tomorrow}" th:min="${today}">
                         <input type="text" name="note" maxlength="500" class="form-control mt-2"
                                placeholder="Ghi chú (không bắt buộc)">
-
-                        <div class="form-text">
-                            Đơn hôm nay chuyển sang <strong>Hoãn</strong>, hệ thống tự tạo lại một
-                            đơn mới ở ngày bạn chọn.
-                        </div>
                         <button type="submit" class="btn btn-outline-secondary w-100 mt-2">
                             Xác nhận hoãn</button>
                     </form>
@@ -307,14 +306,6 @@
                         <label class="form-label mb-1 small">Chậm khoảng bao nhiêu phút?</label>
                         <input type="number" name="delayMinutes" min="1" max="480"
                                class="form-control incident-delay" placeholder="Ví dụ: 30">
-                        <div class="form-text">
-                            Hệ thống sẽ lùi giờ dự kiến của các điểm chưa giao và báo cho khách.
-                        </div>
-                    </div>
-
-                    <div class="form-text mt-2">
-                        Chọn <strong>Không thể tiếp tục</strong> nếu xe không chạy được nữa.
-                        Khi đó bạn dừng lại chờ điều phối viên gọi, đừng tự đi tiếp.
                     </div>
 
                     <button type="submit" class="btn btn-danger w-100 mt-2">Gửi báo sự cố</button>

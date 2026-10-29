@@ -6,8 +6,11 @@ import lombok.RequiredArgsConstructor;
 /**
  * Trang thai xe.
  *
- * Chi xe AVAILABLE moi duoc dua vao phan tuyen (CBR-05).
- * IN_USE do he thong tu dat khi chot tuyen, quan tri vien khong chon tay duoc (BR01-04).
+ * Trang thai nay noi xe DANG O DAU luc nay, khong noi xe ranh ngay nao. Xe ranh ngay D hay
+ * khong thi tra theo bang routes cua ngay D (CBR-05, VehicleService.findSchedulableOn).
+ *
+ * IN_USE do he thong tu dat khi tai xe nhan hang (xe roi kho), quan tri vien khong chon tay
+ * duoc (BR01-04). Truoc day dat ngay luc chot tuyen — xem docs/09 muc B6 vi sao da bo.
  * MAINTENANCE do quan tri vien dat, hoac he thong tu dat khi co su co CANNOT_CONTINUE.
  */
 @Getter

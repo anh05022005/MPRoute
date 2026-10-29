@@ -114,9 +114,6 @@
                 </div>
                 <button type="submit" class="btn btn-sm btn-primary"
                         th:disabled="${orders.isEmpty() or vehicles.isEmpty()}">Chạy tối ưu</button>
-                <div class="form-text mb-1">
-                    Chạy lại sẽ xóa kết quả nháp cũ của ngày này (BR03-09).
-                </div>
             </div>
         </div>
     </form>
@@ -138,13 +135,7 @@
                     <span th:if="${!unassignedOrders.isEmpty() and !routes.isEmpty()}">
                         <span class="legend-swatch" style="background: var(--text-muted);"></span>Chưa xếp tuyến
                     </span>
-                    <span class="text-faint">Rê chuột vào ghim để xem khách và giờ dự kiến</span>
                 </div>
-            </div>
-            <div class="form-text">
-                Đường vẽ trên bản đồ là <strong>lộ trình thật lấy từ OSRM</strong>, không phải
-                đường thẳng nối các điểm. Ảnh nền lấy từ OpenStreetMap nên cần mạng — mất mạng
-                thì khung xám nhưng số liệu bên phải vẫn đầy đủ.
             </div>
             <!-- CN-03-11: ve bang doan thang thi phai noi ra, khong duoc de nguoi xem tuong that -->
             <div th:if="${approximatePath}" class="form-text" style="color: var(--warning);">
@@ -250,6 +241,24 @@
                 <!-- CN-04-03: keo don nang sang xe nho thi dong nay hien do kem MSG-14 -->
                 <div class="route-capacity-warning" hidden></div>
 
+                <!--
+                    Mot xe nhan duoc tuyen cua nhieu ngay, nen xe co the hong (BR06-14) hoac bi dua vao
+                    bao tri SAU khi tuyen ngay sau da xep cho no. May chu chan ca chot ke hoach lan tai
+                    xe nhan hang voi xe do; dong nay de dieu phoi vien biet truoc ma xu ly.
+                -->
+                <div th:if="${route.vehicle.status.name() == 'MAINTENANCE'
+                              and (route.status.name() == 'DRAFT' or route.status.name() == 'CONFIRMED')}"
+                     class="panel panel-warning mb-2 small">
+                    <strong th:text="'Xe ' + ${route.vehicle.licensePlate} + ' đang bảo trì.'">Xe 29H-123.45 đang bảo trì.</strong>
+                    <span th:if="${route.status.name() == 'DRAFT'}">
+                        Không chốt được kế hoạch này. Bỏ chọn xe đó rồi chạy lại phân tuyến.
+                    </span>
+                    <span th:if="${route.status.name() == 'CONFIRMED'}">
+                        Tài xế sẽ không nhận hàng được. Hủy tuyến để đưa đơn về hàng chờ rồi chạy lại
+                        phân tuyến bằng xe khác, hoặc chờ xe sửa xong.
+                    </span>
+                </div>
+
                 <!-- ============ CN-04-06 gan tai xe · CN-04-09 huy tuyen ============ -->
                 <div class="d-flex align-items-center gap-2 mb-2" sec:authorize="hasRole('DISPATCHER')">
 
@@ -351,7 +360,8 @@
             </div>
 
             <!-- ============ CN-04-04 so sanh tu dong voi chinh tay · CN-04-05 khoi phuc ============ -->
-            <div th:if="${!routes.isEmpty() and automaticDistance != null}"
+            <!-- Chi hien khi con tuyen nhap: tuyen da chot khong keo tha, luu hay khoi phuc duoc nua -->
+            <div th:if="${!routes.isEmpty() and automaticDistance != null and hasDraftRoute}"
                  class="panel mt-3" sec:authorize="hasRole('DISPATCHER')">
 
                 <div class="metric-row">
@@ -363,7 +373,7 @@
                     <div>
                         <div class="metric-label">Phương án hiện tại</div>
                         <div class="metric-value" style="font-size: 17px;" id="manual-distance"
-                             th:text="${#numbers.formatDecimal(totalRouteDistance / 1000, 1, 'POINT', 2, 'COMMA')} + ' km'">25,17 km</div>
+                             th:text="${#numbers.formatDecimal(draftRouteDistance / 1000, 1, 'POINT', 2, 'COMMA')} + ' km'">25,17 km</div>
                     </div>
                     <div>
                         <div class="metric-label">Chênh lệch</div>
@@ -374,10 +384,10 @@
                         -->
                         <div class="metric-value" style="font-size: 17px;" id="manual-gap"
                              th:data-auto="${automaticDistance}"
-                             th:text="${totalRouteDistance - automaticDistance > 1}
-                                        ? 'Dài hơn ' + ${#numbers.formatDecimal((totalRouteDistance - automaticDistance) / 1000, 1, 'POINT', 2, 'COMMA')} + ' km'
-                                        : (${automaticDistance - totalRouteDistance > 1}
-                                            ? 'Ngắn hơn ' + ${#numbers.formatDecimal((automaticDistance - totalRouteDistance) / 1000, 1, 'POINT', 2, 'COMMA')} + ' km'
+                             th:text="${draftRouteDistance - automaticDistance > 1}
+                                        ? 'Dài hơn ' + ${#numbers.formatDecimal((draftRouteDistance - automaticDistance) / 1000, 1, 'POINT', 2, 'COMMA')} + ' km'
+                                        : (${automaticDistance - draftRouteDistance > 1}
+                                            ? 'Ngắn hơn ' + ${#numbers.formatDecimal((automaticDistance - draftRouteDistance) / 1000, 1, 'POINT', 2, 'COMMA')} + ' km'
                                             : 'Bằng nhau')">Bằng nhau</div>
                     </div>
                 </div>
@@ -397,15 +407,7 @@
                             Khôi phục kết quả tự động</button>
                     </form>
 
-                    <span class="form-text mb-0" id="arrange-hint">
-                        Kéo dòng khách hàng để đổi thứ tự trong tuyến, hoặc kéo sang bảng của tuyến khác.
-                    </span>
-                </div>
-
-                <div th:if="${manuallyEdited}" class="form-text mt-1">
-                    Kế hoạch này đã được chỉnh tay nên các tuyến được đánh dấu
-                    <strong>Chỉnh tay</strong>. Bảng chỉ số phía trên vẫn là số liệu của lần chạy
-                    thuật toán, cố ý giữ nguyên để đối chiếu (CBR-18).
+                    <span class="form-text mb-0" id="arrange-hint"></span>
                 </div>
             </div>
 
@@ -442,10 +444,6 @@
                         Kế hoạch đã chốt hết thì nút này cũng tắt.
                     </span>
                 </div>
-                <div th:if="${canConfirmPlan}" class="form-text">
-                    Chốt xong: tuyến chuyển sang <strong>Đã chốt</strong>, xe chuyển sang
-                    <strong>Đang chạy</strong>, tài xế thấy tuyến trên điện thoại (BR04-08).
-                </div>
             </div>
         </div>
     </div>
@@ -458,10 +456,6 @@
             <strong th:text="'Còn ' + ${unassignedOrders.size()} + ' đơn chưa xếp được vào tuyến nào'">
                 Còn 1 đơn chưa xếp được vào tuyến nào
             </strong>
-            <div class="small text-sub">
-                Tổng sức chứa đủ nhưng thuật toán vẫn không xếp hết — đây là bài toán xếp thùng,
-                không phải lỗi. Chọn thêm xe rồi chạy lại, hoặc chuyển các đơn này sang ngày khác.
-            </div>
         </div>
         <div th:if="${routes.isEmpty()}" class="section-label">Đơn hàng chờ phân tuyến</div>
 
@@ -501,17 +495,22 @@
     </div>
 
     <!--
-        Du lieu ghim de o day duoi dang JSON thay vi noi thang vao JavaScript.
-        th:text tu escape nen ten khach co dau nhay kep cung khong lam vo trang;
-        JavaScript doc lai bang textContent thi duoc dung chuoi goc.
+        Du lieu JSON cho JavaScript, dat trong <div hidden> chu KHONG dat trong
+        <script type="application/json">.
+
+        th:text luon escape HTML (" thanh &quot;). Trong mot the thuong, trinh duyet giai ma
+        lai nen textContent ra dung chuoi JSON goc. Nhung <script> la the "raw text": trinh
+        duyet KHONG giai ma gi ca, textContent con nguyen &quot; va JSON.parse hong — ca ban
+        do lan keo tha im lang khong chay. Khong doi sang th:utext: ten khach do nguoi dung
+        nhap, de nguyen thi mot ten chua </script> la chen duoc ma vao trang.
     -->
-    <script id="map-points-data" type="application/json" th:text="${mapPointsJson}">[]</script>
+    <div id="map-points-data" hidden th:text="${mapPointsJson}">[]</div>
 
     <!-- CN-03-09: mau, ghim danh so va lo trinh that cua tung tuyen -->
-    <script id="route-lines-data" type="application/json" th:text="${routeLinesJson}">[]</script>
+    <div id="route-lines-data" hidden th:text="${routeLinesJson}">[]</div>
 
     <!-- CN-04-01/02: ma tran khoang cach de tinh THU km va ETA ngay khi keo tha -->
-    <script id="plan-data" type="application/json" th:text="${planJson}">null</script>
+    <div id="plan-data" hidden th:text="${planJson}">null</div>
 
 </div>
 

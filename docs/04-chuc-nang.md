@@ -126,7 +126,7 @@ Chọn ngày → hiện danh sách đơn `APPROVED`, tổng số đơn, tổng k
 Leaflet nền OpenStreetMap. Kho là ô vuông đậm, khách là ghim. Rê chuột hiện tên khách và số thùng.
 
 ### ★ CN-03-03 Chọn xe khả dụng
-Danh sách checkbox các xe `AVAILABLE` kèm tải trọng, thể tích. Hiện tổng sức chứa đã chọn để đối chiếu tổng nhu cầu.
+Danh sách checkbox các xe khả dụng cho ngày giao đang chọn (CBR-05: không bảo trì, chưa có tuyến chốt trong ngày đó) kèm tải trọng, thể tích. Hiện tổng sức chứa đã chọn để đối chiếu tổng nhu cầu.
 
 ### ★ CN-03-04 Chọn thuật toán
 Dropdown: `Nearest Neighbor`, `Nearest Neighbor + 2-opt` (mặc định). **Chức năng này để demo so sánh trước hội đồng, bắt buộc có.**
@@ -185,16 +185,16 @@ Hiện song song hai con số quãng đường.
 Bấm nút → về đúng kết quả gốc của thuật toán.
 
 ### ★ CN-04-06 Gán tài xế
-Hộp thoại chọn tài xế cho từng tuyến. Tài xế đã chọn không xuất hiện ở tuyến khác cùng ngày.
+Hộp thoại chọn tài xế cho từng tuyến. Tài xế đang có tuyến chưa xong trong ngày không xuất hiện ở tuyến khác cùng ngày; giao xong chuyến trước thì chọn lại được (CBR-06).
 
 ### ★ CN-04-07 Chốt kế hoạch
-Xác nhận → tuyến `CONFIRMED`, đơn `ROUTED`, xe `IN_USE`, tài xế nhận thông báo.
+Xác nhận → tuyến `CONFIRMED`, đơn `ROUTED`, tài xế nhận thông báo. Xe bị giữ cho đúng ngày giao đó (CBR-05), chưa đổi trạng thái; tuyến nháp nào dùng xe đang bảo trì thì không chốt được.
 
 ### ★ CN-04-08 Gửi email ETA cho khách
 Sau khi chốt, khách có email nhận được thư gồm mã đơn, ETA, link tra cứu. Khách không có email → ghi thông báo trạng thái `NOT_SENT`.
 
 ### ★ CN-04-09 Hủy tuyến
-Tuyến `CONFIRMED` hủy được, đơn về `APPROVED`, xe về `AVAILABLE`. Tuyến `IN_PROGRESS` → MSG-10.
+Tuyến `CONFIRMED` hủy được, đơn về `APPROVED`, xe được nhả lịch ngày đó. Tuyến `IN_PROGRESS` → MSG-10.
 
 ### ○ CN-04-10 Xuất kết quả phân tuyến ra Excel
 
@@ -275,7 +275,7 @@ Tự lấy từ trình duyệt. Từ chối quyền → dùng tọa độ điể
 Hiện thông tin sự cố, vị trí xe trên bản đồ, danh sách điểm chưa giao.
 
 ### ★ CN-06-07 Sinh phương án A — xe cứu hộ
-Tìm xe `AVAILABLE` đủ sức chứa. Tính km phát sinh = kho → điểm sự cố + lộ trình còn lại.
+Tìm xe `AVAILABLE` đang ở kho, chưa có tuyến trong ngày sự cố, đủ sức chứa. Tính km phát sinh = kho → điểm sự cố + lộ trình còn lại.
 
 ### ★ CN-06-08 Sinh phương án B — chèn vào tuyến khác
 Dùng Cheapest Insertion. Kiểm sức chứa còn lại của tuyến ứng viên. Không đủ → loại khỏi danh sách.

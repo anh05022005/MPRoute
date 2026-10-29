@@ -11,7 +11,6 @@ import com.minhphu.mproute.entity.enums.AlgorithmType;
 import com.minhphu.mproute.entity.enums.EntityType;
 import com.minhphu.mproute.entity.enums.OrderStatus;
 import com.minhphu.mproute.entity.enums.RouteStatus;
-import com.minhphu.mproute.entity.enums.VehicleStatus;
 import com.minhphu.mproute.repository.OptimizationResultRepository;
 import com.minhphu.mproute.repository.OrderRepository;
 import com.minhphu.mproute.repository.RouteRepository;
@@ -38,6 +37,7 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.time.format.DateTimeFormatter;
+import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.LinkedHashMap;
@@ -78,6 +78,7 @@ public class RoutingService {
     private final UserRepository userRepository;
 
     private final DepotService depotService;
+    private final VehicleService vehicleService;
     private final DistanceMatrixService distanceMatrixService;
     private final SystemParameterService systemParameterService;
     private final StatusHistoryService statusHistoryService;
@@ -128,7 +129,7 @@ public class RoutingService {
         }
 
         // ---------- B3: xe duoc chon (BR03-02) ----------
-        List<Vehicle> vehicles = loadSelectedVehicles(vehicleIds);
+        List<Vehicle> vehicles = loadSelectedVehicles(vehicleIds, deliveryDate);
 
         // ---------- B4: tong nhu cau so voi tong suc chua (BR03-04, MSG-08) ----------
         checkTotalCapacity(orders, vehicles);
@@ -211,12 +212,12 @@ public class RoutingService {
     // ==================== B3 ====================
 
     /**
-     * Lay cac xe dieu phoi vien tich chon, chi nhan xe AVAILABLE (CBR-05, BR03-02).
+     * Lay cac xe dieu phoi vien tich chon, chi nhan xe ranh trong CHINH ngay giao (CBR-05, BR03-02).
      *
-     * Kiem lai trang thai o day chu khong tin vao danh sach o chon: hoi dong se gui thang
-     * id cua mot xe dang chay len xem he thong co nhan khong.
+     * Kiem lai o day chu khong tin vao danh sach o chon: hoi dong se gui thang id cua mot
+     * xe da co tuyen trong ngay len xem he thong co nhan khong.
      */
-    private List<Vehicle> loadSelectedVehicles(List<Long> vehicleIds) {
+    private List<Vehicle> loadSelectedVehicles(List<Long> vehicleIds, LocalDate deliveryDate) {
         if (vehicleIds == null || vehicleIds.isEmpty()) {
             throw new IllegalArgumentException("Chưa chọn xe nào để phân tuyến.");
         }
@@ -227,11 +228,7 @@ public class RoutingService {
         }
 
         for (Vehicle vehicle : vehicles) {
-            if (vehicle.getStatus() != VehicleStatus.AVAILABLE) {
-                throw new IllegalStateException(String.format(
-                        "Xe %s đang ở trạng thái \"%s\" nên không đưa vào phân tuyến được.",
-                        vehicle.getLicensePlate(), vehicle.getStatus().getDisplayName()));
-            }
+            vehicleService.checkSchedulableOn(vehicle, deliveryDate);
         }
         return vehicles;
     }
@@ -351,7 +348,7 @@ public class RoutingService {
         int loadingMinutes = systemParameterService.getInt(SystemParameterService.LOADING_TIME);
 
         EtaCalculator.assignEta(result.getRoutes(), matrix,
-                LocalDateTime.of(deliveryDate, departureTime()), speedKmh, loadingMinutes);
+                plannedDepartureOn(deliveryDate), speedKmh, loadingMinutes);
     }
 
     /**
@@ -424,9 +421,16 @@ public class RoutingService {
             }
 
             RouteDistanceCalculator.updateTotalDistance(optimizationRoute, meters);
-            EtaCalculator.assignEta(optimizationRoute, meters,
-                    LocalDateTime.of(route.getDeliveryDate(), departureTime()),
-                    speedKmh, loadingMinutes);
+
+            /*
+             * Xe da roi kho thi lay gio roi kho THAT lam moc (docs/09 muc B7): tai xe nhan hang luc
+             * 14:00 ma van tinh tu 08:00 thi khach doc ETA da qua tu sang. Cong thuc ETA giu
+             * nguyen, chi doi moc xuat phat.
+             */
+            LocalDateTime departure = (route.getDepartedAt() != null)
+                    ? route.getDepartedAt()
+                    : plannedDepartureOn(route.getDeliveryDate());
+            EtaCalculator.assignEta(optimizationRoute, meters, departure, speedKmh, loadingMinutes);
 
             route.setTotalDistance(optimizationRoute.getTotalDistance());
             route.setTotalWeight(optimizationRoute.getTotalWeight());
@@ -460,6 +464,22 @@ public class RoutingService {
     @Transactional
     public DistanceMatrixService.DistanceMatrix matrixFor(List<OptimizationPoint> points) {
         return distanceMatrixService.loadMatrix(points);
+    }
+
+    /**
+     * Gio xe du kien roi kho cua mot ngay giao, dung lam moc tinh ETA cho tuyen chua xuat phat.
+     *
+     * Binh thuong la tham so DEPARTURE_TIME. Rieng tuyen cua HOM NAY ma xep sau gio do (don
+     * phat sinh trong ngay, chuyen thu hai cua tai xe) thi xe som nhat cung chi di duoc tu bay
+     * gio — lay 08:00 thi email bao khach mot gio da troi qua.
+     */
+    public LocalDateTime plannedDepartureOn(LocalDate deliveryDate) {
+        LocalDateTime fromParameter = LocalDateTime.of(deliveryDate, departureTime());
+        LocalDateTime now = LocalDateTime.now().truncatedTo(ChronoUnit.MINUTES);
+        if (deliveryDate.equals(now.toLocalDate()) && now.isAfter(fromParameter)) {
+            return now;
+        }
+        return fromParameter;
     }
 
     /** Gio xe roi kho, tham so DEPARTURE_TIME dang HH:mm. */

@@ -183,7 +183,7 @@ public class HistorySeeder implements CommandLineRunner {
          *
          * Ba trong bon xe dang MAINTENANCE / IN_USE — do la trang thai da dung san cho
          * KICH BAN DEMO (buoc 2 va 5b cua docs/08), khong duoc lam hong. Nhung phan tuyen
-         * chi nhan xe AVAILABLE (CBR-05, BR03-02) nen phai muon tam trong luc seed.
+         * loai xe MAINTENANCE (CBR-05, BR03-02) nen phai muon tam trong luc seed.
          */
         Map<Long, VehicleStatus> statusBeforeSeeding = new LinkedHashMap<>();
         for (Vehicle vehicle : fleet) {
@@ -433,6 +433,13 @@ public class HistorySeeder implements CommandLineRunner {
                     RouteStatus.CONFIRMED.name(), RouteStatus.IN_PROGRESS.name(),
                     dispatcherId, "Tai xe xac nhan nhan hang");
 
+            // Xe thanh "Dang chay" luc roi kho chu khong phai luc chot (docs/09 muc B6)
+            Vehicle departingVehicle = route.getVehicle();
+            if (departingVehicle.getStatus() == VehicleStatus.AVAILABLE) {
+                departingVehicle.setStatus(VehicleStatus.IN_USE);
+                vehicleRepository.save(departingVehicle);
+            }
+
             // Hang len xe thi don sang DELIVERING, dung luong ROUTED -> DELIVERING -> DELIVERED
             for (RouteStop stop : route.getStops()) {
                 Order order = stop.getOrder();
@@ -473,7 +480,7 @@ public class HistorySeeder implements CommandLineRunner {
                     RouteStatus.IN_PROGRESS.name(), RouteStatus.COMPLETED.name(),
                     dispatcherId, "Diem cuoi da co ket qua");
 
-            // Quen tra xe ve AVAILABLE thi ngay hom sau khong phan tuyen duoc nua
+            // Xe da ve kho; quen tra ve AVAILABLE thi xe hien "Dang chay" mai va khong cuu ho duoc
             Vehicle vehicle = route.getVehicle();
             if (vehicle.getStatus() == VehicleStatus.IN_USE) {
                 vehicle.setStatus(VehicleStatus.AVAILABLE);

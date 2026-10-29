@@ -23,7 +23,6 @@ import com.minhphu.mproute.repository.OrderRepository;
 import com.minhphu.mproute.repository.RouteRepository;
 import com.minhphu.mproute.repository.RouteStopRepository;
 import com.minhphu.mproute.repository.UserRepository;
-import com.minhphu.mproute.repository.VehicleRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -36,6 +35,7 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.List;
 import java.util.Locale;
 import java.util.Optional;
@@ -73,12 +73,13 @@ public class DeliveryService {
     private final RouteStopRepository routeStopRepository;
     private final DriverRepository driverRepository;
     private final OrderRepository orderRepository;
-    private final VehicleRepository vehicleRepository;
     private final UserRepository userRepository;
     private final NotificationRepository notificationRepository;
     private final StatusHistoryService statusHistoryService;
     private final OrderService orderService;
     private final StockService stockService;
+    private final VehicleService vehicleService;
+    private final RoutingService routingService;
 
     /** Ho so tai xe cua tai khoan dang dang nhap. Rong khi tai khoan chua duoc gan tai xe nao. */
     @Transactional(readOnly = true)
@@ -98,10 +99,22 @@ public class DeliveryService {
         return driverOf(userId).flatMap(driver -> routeOfDriverOn(driver.getId(), LocalDate.now()));
     }
 
+    /**
+     * Tai xe chay duoc nhieu chuyen mot ngay (CBR-06, docs/09 muc B7), nhung moi luc chi co
+     * mot chuyen chua xong. Chuyen chua xong luon dung truoc: lay dai mot tuyen bat ky thi tai
+     * xe co the mo ra thay tong ket chuyen sang ma khong thay chuyen chieu de bam nhan hang.
+     * Het chuyen thi hien chuyen xong gan nhat de tai xe xem tong ket.
+     */
     private Optional<Route> routeOfDriverOn(Long driverId, LocalDate date) {
-        return routeRepository.findByDriverIdAndDeliveryDate(driverId, date).stream()
+        List<Route> visible = routeRepository.findByDriverIdAndDeliveryDate(driverId, date).stream()
                 .filter(route -> VISIBLE_TO_DRIVER.contains(route.getStatus()))
-                .findFirst();
+                .toList();
+
+        return visible.stream()
+                .filter(route -> route.getStatus() != RouteStatus.COMPLETED)
+                .findFirst()
+                .or(() -> visible.stream().max(Comparator.comparing(Route::getCompletedAt,
+                        Comparator.nullsFirst(Comparator.naturalOrder()))));
     }
 
     /**
@@ -127,9 +140,31 @@ public class DeliveryService {
                     route.getStatus().getDisplayName()));
         }
 
+        /*
+         * Mot xe nhan duoc tuyen cua nhieu ngay, nen tuyen ngay mai da chot co the dang giu mot
+         * chiec xe vua hong hom nay (BR06-14). Cho tai xe cho hang len chiec xe do la mat ca
+         * ngay giao. Dieu phoi vien phai huy tuyen roi phan lai bang xe khac, hoac doi xe sua xong.
+         */
+        Vehicle vehicle = route.getVehicle();
+        if (vehicle.getStatus() == VehicleStatus.MAINTENANCE) {
+            throw new IllegalStateException(String.format(
+                    "Xe %s đang bảo trì nên chưa nhận hàng được. Vui lòng liên hệ điều phối viên.",
+                    vehicle.getLicensePlate()));
+        }
+
         route.setStatus(RouteStatus.IN_PROGRESS);
         route.setDepartedAt(LocalDateTime.now());
         routeRepository.save(route);
+
+        /*
+         * ETA luc chot tinh tu gio xuat phat KE HOACH. Xe roi kho muon hon (chuyen thu hai trong
+         * ngay, tai xe den tre) thi moi diem phia sau muon theo, nen tinh lai bang dung ham cua
+         * thuat toan voi moc la gio roi kho that — trang /track va man tai xe doc ngay gio moi.
+         */
+        routingService.recalculate(List.of(route));
+
+        // Xe roi kho tu luc nay, khong phai tu luc chot ke hoach (docs/09 muc B6)
+        vehicleService.markOnTheRoad(vehicle);
 
         statusHistoryService.recordChange(EntityType.ROUTE, route.getId(),
                 RouteStatus.CONFIRMED.name(), RouteStatus.IN_PROGRESS.name(),
@@ -491,14 +526,11 @@ public class DeliveryService {
                 RouteStatus.IN_PROGRESS.name(), RouteStatus.COMPLETED.name(), userId,
                 "Diem cuoi da co ket qua");
 
-        Vehicle vehicle = route.getVehicle();
-        if (vehicle.getStatus() == VehicleStatus.IN_USE) {
-            vehicle.setStatus(VehicleStatus.AVAILABLE);
-            vehicleRepository.save(vehicle);
-        }
+        // Ve kho thi xe het "Dang chay" — tru khi no con mot tuyen khac dang ngoai duong
+        vehicleService.releaseIfIdle(route);
 
-        log.info("Tuyen {} hoan thanh luc {}, xe {} ve san sang",
-                route.getCode(), route.getCompletedAt(), vehicle.getLicensePlate());
+        log.info("Tuyen {} hoan thanh luc {}, xe {} ve kho",
+                route.getCode(), route.getCompletedAt(), route.getVehicle().getLicensePlate());
     }
 
     /** Mot dong trong lich su: tuyen da chay kem con so ket qua cua no (CN-05-11). */
