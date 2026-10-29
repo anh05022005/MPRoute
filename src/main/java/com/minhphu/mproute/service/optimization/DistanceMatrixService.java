@@ -13,6 +13,7 @@ import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
@@ -196,7 +197,13 @@ public class DistanceMatrixService {
 
         double[][] osrmMeters = osrmTable.get().meters();
         int[][] osrmSeconds = osrmTable.get().seconds();
-        List<DistanceMatrixEntry> toSave = new ArrayList<>();
+        /*
+         * Gom theo KHOA TOA DO chu khong theo cap chi so (i, j). Hai don cua cung mot
+         * khach trong mot ngay la hai diem khac chi so nhung trung toa do, nen nhieu o
+         * cua ma tran cung mot khoa. Luu ca hai la vi pham uk_coordinate_pair va ca lan
+         * chay toi uu do thanh loi 500. Giu o dau tien la du: cung toa do thi cung so OSRM.
+         */
+        Map<String, DistanceMatrixEntry> toSave = new LinkedHashMap<>();
         boolean anyApproximate = false;
 
         for (int[] cell : missingCells) {
@@ -216,11 +223,12 @@ public class DistanceMatrixService {
             }
 
             matrix[i][j] = meters;
-            toSave.add(newCacheEntry(points.get(i), points.get(j), meters, osrmSeconds[i][j]));
+            toSave.putIfAbsent(cacheKeyFor(points.get(i), points.get(j)),
+                    newCacheEntry(points.get(i), points.get(j), meters, osrmSeconds[i][j]));
         }
 
         if (!toSave.isEmpty()) {
-            distanceMatrixEntryRepository.saveAll(toSave);
+            distanceMatrixEntryRepository.saveAll(toSave.values());
             log.info("Da luu {} o moi vao bo nho dem distance_matrix", toSave.size());
         }
         return anyApproximate;
