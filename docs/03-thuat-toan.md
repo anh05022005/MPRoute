@@ -534,18 +534,24 @@ B6.  TRA VE tong
 HAM calculateEta(route, matrix, departureTime, speedKmh, loadingMinutesPerStop):
 
 B1.  cumulativeDistance = matrix[DEPOT][route.points[0]]
+     completedLocations = 0
 
 B2.  VOI i tu 0 den pointCount - 1:
 B3.      NEU i > 0 THI
-B4.          cumulativeDistance = cumulativeDistance
-B5.                             + matrix[route.points[i-1]][route.points[i]]
-B6.
+B4.          leg = matrix[route.points[i-1]][route.points[i]]
+B5.          cumulativeDistance = cumulativeDistance + leg
+B6.          NEU leg > 0 THI completedLocations = completedLocations + 1
 B7.      travelMinutes       = (cumulativeDistance / 1000.0) / speedKmh * 60
-B8.      totalLoadingMinutes = i * loadingMinutesPerStop    // i diem da giao truoc do
+B8.      totalLoadingMinutes = completedLocations * loadingMinutesPerStop   // so CHO DUNG da do xong
 B9.
 B10.     eta = departureTime + travelMinutes + totalLoadingMinutes
 B11.     route.points[i].estimatedArrival = eta
 ```
+
+Bốc dỡ tính theo **chỗ dừng**, không theo số đơn. Hai đơn của cùng một khách đứng cạnh nhau
+trong tuyến thì chặng giữa chúng bằng 0 m: xe không di chuyển, dỡ cả hai đơn trong một lần
+dừng, nên hai đơn **cùng ETA** và chỉ tính một lần bốc dỡ. Khi mỗi chỗ chỉ có một đơn thì
+`completedLocations` đúng bằng `i`, ra lại công thức gốc. Xem `docs/09` mục B5.
 
 Ví dụ kiểm chứng bằng tay:
 - Điểm 2, quãng đường tích lũy 13300 m, tốc độ 30 km/h, bốc dỡ 15 phút

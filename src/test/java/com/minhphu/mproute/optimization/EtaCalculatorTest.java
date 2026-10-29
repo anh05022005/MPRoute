@@ -116,4 +116,54 @@ class EtaCalculatorTest {
                 EtaCalculator.estimatedReturnToDepot(route, MATRIX, SPEED_KMH, LOADING_MINUTES_PER_STOP),
                 "Ve toi kho = 09:10 + 15 phut boc do + 30 phut chay ve = 09:55");
     }
+
+    /*
+     * Chan loi tai phat: hai don cua cung mot khach (Tap hoa Duc Loi ngay 28/10) bi bao hai
+     * gio cach nhau 15 phut, vi moi don bi tinh mot lan boc do du xe chi dung mot lan.
+     *
+     * Ma tran: P1 va P1b CUNG TOA DO nen khoang cach giua chung la 0.
+     *
+     *     KHO -> P1  : 12 000 m
+     *     P1  -> P1b :      0 m   <-- cung mot cho dung
+     *     P1b -> P2  :  1 300 m
+     *     P2  -> KHO : 13 000 m
+     */
+    private static final double[][] MATRIX_WITH_SHARED_LOCATION = {
+            /* tu KHO */ {     0, 12000, 12000, 13000},
+            /* tu P1  */ { 12000,     0,     0,  1300},
+            /* tu P1b */ { 12000,     0,     0,  1300},
+            /* tu P2  */ { 13000,  1300,  1300,     0}
+    };
+
+    @Test
+    void ordersAtSameLocationShareOneEtaAndOneLoadingTime() {
+
+        OptimizationRoute route = new OptimizationRoute(
+                new OptimizationVehicle(1L, "29H-123.45", 1500, 12));
+        route.addPoint(point(1, "P1"));
+        route.addPoint(point(2, "P1b"));
+        route.addPoint(point(3, "P2"));
+
+        EtaCalculator.assignEta(route, MATRIX_WITH_SHARED_LOCATION, DEPARTURE,
+                SPEED_KMH, LOADING_MINUTES_PER_STOP);
+
+        // P1: 12 km / 30 km/h = 24 phut, chua boc do -> 08:24
+        assertEquals(LocalDateTime.of(2026, 8, 25, 8, 24),
+                route.getPoints().get(0).getEstimatedArrival());
+
+        // P1b: chang 0 m, xe chua roi cho -> van 08:24. Cach tinh cu ra 08:39 (cong 15 phut)
+        assertEquals(LocalDateTime.of(2026, 8, 25, 8, 24),
+                route.getPoints().get(1).getEstimatedArrival(),
+                "Hai don cung toa do phai cung ETA");
+
+        /*
+         * P2: tich luy 13.3 km -> 26.6 phut = 26 phut 36 giay
+         *     boc do: CHI MOT cho dung da xong (cho P1/P1b) -> 15 phut, khong phai 30
+         *     08:00 + 26:36 + 15:00 = 08:41:36 — dung bang P2 cua bai tren, nhu the don
+         *     thu hai cua P1 khong ton tai
+         */
+        assertEquals(LocalDateTime.of(2026, 8, 25, 8, 41, 36),
+                route.getPoints().get(2).getEstimatedArrival(),
+                "Cho dung chung chi tinh mot lan boc do");
+    }
 }

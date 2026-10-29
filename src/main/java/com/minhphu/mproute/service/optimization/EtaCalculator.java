@@ -9,7 +9,11 @@ import java.util.List;
  * CONG THUC:
  *     ETA(diem thu N) = gio xuat phat
  *                     + (quang duong tich luy toi diem N / toc do trung binh)
- *                     + (N - 1) x thoi gian boc do moi diem
+ *                     + (so cho dung da do xong truoc N) x thoi gian boc do moi diem
+ *
+ * Gio xuat phat do ben goi quyet dinh: gio ke hoach khi chua chay, gio roi kho THAT khi tai xe
+ * da nhan hang (RoutingService.recalculate). Lop nay chi biet cong thuc, khong biet tuyen o
+ * trang thai nao.
  *
  * Hai tham so toc do va thoi gian boc do KHONG hard-code trong lop nay ma nhan tu ben
  * ngoai, vi chung la tham so he thong (AVERAGE_SPEED = 30 km/h, LOADING_TIME = 15 phut)
@@ -75,28 +79,46 @@ public final class EtaCalculator {
         // B1. Chang dau tien: diem xuat phat -> diem giao thu nhat
         double cumulativeMeters = matrix[originIndex][points.get(0).getMatrixIndex()];
 
+        // So CHO DUNG da do hang xong truoc khi toi diem dang xet (xem B8)
+        int completedLocations = 0;
+
         for (int i = 0; i < points.size(); i++) {
 
             // B3-B5. Tu diem thu hai tro di, cong them chang tu diem truoc sang diem nay
             if (i > 0) {
                 int previousIndex = points.get(i - 1).getMatrixIndex();
                 int currentIndex = points.get(i).getMatrixIndex();
-                cumulativeMeters += matrix[previousIndex][currentIndex];
+                double legMeters = matrix[previousIndex][currentIndex];
+                cumulativeMeters += legMeters;
+
+                /*
+                 * Chang 0 m nghia la xe KHONG di chuyen: hai don cua cung mot khach (cung toa
+                 * do) dung canh nhau trong tuyen. Ngoai thuc te xe do hang ca hai don trong
+                 * MOT lan dung, nen khong cong them mot lan boc do va hai don cung mot ETA.
+                 * Chi khi xe that su roi cho cu (chang > 0) thi cho cu moi tinh la da do xong.
+                 *
+                 * Xet theo ma tran chu khong so toa do de routing-arrange.js (chi co ma tran)
+                 * tinh ra dung cung con so khi xem truoc keo tha.
+                 */
+                if (legMeters > 0) {
+                    completedLocations++;
+                }
             }
 
             // B7. Thoi gian chay xe, tinh tu dau chuyen den luc TOI diem nay
             double travelMinutes = (cumulativeMeters / 1000.0) / speedKmh * 60.0;
 
             /*
-             * B8. Thoi gian boc do CONG DON.
+             * B8. Thoi gian boc do CONG DON, theo so CHO DUNG chu khong theo so don.
              *
-             * Nhan voi i chu khong phai (i + 1): den diem thu nhat (i = 0) thi xe chua
-             * do hang o dau ca, con den diem thu ba (i = 2) thi da do xong hai diem truoc.
+             * Den cho dung thu nhat thi xe chua do hang o dau ca (completedLocations = 0),
+             * den cho dung thu ba thi da do xong hai cho truoc. Khi moi cho chi co mot don
+             * thi completedLocations dung bang i, giong cong thuc goc cua docs/03.
              *
              * Hai bien nay docs/03 ban dau dat trung mot ten (docs/09 muc B4), chep thang
              * vao code la sai toan bo gio du kien nen o day tach han lam hai ten.
              */
-            double totalLoadingMinutes = (double) i * loadingMinutesPerStop;
+            double totalLoadingMinutes = (double) completedLocations * loadingMinutesPerStop;
 
             // B10. Cong bang GIAY de khong mat phan le cua phut (26.6 phut = 26 phut 36 giay)
             long offsetSeconds = Math.round((travelMinutes + totalLoadingMinutes) * 60.0);
