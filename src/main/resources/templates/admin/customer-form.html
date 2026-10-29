@@ -59,7 +59,6 @@
                                th:classappend="${#fields.hasErrors('email')} ? 'is-invalid'"
                                placeholder="tapholaban@gmail.com">
                         <div class="invalid-feedback" th:errors="*{email}">Lỗi</div>
-                        <div class="form-text">Dùng để gửi thông báo giờ giao dự kiến sau khi chốt tuyến.</div>
                     </div>
 
                     <div class="col-12">
@@ -120,15 +119,6 @@
                                   placeholder="Chỉ nhận buổi sáng trước 11h. Xe lớn không vào được ngõ."></textarea>
                         <div class="invalid-feedback" th:errors="*{deliveryNote}">Lỗi</div>
                     </div>
-                </div>
-
-                <div class="panel panel-info mt-3 small text-sub">
-                    Tọa độ là <strong>bắt buộc</strong>: thiếu tọa độ thì đơn của khách này không đưa vào
-                    phân tuyến được. Khách trong nội thành Hà Nội có vĩ độ khoảng <strong>20.9–21.1</strong>
-                    và kinh độ khoảng <strong>105.7–105.9</strong> — lệch xa hai khoảng này thường là nhập
-                    đổi chỗ hai ô.
-                    Ghi chú giao hàng được lưu và hiển thị cho điều phối viên, nhưng
-                    <strong>thuật toán chưa ràng buộc khung giờ</strong>.
                 </div>
             </div>
 

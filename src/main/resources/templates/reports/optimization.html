@@ -90,18 +90,6 @@
                 </div>
             </div>
 
-            <!--
-                Giai thich hai moc ngay tren man hinh, khong bat nguoi xem mo tai lieu.
-                Day cung la cau tra loi san cho cau hoi "moc A o dau ra" khi van dap.
-            -->
-            <div class="small text-sub mt-2">
-                <strong>Mốc A</strong> — mỗi đơn một chuyến khứ hồi riêng từ kho, mô phỏng cách
-                Minh Phú đang làm.
-                <strong>Mốc B</strong> — vẫn dùng đúng cách chia xe của thuật toán, chỉ giao theo
-                thứ tự nhận đơn; mốc này đo riêng đóng góp của việc sắp thứ tự.
-                Phần trăm toàn kỳ tính từ <em>tổng</em> quãng đường các ngày, không phải trung bình
-                cộng phần trăm từng ngày.
-            </div>
         </div>
 
         <!-- ============ Bieu do duong (CN-08-03) ============ -->
@@ -144,7 +132,7 @@
         </div>
 
         <!-- ============ Bang chi tiet theo ngay ============ -->
-        <table class="table table-striped align-middle mb-2" th:unless="${report.rows.isEmpty()}">
+        <table class="table table-striped align-middle mb-4" th:unless="${report.rows.isEmpty()}">
             <thead>
             <tr>
                 <th style="width: 110px;">Ngày giao</th>
@@ -210,12 +198,6 @@
             </tr>
             </tfoot>
         </table>
-
-        <div class="text-sub small mb-4">
-            Quãng đường tính bằng <strong>km</strong> và đã gồm chặng cuối quay về kho (CBR-01).
-            Mỗi ngày lấy lần chạy gần nhất — chạy lại nhiều lần trong ngày thì chỉ lần cuối là
-            kế hoạch thực sự được chốt.
-        </div>
 
         <!-- ============ CN-08-04 / BR08-03 — tuyen xap xi hien rieng ============ -->
         <div th:unless="${report.approximateRows.isEmpty()}">

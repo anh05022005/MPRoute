@@ -18,7 +18,7 @@
             khong gan duoc vao mot o nhap cu the nen hien thanh mot khoi rieng o dau form.
         -->
         <div th:if="${#fields.hasGlobalErrors()}" class="alert alert-danger py-2">
-            <div th:each="loi : ${#fields.globalErrors()}" th:text="${errorMessage}">Lỗi</div>
+            <div th:each="globalError : ${#fields.globalErrors()}" th:text="${globalError}">Lỗi</div>
         </div>
 
         <div class="row g-3">
@@ -81,7 +81,6 @@
                 <div class="invalid-feedback d-block" th:if="${#fields.hasErrors('paymentMethod')}"
                      th:errors="*{paymentMethod}">Lỗi</div>
                 <!-- BR02-16: doi o nay la so tien phai thu doi theo ngay -->
-                <div class="form-text">Điền sẵn theo khách, sửa được cho riêng đơn này.</div>
             </div>
 
             <!-- ============ Dia chi giao ============ -->
@@ -234,13 +233,6 @@
             </div>
         </div>
 
-        <div class="info-block mt-3 small text-sub">
-            Khối lượng, thể tích và tiền hàng do <strong>hệ thống tự tính</strong> từ các dòng chi tiết,
-            không sửa tay được. Đơn giá được <strong>chép lại tại thời điểm tạo đơn</strong> — sau này
-            danh mục đổi giá thì đơn cũ vẫn giữ giá cũ. Đơn vượt sức chứa của xe lớn nhất sẽ bị chặn,
-            phải tách thành nhiều đơn.
-        </div>
-
         <div class="mt-3">
             <button type="submit" class="btn btn-primary">Lưu đơn hàng</button>
             <a th:href="@{/orders}" class="btn btn-outline-secondary">Hủy</a>
@@ -347,13 +339,6 @@
                                        class="form-control"
                                        placeholder="Chỉ nhận buổi sáng trước 11h. Xe lớn không vào được ngõ.">
                             </div>
-                        </div>
-
-                        <div class="info-block mt-3 small text-sub">
-                            Hộp thoại này <strong>chỉ thêm khách mới</strong>, không sửa được khách đang có.
-                            Bản đồ Hà Nội hầu như không có dữ liệu số nhà nên nút tìm chỉ đưa về đúng
-                            <strong>con đường</strong> — vẫn gõ tay hai ô tọa độ được, và sửa cho chính xác
-                            sau ở màn hình Khách hàng.
                         </div>
                     </div>
 

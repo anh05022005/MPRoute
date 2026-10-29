@@ -62,7 +62,6 @@
                 </select>
                 <div class="invalid-feedback d-block" th:if="${#fields.hasErrors('userId')}"
                      th:errors="*{userId}">Lỗi</div>
-                <div class="form-text">Chưa gán tài khoản thì tài xế không đăng nhập xem tuyến được.</div>
             </div>
 
             <div class="col-md-7">
@@ -89,12 +88,6 @@
                 <div class="invalid-feedback d-block" th:if="${#fields.hasErrors('status')}"
                      th:errors="*{status}">Lỗi</div>
             </div>
-        </div>
-
-        <div class="info-block mt-3 small text-sub">
-            Xe mặc định là xe tài xế <strong>thường lái</strong>, dùng để gợi ý sẵn khi chốt tuyến.
-            Điều phối viên vẫn đổi được sang xe khác, và chỉ xe đang ở trạng thái
-            <strong>Sẵn sàng</strong> mới được đưa vào phân tuyến.
         </div>
 
         <div class="mt-3">

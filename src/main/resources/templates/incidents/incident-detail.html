@@ -188,18 +188,13 @@
                                 th:text="'Áp dụng phương án ' + ${optionStat.count}">Áp dụng phương án 1</button>
                     </form>
                 </div>
-
-                <div class="form-text">
-                    Phương án xếp theo <strong>km phát sinh</strong> tăng dần. Hoãn sang ngày mai
-                    luôn xếp cuối dù không phát sinh km nào — khách không nhận được hàng hôm nay
-                    là cái giá không đo bằng km được (BR06-11).
-                </div>
             </div>
         </div>
     </div>
 
-    <script id="map-points-data" type="application/json" th:text="${mapPointsJson}">[]</script>
-    <script id="route-lines-data" type="application/json">[]</script>
+    <!-- Dat trong <div hidden> chu khong phai <script>: ly do xem comment cung cho o routing.html -->
+    <div id="map-points-data" hidden th:text="${mapPointsJson}">[]</div>
+    <div id="route-lines-data" hidden>[]</div>
 
 </div>
 

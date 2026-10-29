@@ -20,12 +20,7 @@
         </ul>
     </div>
 
-    <div class="toolbar d-flex justify-content-between align-items-end flex-wrap gap-2">
-        <p class="text-sub small mb-0" style="max-width: 640px;">
-            <strong>Còn rảnh</strong> là số thùng được phép hứa cho đơn mới.
-            <strong>Đã cam kết</strong> là hàng của các đơn đã duyệt, vẫn nằm trong kho chờ tài xế lấy.
-            <strong>Trong kho</strong> là tổng hai số đó — con số nhân viên kho đếm được khi đi vào kho.
-        </p>
+    <div class="toolbar d-flex justify-content-end align-items-end flex-wrap gap-2">
         <a th:href="@{/admin/stock/movements}" class="btn btn-sm btn-outline-secondary">Xem sổ kho</a>
     </div>
 
@@ -142,16 +137,6 @@
                                placeholder="Ví dụ: 5 thùng bị ướt, loại bỏ">
                     </div>
 
-                    <!--
-                        Giai thich phep tru ngay tren man hinh. Day la cho de nham nhat cua
-                        ca phan ton kho: nguoi dung go so VAT LY dem duoc, he thong tu tru
-                        phan da cam ket de ra so con ranh.
-                    -->
-                    <div class="alert alert-light border small mt-3 mb-0">
-                        Nhập <strong>số thùng đếm được trong kho</strong>, không phải số còn rảnh.
-                        Hệ thống tự trừ <strong th:text="${level.committedBoxes}">0</strong> thùng
-                        đã cam kết cho các đơn đã duyệt để ra số còn rảnh mới.
-                    </div>
                 </div>
 
                 <div class="modal-footer py-2">

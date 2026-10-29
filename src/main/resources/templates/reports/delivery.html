@@ -67,17 +67,6 @@
                 </div>
             </div>
 
-            <!-- Cach tinh de ngay tren man hinh: day la cong thuc hoi dong se hoi -->
-            <div class="small text-sub mt-2">
-                <strong>Cách tính (BR08-06):</strong> tỷ lệ thành công = số đơn <em>Đã giao</em>
-                chia cho tổng đơn <em>đã phân tuyến</em>, không phải chia cho mọi đơn trong kỳ.
-                Đơn còn chờ duyệt hoặc đã hủy thì chưa bao giờ lên xe — đếm chúng vào mẫu số là
-                tự hạ tỷ lệ của mình xuống vì một lý do không liên quan đến việc giao hàng.
-                <span th:if="${report.cancelledCount > 0}">
-                    Kỳ này có <strong th:text="${report.cancelledCount}">4</strong> đơn đã hủy,
-                    không nằm trong mẫu số.
-                </span>
-            </div>
         </div>
 
         <div class="row g-3 mb-4">
@@ -188,13 +177,6 @@
             </tr>
             </tbody>
         </table>
-
-        <div class="text-sub small" th:unless="${report.failureRows.isEmpty()}">
-            Đếm trên <strong>điểm dừng</strong> chứ không trên đơn: lý do thất bại thuộc về
-            <em>lần giao</em>. Một đơn bị hoãn rồi giao lại và lại hỏng là hai lần thất bại với
-            hai lý do, mà cột trạng thái của đơn chỉ giữ được cái cuối cùng. Điểm dừng của tuyến
-            đã hủy không được tính (BR08-04).
-        </div>
     </div>
 
 </div>

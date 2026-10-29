@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<!--
+    Trang loi chung, Spring Boot tu dung cho moi ma loi khong co trang rieng trong error/
+    (404, 500...). Thieu file nay thi nguoi dung thay trang "Whitelabel Error Page" tieng Anh.
+
+    Co y KHONG in chi tiet exception ra man hinh: thong bao loi SQL lo ten bang, ten cot.
+    Chi tiet day du van nam trong log cua ung dung.
+-->
+<html lang="vi"
+      xmlns:th="http://www.thymeleaf.org"
+      th:replace="~{layout :: main('Có lỗi xảy ra', ~{::content})}">
+<body>
+
+<div th:fragment="content">
+
+    <div class="info-block" style="max-width: 520px;">
+        <div th:if="${status == 404}">
+            <h1 class="h4 mb-2">404 — Không tìm thấy trang</h1>
+            <p class="mb-3">Đường dẫn này không tồn tại hoặc đã bị gỡ.</p>
+        </div>
+        <div th:unless="${status == 404}">
+            <h1 class="h4 mb-2">Có lỗi xảy ra</h1>
+            <p class="mb-3">Hệ thống chưa xử lý được yêu cầu này. Vui lòng thử lại, nếu vẫn lỗi thì báo cho quản trị viên.</p>
+        </div>
+        <a class="btn btn-primary" th:href="@{/}">Về trang chủ</a>
+    </div>
+
+</div>
+
+</body>
+</html>

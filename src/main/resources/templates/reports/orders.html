@@ -83,10 +83,6 @@
                          th:text="${#numbers.formatDecimal(totals.totalAmount, 1, 'POINT', 0, 'COMMA')} + ' đ'">1.284.000.000 đ</div>
                 </div>
             </div>
-            <div class="small text-sub mt-2">
-                Đơn đã hủy không được tính (BR08-04) — đơn hủy không phát sinh chuyến giao nào,
-                đếm vào thì số đơn của báo cáo không khớp với số hàng thực sự ra khỏi kho.
-            </div>
         </div>
 
         <!-- ============ Bieu do cot ============ -->
@@ -187,11 +183,6 @@
             </tr>
             </tbody>
         </table>
-
-        <div class="text-sub small">
-            Cột <strong>Số đơn có mặt</strong> đếm số đơn <em>khác nhau</em> có mặt hàng này —
-            một đơn có hai dòng cùng sản phẩm vẫn chỉ tính một lần.
-        </div>
     </div>
 
 </div>

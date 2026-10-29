@@ -61,7 +61,6 @@
                 -->
                 <div th:if="${form.status != null && form.status.name() == 'IN_USE'}">
                     <input type="text" class="form-control" value="Đang chạy" disabled>
-                    <div class="form-text">Do hệ thống đặt khi chốt tuyến, không sửa được.</div>
                 </div>
 
                 <select th:unless="${form.status != null && form.status.name() == 'IN_USE'}"
@@ -80,12 +79,6 @@
                           th:classappend="${#fields.hasErrors('note')} ? 'is-invalid'"></textarea>
                 <div class="invalid-feedback" th:errors="*{note}">Lỗi</div>
             </div>
-        </div>
-
-        <div class="info-block mt-3 small text-sub">
-            Tải trọng và thể tích thùng xe là hai giới hạn mà hệ thống kiểm tra
-            <strong>đồng thời</strong> khi xếp đơn lên xe. Một xe chở hàng nhẹ mà cồng kềnh
-            sẽ đầy chỗ trước khi đầy tải, nên thiếu một trong hai con số là không chia tuyến được.
         </div>
 
         <div class="mt-3">
