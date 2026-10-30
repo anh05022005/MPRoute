@@ -11,6 +11,10 @@ import org.springframework.security.config.annotation.web.configuration.EnableWe
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
+import org.springframework.security.web.savedrequest.HttpSessionRequestCache;
+import org.springframework.security.web.savedrequest.RequestCache;
+import org.springframework.security.web.servlet.util.matcher.PathPatternRequestMatcher;
+import org.springframework.security.web.util.matcher.NegatedRequestMatcher;
 
 /**
  * Cau hinh dang nhap va phan quyen (CN-00-03, CN-00-04).
@@ -85,6 +89,14 @@ public class SecurityConfig {
                         .logoutSuccessUrl("/login?logout")
                         .permitAll()
                 )
+                /*
+                 * Chua dang nhap ma vao trang can quyen thi Spring nho lai dia chi do, dang
+                 * nhap xong dua nguoi dung quay ve. Chrome mo DevTools (F12) se tu goi ngam
+                 * /.well-known/appspecific/com.chrome.devtools.json; neu nho dia chi nay thi
+                 * dang nhap xong bi dua toi trang 404. Nen chi nho cac dia chi KHONG thuoc
+                 * /.well-known/. Khong mo cong khai duong dan nay, chi la khong nho no.
+                 */
+                .requestCache(cache -> cache.requestCache(savedRequestCache()))
                 // Dang nhap roi nhung khong du quyen -> trang 403 tu viet,
                 // khong phai trang trang hay loi 500 (tieu chi CN-00-04)
                 .exceptionHandling(ex -> ex.accessDeniedPage("/403"));
@@ -92,5 +104,12 @@ public class SecurityConfig {
         // KHONG tat CSRF. Spring Security bat san, moi form Thymeleaf tu chen the an
         // chua token. Tat di cho tien la mat diem phan bao mat.
         return http.build();
+    }
+
+    private RequestCache savedRequestCache() {
+        HttpSessionRequestCache cache = new HttpSessionRequestCache();
+        cache.setRequestMatcher(new NegatedRequestMatcher(
+                PathPatternRequestMatcher.withDefaults().matcher("/.well-known/**")));
+        return cache;
     }
 }
