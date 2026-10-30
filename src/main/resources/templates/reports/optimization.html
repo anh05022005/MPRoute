@@ -42,7 +42,7 @@
         </a>
     </div>
 
-    <div class="section-label">RPT-03 — Hiệu quả tối ưu tuyến đường</div>
+    <div class="section-label">Hiệu quả tối ưu tuyến đường</div>
 
     <!-- ============ Chua co du lieu ============ -->
     <div th:if="${report.empty}" class="panel">
@@ -51,7 +51,7 @@
             <strong th:text="${#temporals.format(fromDate, 'dd/MM/yyyy')}">01/08/2026</strong> –
             <strong th:text="${#temporals.format(toDate, 'dd/MM/yyyy')}">27/08/2026</strong>.
             Số liệu của báo cáo này được ghi lại mỗi lần chạy tối ưu ở màn hình
-            <a th:href="@{/routing}">Phân tuyến</a>, và không bao giờ được tính lại về sau (CBR-18).
+            <a th:href="@{/routing}">Phân tuyến</a>, và không bao giờ được tính lại về sau.
         </div>
     </div>
 
@@ -206,9 +206,9 @@
             <div class="panel panel-warning mb-2">
                 <div class="small">
                     Những ngày dưới đây chạy khi <strong>không kết nối được OSRM</strong>, quãng
-                    đường là ước lượng Haversine nhân hệ số (MSG-09, CBR-11). Sai số của cách ước
+                    đường là ước lượng Haversine nhân hệ số. Sai số của cách ước
                     lượng này tới hàng chục phần trăm, nên các dòng này
-                    <strong>không được cộng vào số liệu toàn kỳ ở trên</strong> (BR08-03).
+                    <strong>không được cộng vào số liệu toàn kỳ ở trên</strong>.
                     Liệt kê ra đây để báo cáo không giấu dữ liệu.
                 </div>
             </div>
@@ -251,7 +251,7 @@
         <!-- ============ CN-08-04 / BR08-04 — ngay bi loai vi tuyen da huy ============ -->
         <div th:unless="${report.cancelledDates.isEmpty()}" class="text-sub small">
             Đã loại khỏi báo cáo <strong th:text="${report.cancelledDates.size()}">1</strong> ngày
-            có chỉ số nhưng mọi tuyến đều đã hủy (BR08-04):
+            có chỉ số nhưng mọi tuyến đều đã hủy:
             <span th:each="date, iteration : ${report.cancelledDates}">
                 <span th:text="${#temporals.format(date, 'dd/MM/yyyy')}">18/08/2026</span><span
                     th:if="${!iteration.last}">, </span>

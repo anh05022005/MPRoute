@@ -18,7 +18,7 @@ import java.util.List;
  *
  * Mo cho quan tri vien VA dieu phoi vien, khong mo rong hon: hai vai tro nay deu co
  * man hinh phai xac dinh toa do — quan tri vien o form khach hang va form kho,
- * dieu phoi vien o form tao don khi ghi de dia chi giao cho rieng mot don (BR02-08).
+ * dieu phoi vien o hop thoai them khach nhanh tren form tao don (CN-02-10).
  * Van dong voi tai xe va nguoi chua dang nhap, vi mo rong hon muc can thiet la bien
  * may chu cua do an thanh mot cai cong goi Nominatim mien phi cho nguoi khac dung (CBR-15).
  */

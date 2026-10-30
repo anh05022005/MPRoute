@@ -18,7 +18,6 @@ import com.minhphu.mproute.service.RoutePlanService;
 import com.minhphu.mproute.service.RoutingService;
 import com.minhphu.mproute.service.SystemParameterService;
 import com.minhphu.mproute.service.VehicleService;
-import com.minhphu.mproute.service.optimization.DistanceMatrixService;
 import com.minhphu.mproute.service.optimization.OptimizationPoint;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -64,7 +63,6 @@ public class RoutingController {
     private final OrderRepository orderRepository;
     private final VehicleService vehicleService;
     private final DepotService depotService;
-    private final DistanceMatrixService distanceMatrixService;
     private final RoutingService routingService;
     private final RoutePlanService routePlanService;
     private final RouteGeometryService routeGeometryService;
@@ -81,7 +79,6 @@ public class RoutingController {
     @GetMapping
     public String screen(@RequestParam(required = false)
                          @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate deliveryDate,
-                         @RequestParam(required = false) AlgorithmType algorithm,
                          Model model) {
 
         // Mac dinh xem ngay mai — dung ngay ma don duoc tao san (BR02-06)
@@ -104,12 +101,6 @@ public class RoutingController {
         // CN-03-03: xe khong bao tri va chua co tuyen chot trong CHINH ngay nay (CBR-05, BR03-02)
         List<Vehicle> vehicles = vehicleService.findSchedulableOn(targetDate);
         model.addAttribute("vehicles", vehicles);
-
-        // CN-03-04: ba bo giai, MANUAL khong phai thuat toan chay tu dong nen khong liet ke
-        model.addAttribute("algorithms",
-                List.of(AlgorithmType.OR_TOOLS, AlgorithmType.NN, AlgorithmType.NN_2OPT));
-        model.addAttribute("selectedAlgorithm",
-                (algorithm != null) ? algorithm : routingService.defaultAlgorithm());
 
         /*
          * CN-03-07: ket qua lan chay gan nhat lay THANG TU CSDL chu khong giu trong session.
@@ -210,13 +201,12 @@ public class RoutingController {
     public String optimize(@RequestParam
                            @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate deliveryDate,
                            @RequestParam(required = false) List<Long> vehicleIds,
-                           @RequestParam(required = false) AlgorithmType algorithm,
                            @AuthenticationPrincipal CurrentUser currentUser,
                            RedirectAttributes redirectAttributes) {
 
         try {
             RoutingService.RoutingOutcome outcome =
-                    routingService.optimize(deliveryDate, vehicleIds, algorithm, currentUser.getId());
+                    routingService.optimize(deliveryDate, vehicleIds, currentUser.getId());
 
             redirectAttributes.addFlashAttribute("successMessage", summaryOf(outcome));
 
@@ -230,50 +220,6 @@ public class RoutingController {
             redirectAttributes.addFlashAttribute("errorMessage", ex.getMessage());
         }
 
-        String algorithmParam = (algorithm != null) ? "&algorithm=" + algorithm.name() : "";
-        return "redirect:/routing?deliveryDate=" + deliveryDate + algorithmParam;
-    }
-
-    /**
-     * CN-03-05 — nap truoc ma tran khoang cach cho tap diem cua ngay dang xem.
-     *
-     * Bam lan hai voi cung tap diem thi so o "lay moi" phai bang 0 va khong co dong
-     * log nao goi OSRM — day chinh la cach chung minh bo nho dem hoat dong (CBR-12).
-     */
-    @PreAuthorize("hasRole('DISPATCHER')")
-    @PostMapping("/prepare-matrix")
-    public String prepareMatrix(@RequestParam
-                                @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate deliveryDate,
-                                RedirectAttributes redirectAttributes) {
-
-        List<Order> orders = orderRepository.findByDeliveryDateAndStatus(deliveryDate, OrderStatus.APPROVED);
-        if (orders.isEmpty()) {
-            redirectAttributes.addFlashAttribute("errorMessage",
-                    "Ngày này chưa có đơn nào đã duyệt nên chưa có điểm giao để tính khoảng cách.");
-            return "redirect:/routing?deliveryDate=" + deliveryDate;
-        }
-
-        Depot depot = depotService.getActiveDepot();
-        List<OptimizationPoint> points = buildOptimizationPoints(depot, orders);
-
-        long startedAt = System.currentTimeMillis();
-        DistanceMatrixService.DistanceMatrix matrix = distanceMatrixService.loadMatrix(points);
-        long elapsedMs = System.currentTimeMillis() - startedAt;
-
-        int size = points.size();
-        String message = String.format(
-                "Đã chuẩn bị ma trận %d×%d (%d ô) trong %d ms. "
-                        + "Lấy từ bộ nhớ đệm: %d ô. Phải lấy mới: %d ô. Nguồn: %s.",
-                size, size, size * size - size, elapsedMs,
-                matrix.cacheHits(), matrix.cacheMisses(), matrix.source().getDisplayName());
-
-        if (matrix.approximate()) {
-            // MSG-09
-            redirectAttributes.addFlashAttribute("errorMessage",
-                    "Không kết nối được OSRM. Đang dùng khoảng cách xấp xỉ (Haversine × hệ số). "
-                            + "Tuyến sinh ra từ ma trận này sẽ được đánh dấu là xấp xỉ.");
-        }
-        redirectAttributes.addFlashAttribute("successMessage", message);
         return "redirect:/routing?deliveryDate=" + deliveryDate;
     }
 
@@ -503,28 +449,6 @@ public class RoutingController {
                 metrics.getExecutionTimeMs(),
                 metrics.getOptimizedDistance() / 1000.0,
                 metrics.getReductionAPercent());
-    }
-
-    /**
-     * Doi don hang sang diem cua bai toan.
-     *
-     * KHO LUON DUNG DAU danh sach — quy uoc xuyen suot do an: chi so 0 trong ma tran
-     * la kho. DistanceMatrixService dua vao dung thu tu nay de danh matrixIndex.
-     */
-    private List<OptimizationPoint> buildOptimizationPoints(Depot depot, List<Order> orders) {
-        List<OptimizationPoint> points = new ArrayList<>();
-        points.add(OptimizationPoint.depot(depot.getLatitude(), depot.getLongitude()));
-
-        for (Order order : orders) {
-            points.add(OptimizationPoint.forOrder(
-                    order.getId(),
-                    order.getCustomer().getName(),
-                    order.getLatitude(),
-                    order.getLongitude(),
-                    order.getTotalWeight(),
-                    order.getTotalVolume()));
-        }
-        return points;
     }
 
     /**

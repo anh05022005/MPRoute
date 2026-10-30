@@ -17,17 +17,16 @@ nước lau sàn, nước rửa tay) tại Hà Nội, kho đặt ở đường P
 
 ---
 
-## Ba điều bị cấm
+## Hai điều bị cấm
 
-Cả ba đều **không phải quy tắc phong cách** — chúng là đúng/sai, hoặc là điều kiện ăn điểm.
+Cả hai đều **không phải quy tắc phong cách** — chúng là đúng/sai, hoặc là điều kiện ăn điểm.
 
 | Cấm | Vì sao |
 |---|---|
-| **Import OR-Tools vào `optimization/heuristic/`** | Package đó là bản tự cài đặt dùng làm mốc so sánh ở chương thực nghiệm — lẫn thư viện vào là mất ý nghĩa so sánh. Bộ giải OR-Tools nằm riêng ở `optimization/ortools/` |
 | **`float`** ở bất kỳ đâu | Tiền dùng `BigDecimal`, tọa độ và khoảng cách dùng `double`. `float` sai số quá lớn cho cả hai |
-| **Gọi OSRM / Repository trong vòng lặp thuật toán** | 2-opt gọi hàm khoảng cách hàng nghìn lần, mỗi lần một HTTP request là treo chương trình. Ma trận phải nạp sẵn vào bộ nhớ, thuật toán chỉ tra `matrix[i][j]` |
+| **Gọi OSRM / Repository trong vòng lặp thuật toán** | Bộ giải hỏi khoảng cách hàng nghìn lần, mỗi lần một HTTP request là treo chương trình. Ma trận phải nạp sẵn vào bộ nhớ, thuật toán chỉ tra `matrix[i][j]` |
 
-Ngoài ba điều trên, viết code như một lập trình viên Java bình thường: **Lombok, Stream API,
+Ngoài hai điều trên, viết code như một lập trình viên Java bình thường: **Lombok, Stream API,
 lambda, method reference, `Optional`, `var`, record, annotation đầy đủ — dùng thoải mái ở mọi
 nơi, kể cả trong `service/optimization/`.**
 
@@ -155,7 +154,7 @@ Ngoại lệ: giữ nguyên tiếng Anh cho các từ đã thành thuật ngữ 
   Lúc hội đồng chỉ vào một dòng thì comment ngay trên đó đã là câu trả lời sẵn.
 - **Comment trả lời *tại sao*, không kể lại *cái gì*.** `// tang bien dem` đặt trên `i++` là rác.
   Comment có giá trị là chỗ giải thích vì sao tổng quãng đường phải cộng thêm chặng cuối về kho,
-  hoặc vì sao phải đối xứng hóa ma trận trước khi chạy 2-opt.
+  hoặc vì sao phải đối xứng hóa ma trận trước khi đưa vào bộ giải.
 - **Commit message viết tiếng Anh** — xem mục "Quy ước Git" bên dưới.
 - **Chuỗi hiển thị ra giao diện là tiếng Việt có dấu bình thường**, vì người dùng cuối là chủ
   tạp hóa và tài xế. Mỗi enum có trường `displayName` để đổ ra giao diện — dữ liệu lưu
@@ -184,29 +183,25 @@ Ngoại lệ: giữ nguyên tiếng Anh cho các từ đã thành thuật ngữ 
 vốn là trái tim đồ án. Mục tiêu là có đủ test để trả lời câu hỏi "em kiểm thử thế nào" và để
 chắc chắn thuật toán đúng.
 
-**14 test bắt buộc**, đặt trong `src/test/java/.../optimization/`. Mười test cho bản tự cài đặt:
+**7 test bắt buộc**, đặt trong `src/test/java/.../optimization/`. Bốn test cho phần tính toán dùng chung:
 
 | Test | Kiểm cái gì |
 |---|---|
 | `totalDistanceIncludesReturnLegToDepot` | Tuyến 3 điểm, tổng phải gồm chặng cuối về kho |
 | `haversineMatchesHandCalculatedDistances` | So với giá trị tính tay của hai tọa độ đã biết |
-| `nearestNeighborNeverExceedsWeightCapacity` | Sinh dữ liệu nặng, mọi tuyến ≤ tải trọng |
-| `nearestNeighborNeverExceedsVolumeCapacity` | Sinh dữ liệu cồng kềnh, mọi tuyến ≤ thể tích |
-| `nearestNeighborAssignsEveryPointWhenCapacityAllows` | Không sót điểm nào |
-| `nearestNeighborReportsUnassignedPointsWhenCapacityRunsOut` | Trả về danh sách chưa gán, không im lặng bỏ qua |
-| `twoOptNeverIncreasesTotalDistance` | Sau 2-opt luôn ≤ trước 2-opt |
-| `twoOptPreservesPointSet` | Số điểm và tổng kg/m³ không đổi |
 | `etaOfFirstStopMatchesHandCalculation` | Khớp với kết quả tính tay |
-| `cheapestInsertionPicksCorrectPosition` | Ví dụ nhỏ tính tay được |
+| `cheapestInsertionPicksCorrectPosition` | Ví dụ nhỏ tính tay được (dùng ở màn Sự cố) |
 
-Bốn test cho bộ giải chính:
+Ba test cho bộ giải OR-Tools:
 
 | Test | Kiểm cái gì |
 |---|---|
 | `orToolsSolvesSmallCvrpToHandCalculatedOptimum` | Bài 4 điểm 2 xe, ra đúng 8000 m tính tay. **Đã viết, đã xanh** |
 | `orToolsRespectsBothCapacityDimensions` | Dữ liệu vừa nặng vừa cồng kềnh, kiểm cả hai Dimension |
 | `orToolsDropsPointsWhenCapacityIsInsufficient` | `addDisjunction` chạy đúng, trả `unassignedPoints` chứ không `null` |
-| `bothSolversCoverTheSamePointSet` | Hai bộ giải trên cùng dữ liệu phải phủ đúng tập điểm như nhau |
+
+Các test của Nearest Neighbor và 2-opt đã bỏ cùng hai bộ giải đó (`09` mục A7). Hai ràng buộc
+sức chứa giờ do `orToolsRespectsBothCapacityDimensions` canh.
 
 Cách viết:
 
@@ -217,13 +212,13 @@ Cách viết:
 - Test thuật toán **không cần Spring context** — dùng JUnit thuần, chạy nhanh, không cần MySQL.
 - Không mock lung tung. `HaversineDistanceCalculator` chạy thật được thì dùng thật.
 
-Ngoài 10 test trên chỉ viết thêm khi vừa sửa một lỗi khó (viết test chặn lỗi đó tái phát), hoặc
+Ngoài 7 test trên chỉ viết thêm khi vừa sửa một lỗi khó (viết test chặn lỗi đó tái phát), hoặc
 khi một quy tắc nghiệp vụ dễ sai và hay dùng (ví dụ BR02-14 tính `amount_to_collect`). Không
 viết test cho controller, không viết test cho CRUD, không dựng Testcontainers.
 
 ```
 mvnw.cmd test                                    # chay toan bo
-mvnw.cmd test -Dtest=NearestNeighborSolverTest   # chay mot lop
+mvnw.cmd test -Dtest=OrToolsSolverTest           # chay mot lop
 ```
 
 Tuần 6–7 phải có `AlgorithmRunner` với `main()` chạy được **không cần khởi động web, không cần
@@ -306,8 +301,8 @@ Ví dụ:
 feat(routing): add distance matrix cache backed by MySQL (CN-03-05)
 fix(optimization): include final leg back to depot in total distance (CBR-01)
 refactor(order): extract capacity check into OrderService
-test(optimization): cover both capacity constraints in NearestNeighborSolver
-perf(routing): preload distance matrix before running 2-opt
+test(optimization): cover both capacity constraints in OrToolsSolver
+perf(routing): preload distance matrix before running the solver
 docs: update progress after finishing OSRM integration
 ```
 

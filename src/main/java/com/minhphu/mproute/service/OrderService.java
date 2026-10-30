@@ -189,9 +189,7 @@ public class OrderService {
         order.setCode(generateOrderCode(form.getDeliveryDate()));
         order.setCustomer(customer);
         order.setDeliveryDate(form.getDeliveryDate());
-        order.setDeliveryAddress(form.getDeliveryAddress().trim());
-        order.setLatitude(form.getLatitude());
-        order.setLongitude(form.getLongitude());
+        copyAddressFromCustomer(order, customer);
         order.setPaymentMethod(form.getPaymentMethod());
         order.setPaymentStatus(PaymentStatus.UNPAID);
         order.setStatus(OrderStatus.PENDING_APPROVAL);
@@ -216,6 +214,19 @@ public class OrderService {
                 saved.getCode(), customer.getName(), saved.getItems().size(),
                 saved.getTotalWeight(), saved.getTotalVolume(), saved.getTotalAmount());
         return saved;
+    }
+
+    /**
+     * BR02-07 — dia chi va toa do cua don luon chep tu danh muc khach hang.
+     *
+     * Lay o may chu chu khong tin gia tri trinh duyet gui len: form da bo o ghi de dia chi,
+     * nhung ai gui request tay van khong doi duoc diem giao. Van CHEP sang don chu khong
+     * doc thang tu Customer, de sau nay sua danh muc khach thi don cu khong bi doi theo.
+     */
+    private void copyAddressFromCustomer(Order order, Customer customer) {
+        order.setDeliveryAddress(customer.getAddress());
+        order.setLatitude(customer.getLatitude());
+        order.setLongitude(customer.getLongitude());
     }
 
     // ==================== CN-02-08 Sua don ====================
@@ -257,9 +268,7 @@ public class OrderService {
 
         order.setCustomer(customer);
         order.setDeliveryDate(form.getDeliveryDate());
-        order.setDeliveryAddress(form.getDeliveryAddress().trim());
-        order.setLatitude(form.getLatitude());
-        order.setLongitude(form.getLongitude());
+        copyAddressFromCustomer(order, customer);
         order.setPaymentMethod(form.getPaymentMethod());
         order.setNote(blankToNull(form.getNote()));
 

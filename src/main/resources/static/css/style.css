@@ -62,6 +62,24 @@ body {
   border-color: var(--blue-700);
 }
 
+/* Bootstrap only fades a disabled button to 65% opacity, so a disabled
+   primary button still reads as light blue and looks clickable. Turn every
+   disabled button flat grey with a no-entry cursor instead. pointer-events is
+   restored only so the cursor shows: a disabled <button> never fires click. */
+.btn:disabled,
+.btn.disabled,
+fieldset:disabled .btn {
+  background-color: var(--pending-bg);
+  border-color: var(--border);
+  color: var(--text-muted);
+  opacity: 1;
+  box-shadow: none;
+}
+.btn:disabled {
+  pointer-events: auto;
+  cursor: not-allowed;
+}
+
 /* Full four-sided borders, grey header, zebra body. Applying this to the
    Bootstrap .table class means every existing screen picks the look up
    without touching a single template. */
@@ -785,3 +803,9 @@ body {
   margin-top: 7px;
 }
 .button-pair > .btn { flex: 1; }
+
+/* ---------- Flash messages (toast) ---------- */
+/* Pushed below the header so a toast never covers the logout button */
+.app-toast-area {
+  top: 3.5rem;
+}

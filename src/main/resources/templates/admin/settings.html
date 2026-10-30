@@ -34,18 +34,7 @@
                 </td>
 
                 <td>
-                    <!-- Rieng thuat toan la o chon, khong cho go tay -->
-                    <select th:if="${row.code == 'DEFAULT_ALGORITHM'}"
-                            class="form-select form-select-sm"
-                            th:field="*{items[__${rowStat.index}__].value}"
-                            th:classappend="${#fields.hasErrors('items[__${rowStat.index}__].value')} ? 'is-invalid'">
-                        <option th:each="algorithmOption : ${algorithms}"
-                                th:value="${algorithmOption.name()}"
-                                th:text="${algorithmOption.displayName}">OR-Tools</option>
-                    </select>
-
-                    <input th:unless="${row.code == 'DEFAULT_ALGORITHM'}"
-                           type="text" class="form-control form-control-sm"
+                    <input type="text" class="form-control form-control-sm"
                            th:field="*{items[__${rowStat.index}__].value}"
                            th:classappend="${#fields.hasErrors('items[__${rowStat.index}__].value')} ? 'is-invalid'">
 

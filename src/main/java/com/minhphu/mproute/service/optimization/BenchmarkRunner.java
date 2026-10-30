@@ -1,7 +1,5 @@
 package com.minhphu.mproute.service.optimization;
 
-import com.minhphu.mproute.service.optimization.heuristic.NN2OptSolver;
-import com.minhphu.mproute.service.optimization.heuristic.NearestNeighborSolver;
 import com.minhphu.mproute.service.optimization.ortools.OrToolsSolver;
 
 import java.util.ArrayList;
@@ -9,7 +7,7 @@ import java.util.List;
 import java.util.Locale;
 
 /**
- * Chay benchmark tren bo du lieu chuan Augerat 1995 (CN-09-02, CN-09-03).
+ * Chay benchmark tren bo du lieu chuan Augerat 1995 (CN-09-02).
  *
  * DAY LA SO LIEU AN DIEM CUA CHUONG 4 BAO CAO. Ket qua tren don hang cua Minh Phu rat
  * thuyet phuc voi doanh nghiep nhung khong ai kiem chung duoc; con o day thi loi giai
@@ -33,8 +31,7 @@ import java.util.Locale;
  *
  *   1. Vi sao dung DUNG so xe cua de bai — xem VrpInstance.fleet()
  *   2. Vi sao khoang cach phai lam tron ve so nguyen — xem VrpFileReader
- *   3. Vi sao gap cua NN+2-opt van con hai chuc phan tram, va vi sao do KHONG
- *      phai dau hieu code sai — xem comment o ham printGapTable() ben duoi
+ *   3. Doc con so gap the nao cho dung — xem comment o ham printGapTable() ben duoi
  * =========================================================================
  */
 public final class BenchmarkRunner {
@@ -58,27 +55,22 @@ public final class BenchmarkRunner {
     private BenchmarkRunner() {
     }
 
-    /** Ket qua cua mot bo giai tren mot bai. */
-    private record SolverRun(String solverName, double distance, int routeCount,
-                             int unassignedCount, long elapsedMs) {
+    /** Ket qua cua OR-Tools tren mot bai, dat canh loi giai toi uu da cong bo. */
+    private record InstanceResult(VrpInstance instance, double distance, int routeCount,
+                                  int unassignedCount, long elapsedMs) {
 
         boolean coveredEveryPoint() {
             return unassignedCount == 0;
         }
     }
 
-    /** Ba dong ket qua cua mot bai, dat canh loi giai toi uu da cong bo. */
-    private record InstanceResult(VrpInstance instance, SolverRun nearestNeighbor,
-                                  SolverRun twoOpt, SolverRun orTools) {
-    }
-
     public static void main(String[] args) {
 
         long timeLimitSeconds = readTimeLimit(args);
 
-        System.out.println("=".repeat(112));
+        System.out.println("=".repeat(90));
         System.out.println("BENCHMARK AUGERAT 1995 - bo du lieu chuan CVRPLIB (CN-09-02)");
-        System.out.println("=".repeat(112));
+        System.out.println("=".repeat(90));
         System.out.printf(Locale.ROOT,
                 "Khoang cach EUC_2D lam tron ve so nguyen (quy uoc CVRPLIB). "
                         + "Gioi han OR-Tools %d giay moi bai.%n",
@@ -95,189 +87,93 @@ public final class BenchmarkRunner {
         System.out.println();
 
         printGapTable(results);
-        printImprovementTable(results);
-    }
-
-    /** Chay ca ba bo giai tren CUNG mot ma tran va CUNG doi xe cua bai do. */
-    private static InstanceResult runInstance(VrpInstance instance, long timeLimitSeconds) {
-
-        double[][] matrix = instance.getMatrix();
-
-        SolverRun nearestNeighbor = run("NN", new NearestNeighborSolver(), instance, matrix);
-        SolverRun twoOpt = run("NN+2-opt", new NN2OptSolver(), instance, matrix);
-        SolverRun orTools = run("OR-Tools", new OrToolsSolver(timeLimitSeconds), instance, matrix);
-
-        return new InstanceResult(instance, nearestNeighbor, twoOpt, orTools);
     }
 
     /**
-     * Mot lan chay.
+     * Chay OR-Tools tren mot bai, voi DUNG doi xe cua de bai.
      *
-     * Moi bo giai nhan mot DANH SACH DIEM MOI va mot DOI XE MOI: NearestNeighborSolver
-     * xoa dan phan tu khoi danh sach no dang chay, con cac bo giai deu ghi thu tu diem
-     * vao doi tuong tuyen cua rieng minh. Dung chung mot danh sach thi bo chay sau nhan
-     * dau vao da bi bo chay truoc dong vao.
+     * deliveryPoints() va fleet() tra ban sao moi moi lan goi, nen bo giai ghi thu tu diem
+     * vao doi tuong tuyen cua no ma khong dong vao du lieu goc cua bai.
      */
-    private static SolverRun run(String solverName, RoutingAlgorithm solver,
-                                 VrpInstance instance, double[][] matrix) {
+    private static InstanceResult runInstance(VrpInstance instance, long timeLimitSeconds) {
+        RoutingResult result = new OrToolsSolver(timeLimitSeconds)
+                .solve(instance.deliveryPoints(), instance.fleet(), instance.getMatrix());
 
-        RoutingResult result = solver.solve(instance.deliveryPoints(), instance.fleet(), matrix);
-
-        return new SolverRun(solverName,
+        return new InstanceResult(instance,
                 result.getOptimizedDistance(),
                 result.getRoutes().size(),
                 result.getUnassignedPoints().size(),
                 result.getExecutionTimeMs());
     }
 
-    // ==================== Bang 1: gap so voi loi giai toi uu ====================
+    // ==================== Bang gap so voi loi giai toi uu ====================
 
     /**
      * Bang chinh cua chuong 4 (CN-09-02).
      *
      *     gap (%) = (ket qua cua minh - loi giai toi uu) / loi giai toi uu x 100
      *
-     * DOC CON SO NAY THE NAO — chuan bi san cho vấn đáp:
+     * DOC CON SO NAY THE NAO — chuan bi san cho van dap:
      *
-     *  - NN thuan thuong lech 20-35%, them 2-opt keo xuong khoang 10-25%. Nam trong
-     *    khoang do la binh thuong, KHONG phai dau hieu code sai.
-     *  - Vi sao 2-opt khong keo xuong duoc nua: no chi sap lai THU TU BEN TRONG mot
-     *    tuyen, khong dong duoc vao viec diem nao thuoc xe nao. Ma voi CVRP thi phan
-     *    sai so lon nhat lai nam chinh o khau phan diem cho xe. Muon giam tiep phai
-     *    them buoc hoan doi diem GIUA cac tuyen (Or-opt, relocate) — do la huong phat
-     *    trien, khong phai pham vi do an.
-     *  - GAP QUA THAP MOI LA DAU HIEU SAI: duoi 5% thi gan nhu chac chan dang tinh
-     *    thieu, hay gap nhat la quen chang cuoi ve kho (CBR-01). Tren 50% thi kiem lai
-     *    quy uoc lam tron EUC_2D o VrpFileReader.
+     *  - OR-Tools voi Guided Local Search trong vai giay thuong chi lech vai phan tram.
+     *    Khong ra dung 0% la binh thuong: bo giai dung theo gioi han thoi gian chu khong
+     *    chung minh toi uu.
+     *  - GAP AM MOI LA DAU HIEU SAI: ngan hon loi giai toi uu da chung minh thi gan nhu
+     *    chac chan dang tinh thieu, hay gap nhat la quen chang cuoi ve kho (CBR-01). Gap
+     *    lon bat thuong thi kiem lai quy uoc lam tron EUC_2D o VrpFileReader.
      *
-     * Bai nao co bo giai khong xep het diem thi danh dau * va KHONG tinh vao trung binh:
-     * ben bo bot diem di duong nhien tuyen ngan hon, dem so canh nhau la ket luan nguoc.
+     * Bai nao khong xep het diem thi danh dau * va KHONG tinh vao trung binh: bo bot diem
+     * di duong nhien tuyen ngan hon, dem so canh loi giai toi uu la ket luan nguoc.
      */
     private static void printGapTable(List<InstanceResult> results) {
 
-        System.out.println("=".repeat(112));
-        System.out.println("BANG 1 - GAP SO VOI LOI GIAI TOI UU DA CONG BO (CN-09-02)");
-        System.out.println("=".repeat(112));
-        System.out.printf(Locale.ROOT, "%-11s %5s %4s %8s | %9s %8s | %9s %8s | %9s %8s%n",
-                "Bai toan", "Diem", "Xe", "Toi uu",
-                "NN", "Gap", "NN+2-opt", "Gap", "OR-Tools", "Gap");
-        System.out.println("-".repeat(112));
+        System.out.println("=".repeat(90));
+        System.out.println("GAP CUA OR-TOOLS SO VOI LOI GIAI TOI UU DA CONG BO (CN-09-02)");
+        System.out.println("=".repeat(90));
+        System.out.printf(Locale.ROOT, "%-11s %5s %4s %8s | %9s %8s %10s%n",
+                "Bai toan", "Diem", "Xe", "Toi uu", "OR-Tools", "Gap", "Thoi gian");
+        System.out.println("-".repeat(90));
 
-        double sumGapNearestNeighbor = 0;
-        double sumGapTwoOpt = 0;
-        double sumGapOrTools = 0;
-        int countedNearestNeighbor = 0;
-        int countedTwoOpt = 0;
-        int countedOrTools = 0;
+        double sumGap = 0;
+        int counted = 0;
 
         for (InstanceResult result : results) {
             VrpInstance instance = result.instance();
             double optimal = instance.getOptimalValue();
 
-            System.out.printf(Locale.ROOT, "%-11s %5d %4d %8.0f | %9s %8s | %9s %8s | %9s %8s%n",
+            System.out.printf(Locale.ROOT, "%-11s %5d %4d %8.0f | %9s %8s %7d ms%n",
                     instance.getName(), instance.deliveryPointCount(), instance.getVehicleCount(),
-                    optimal,
-                    distanceCell(result.nearestNeighbor()), gapCell(result.nearestNeighbor(), optimal),
-                    distanceCell(result.twoOpt()), gapCell(result.twoOpt(), optimal),
-                    distanceCell(result.orTools()), gapCell(result.orTools(), optimal));
+                    optimal, distanceCell(result), gapCell(result, optimal), result.elapsedMs());
 
-            if (result.nearestNeighbor().coveredEveryPoint()) {
-                sumGapNearestNeighbor += MetricsService.gapPercent(result.nearestNeighbor().distance(), optimal);
-                countedNearestNeighbor++;
-            }
-            if (result.twoOpt().coveredEveryPoint()) {
-                sumGapTwoOpt += MetricsService.gapPercent(result.twoOpt().distance(), optimal);
-                countedTwoOpt++;
-            }
-            if (result.orTools().coveredEveryPoint()) {
-                sumGapOrTools += MetricsService.gapPercent(result.orTools().distance(), optimal);
-                countedOrTools++;
+            if (result.coveredEveryPoint()) {
+                sumGap += MetricsService.gapPercent(result.distance(), optimal);
+                counted++;
             }
         }
 
-        System.out.println("-".repeat(112));
-        System.out.printf(Locale.ROOT, "%-11s %5s %4s %8s | %9s %8s | %9s %8s | %9s %8s%n",
-                "Trung binh", "", "", "",
-                "", averageCell(sumGapNearestNeighbor, countedNearestNeighbor),
-                "", averageCell(sumGapTwoOpt, countedTwoOpt),
-                "", averageCell(sumGapOrTools, countedOrTools));
+        System.out.println("-".repeat(90));
+        System.out.printf(Locale.ROOT, "%-11s %5s %4s %8s | %9s %8s%n",
+                "Trung binh", "", "", "", "", averageCell(sumGap, counted));
         System.out.println();
-        System.out.printf(Locale.ROOT,
-                "So bai tinh vao trung binh: NN %d/%d, NN+2-opt %d/%d, OR-Tools %d/%d%n",
-                countedNearestNeighbor, results.size(),
-                countedTwoOpt, results.size(),
-                countedOrTools, results.size());
-        System.out.println("Dau * la bo giai khong xep het diem vao doi xe cua de bai, quang duong cua");
+        System.out.printf(Locale.ROOT, "So bai tinh vao trung binh: %d/%d%n", counted, results.size());
+        System.out.println("Dau * la bai khong xep het diem vao doi xe cua de bai, quang duong cua");
         System.out.println("dong do khong dat canh loi giai toi uu duoc nen khong tinh vao trung binh.");
         System.out.println();
     }
 
-    // ==================== Bang 2: NN so voi NN + 2-opt ====================
-
-    /**
-     * Bang so sanh hai bo giai TU CAI DAT (CN-09-03).
-     *
-     * Bang 1 do minh cach loi giai tot nhat bao nhieu; bang nay do RIENG dong gop cua
-     * buoc 2-opt, tuc phan cai thien ma chinh minh viet ra. Hai bang tra loi hai cau hoi
-     * khac nhau nen phai in ca hai.
-     *
-     * Chi in dong nao ma CA HAI ben deu xep het diem: mot ben bo diem thi hai con so
-     * khong con do cung mot thu.
-     */
-    private static void printImprovementTable(List<InstanceResult> results) {
-
-        System.out.println("=".repeat(112));
-        System.out.println("BANG 2 - RIENG DONG GOP CUA BUOC 2-OPT (CN-09-03)");
-        System.out.println("=".repeat(112));
-        System.out.printf(Locale.ROOT, "%-11s %5s %10s %10s %11s %10s %10s%n",
-                "Bai toan", "Diem", "NN", "NN+2-opt", "Cai thien", "t(NN)", "t(2-opt)");
-        System.out.println("-".repeat(112));
-
-        double sumImprovement = 0;
-        int counted = 0;
-
-        for (InstanceResult result : results) {
-            SolverRun nearestNeighbor = result.nearestNeighbor();
-            SolverRun twoOpt = result.twoOpt();
-
-            boolean comparable = nearestNeighbor.coveredEveryPoint() && twoOpt.coveredEveryPoint();
-            String improvement = "-";
-            if (comparable) {
-                double percent = MetricsService.reductionPercent(
-                        nearestNeighbor.distance(), twoOpt.distance());
-                improvement = String.format(Locale.ROOT, "%.1f%%", percent);
-                sumImprovement += percent;
-                counted++;
-            }
-
-            System.out.printf(Locale.ROOT, "%-11s %5d %10s %10s %11s %8d ms %8d ms%n",
-                    result.instance().getName(), result.instance().deliveryPointCount(),
-                    distanceCell(nearestNeighbor), distanceCell(twoOpt), improvement,
-                    nearestNeighbor.elapsedMs(), twoOpt.elapsedMs());
-        }
-
-        System.out.println("-".repeat(112));
-        System.out.printf(Locale.ROOT, "%-11s %5s %10s %10s %11s%n",
-                "Trung binh", "", "", "", averageCell(sumImprovement, counted));
-        System.out.println();
-        System.out.println("Cai thien = (NN - NN2opt) / NN x 100. Duong nghia la 2-opt lam tuyen ngan di.");
-        System.out.println("2-opt KHONG BAO GIO duoc lam tuyen dai them - do la test");
-        System.out.println("twoOptNeverIncreasesTotalDistance kiem, va la tinh chat cua chinh thuat toan.");
-    }
-
     // ==================== Ham in ====================
 
-    /** Quang duong, kem dau * neu bo giai do de sot diem. */
-    private static String distanceCell(SolverRun run) {
+    /** Quang duong, kem dau * neu bo giai de sot diem. */
+    private static String distanceCell(InstanceResult result) {
         return String.format(Locale.ROOT, "%.0f%s",
-                run.distance(), run.coveredEveryPoint() ? "" : "*");
+                result.distance(), result.coveredEveryPoint() ? "" : "*");
     }
 
-    private static String gapCell(SolverRun run, double optimalValue) {
-        if (!run.coveredEveryPoint()) {
-            return "sot " + run.unassignedCount();
+    private static String gapCell(InstanceResult result, double optimalValue) {
+        if (!result.coveredEveryPoint()) {
+            return "sot " + result.unassignedCount();
         }
-        return String.format(Locale.ROOT, "%+.1f%%", MetricsService.gapPercent(run.distance(), optimalValue));
+        return String.format(Locale.ROOT, "%+.1f%%", MetricsService.gapPercent(result.distance(), optimalValue));
     }
 
     private static String averageCell(double sum, int count) {

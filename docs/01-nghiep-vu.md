@@ -145,8 +145,8 @@ Spring Security cần tiền tố `ROLE_` khi tạo `GrantedAuthority`, nên `AD
 | BR02-04 | Hệ thống tự tính `total_weight` và `total_volume`, không cho sửa tay |
 | BR02-05 | Nếu đơn vượt sức chứa xe lớn nhất → chặn lưu, báo MSG-06, yêu cầu tách đơn |
 | BR02-06 | Ngày giao mặc định là ngày mai, không nhỏ hơn hôm nay |
-| BR02-07 | Chọn khách có sẵn thì tự điền địa chỉ, tọa độ, SĐT, ghi chú, hình thức thanh toán. Ghi đè địa chỉ cho riêng đơn được, không đổi danh mục |
-| BR02-08 | Ghi đè địa chỉ thì bắt buộc xác định lại tọa độ |
+| BR02-07 | Chọn khách có sẵn thì tự điền địa chỉ, tọa độ, SĐT, ghi chú, hình thức thanh toán. Địa chỉ và tọa độ của đơn **luôn lấy từ danh mục khách hàng**, không ghi đè cho riêng đơn (xem `09` mục A6) |
+| BR02-08 | ~~Ghi đè địa chỉ thì bắt buộc xác định lại tọa độ~~ — **đã bỏ** cùng chức năng ghi đè địa chỉ (`09` mục A6) |
 | BR02-09 | Đơn mới có trạng thái `PENDING_APPROVAL`. Phải bấm "Duyệt đơn" mới sang `APPROVED` |
 | BR02-10 | Bước duyệt để kiểm lại địa chỉ và tọa độ trước khi vào thuật toán |
 | BR02-11 | Đơn từ `ROUTED` trở đi không sửa/hủy được |

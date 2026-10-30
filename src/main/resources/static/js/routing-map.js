@@ -38,6 +38,7 @@
     var routeLines = readJson('route-lines-data');
 
     var map = L.map('routing-map').setView(DEFAULT_CENTER, DEFAULT_ZOOM);
+    // Nen OpenStreetMap chuan — vi sao khong dung CARTO, xem location-picker.js
     L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
         maxZoom: 19,
         attribution: '&copy; OpenStreetMap'

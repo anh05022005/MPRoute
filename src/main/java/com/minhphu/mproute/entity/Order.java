@@ -51,11 +51,12 @@ public class Order {
     @Column(name = "delivery_date", nullable = false)
     private LocalDate deliveryDate;
 
-    // Chep tu khach hang, cho phep ghi de rieng cho don nay (BR02-07)
+    // Chep tu khach hang luc luu don, khong doc thang tu Customer: sua danh muc sau nay
+    // thi don da giao khong bi doi theo (BR02-07)
     @Column(name = "delivery_address", nullable = false, length = 255)
     private String deliveryAddress;
 
-    // Ghi de dia chi thi bat buoc xac dinh lai toa do (BR02-08)
+    // Cung chep tu khach hang nhu dia chi (BR02-07)
     @Column(name = "latitude", nullable = false, columnDefinition = "DECIMAL(10,7)")
     private Double latitude;
 

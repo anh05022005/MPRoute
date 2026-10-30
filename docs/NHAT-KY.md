@@ -832,5 +832,21 @@ trỏ tới. Một xác nhận ngoài dự tính rằng ràng buộc `reversal_o
 không cần biết tồn kho tồn tại — UC03 và UC08 rủi ro bằng không. Đây là lý do chính khiến việc bổ
 sung này đáng làm ở giai đoạn muộn.
 
-**Còn nợ một phép thử:** phân quyền với vai trò `DISPATCHER` — mật khẩu `dieuphoi` đã bị đổi nên
-chưa đăng nhập được để thử. Xem `TIEN-DO.md` mục Còn nợ nghiệm thu.
+**Đã trả nốt phép thử phân quyền.** Lần đầu không đăng nhập được vai trò `DISPATCHER` vì mật
+khẩu `dieuphoi` đã bị đổi; phiên sau chủ dự án cung cấp mật khẩu đang dùng nên thử được.
+**Mật khẩu hiện tại của `dieuphoi` và `taixe01` không còn khớp `docs/08`** — máy dựng mới vẫn ra
+mật khẩu trong `docs/08` vì `DataSeeder` không đổi, chỉ máy này đã bị đổi tay. Không ghi mật khẩu
+thật vào tài liệu: kho này công khai trên GitHub.
+Kết quả: `/admin/stock` ra 200 với **5 biểu mẫu Nhập kho và 0 biểu mẫu Kiểm kê**, gõ thẳng
+`POST /admin/stock/stocktake` và `POST /admin/stock/movements/1/reverse` đều ra **403** kèm trang
+"Không đủ quyền" đúng chuẩn; `/admin/stock/movements` và bản Excel vẫn ra 200. `DRIVER`
+(`taixe01`) ra 403 ở cả hai màn hình.
+
+Thêm một phép thử ngoài kế hoạch, và nó mới là phép đáng giá nhất của loạt này: gửi
+`POST /admin/stock/receive` với `boxCount=0` bằng tài khoản `dieuphoi`. Nếu ra 403 thì không
+phân biệt được "chặn vì thiếu quyền" với "chặn vì sai đường dẫn" — hai nguyên nhân khác nhau mà
+cùng một mã trả về thì phép thử 403 ở trên chẳng chứng minh được gì. Kết quả ra **302 kèm thông
+báo lỗi đỏ**: điều phối viên qua được cửa phân quyền rồi mới bị chặn ở tầng kiểm tra dữ liệu.
+Đến đây mới kết luận được là `@PreAuthorize` phân biệt đúng hai nhóm thao tác chứ không phải
+chặn cả cụm. Số dòng sổ kho trước và sau cả loạt đều là 13 — không phép thử nào ghi thêm dữ
+liệu.

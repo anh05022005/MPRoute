@@ -143,7 +143,7 @@ public class ReportController {
 
         byte[] workbook = reportExcelExporter.exportOrderReport(
                 reportService.orderReport(range[0], range[1], chosen), range[0], range[1]);
-        return download(workbook, ReportExcelExporter.fileName("RPT-01-don-hang", range[0], range[1]));
+        return download(workbook, ReportExcelExporter.fileName("bao-cao-don-hang", range[0], range[1]));
     }
 
     @GetMapping("/delivery/excel")
@@ -158,7 +158,7 @@ public class ReportController {
 
         byte[] workbook = reportExcelExporter.exportDeliveryReport(
                 reportService.deliveryReport(range[0], range[1]), range[0], range[1]);
-        return download(workbook, ReportExcelExporter.fileName("RPT-02-ty-le-giao", range[0], range[1]));
+        return download(workbook, ReportExcelExporter.fileName("bao-cao-ty-le-giao", range[0], range[1]));
     }
 
     @GetMapping("/optimization/excel")
@@ -173,7 +173,7 @@ public class ReportController {
 
         byte[] workbook = reportExcelExporter.exportOptimizationReport(
                 reportService.optimizationReport(range[0], range[1]));
-        return download(workbook, ReportExcelExporter.fileName("RPT-03-hieu-qua-toi-uu", range[0], range[1]));
+        return download(workbook, ReportExcelExporter.fileName("bao-cao-hieu-qua-toi-uu", range[0], range[1]));
     }
 
     /**

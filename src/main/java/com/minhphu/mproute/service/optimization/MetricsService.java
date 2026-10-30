@@ -1,8 +1,5 @@
 package com.minhphu.mproute.service.optimization;
 
-import com.minhphu.mproute.service.optimization.heuristic.NN2OptSolver;
-import com.minhphu.mproute.service.optimization.ortools.OrToolsSolver;
-
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
@@ -176,60 +173,5 @@ public final class MetricsService {
             total += route.volumeUtilization();
         }
         return total / routes.size();
-    }
-
-    /**
-     * Ket qua chay ca hai bo giai tren cung mot bo du lieu — bon dong cua bang chuong 4.
-     */
-    public record SolverComparison(RoutingResult heuristicResult,
-                                   RoutingResult orToolsResult,
-                                   double baselineADistance,
-                                   double baselineBDistance) {
-
-        public double heuristicDistance() {
-            return heuristicResult.getOptimizedDistance();
-        }
-
-        public double orToolsDistance() {
-            return orToolsResult.getOptimizedDistance();
-        }
-
-        /** NN+2-opt con kem OR-Tools bao nhieu phan tram — con so quan trong nhat cua muc nay. */
-        public double heuristicGapPercent() {
-            return gapPercent(heuristicDistance(), orToolsDistance());
-        }
-    }
-
-    /**
-     * Chay LAN LUOT ca hai bo giai tren CUNG mot ma tran va CUNG doi xe, roi dat cac con
-     * so canh nhau.
-     *
-     * "Cung mot ma tran" la dieu kien bat buoc de bang so sanh co nghia: chay lai OSRM
-     * giua hai lan giai thi hai cot lech nhau vi ma tran khac nhau chu khong phai vi
-     * thuat toan khac nhau.
-     *
-     * Hai moc A va B lay tu ket qua cua OR-TOOLS, vi do la tuyen he thong thuc su dung.
-     */
-    public static SolverComparison compareSolvers(List<OptimizationPoint> deliveryPoints,
-                                                  List<OptimizationVehicle> vehicles,
-                                                  double[][] matrix) {
-
-        /*
-         * Moi bo giai nhan mot BAN SAO danh sach diem: NearestNeighborSolver xoa dan phan
-         * tu khoi danh sach no dang chay, va ca hai ben deu ghi thu tu diem vao chinh cac
-         * doi tuong OptimizationRoute cua minh. Dung chung mot danh sach thi bo giai chay
-         * sau nhan dau vao da bi bo giai truoc dong vao.
-         */
-        RoutingResult heuristicResult =
-                new NN2OptSolver().solve(new ArrayList<>(deliveryPoints), vehicles, matrix);
-        RoutingResult orToolsResult =
-                new OrToolsSolver().solve(new ArrayList<>(deliveryPoints), vehicles, matrix);
-
-        fillBaselines(orToolsResult, matrix);
-        fillBaselines(heuristicResult, matrix);
-
-        return new SolverComparison(heuristicResult, orToolsResult,
-                orToolsResult.getBaselineADistance(),
-                orToolsResult.getBaselineBDistance());
     }
 }

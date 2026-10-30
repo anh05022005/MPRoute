@@ -90,10 +90,6 @@
                     <th>Địa chỉ giao</th>
                     <td>
                         <span th:text="${order.deliveryAddress}">Số 12 ngõ 5 Phan Trọng Tuệ</span>
-                        <!-- Dia chi cua rieng don khac danh muc thi noi ro, de nguoi doc
-                             khong tuong la nhap nham (BR02-07) -->
-                        <span th:if="${order.deliveryAddress != order.customer.address}"
-                              class="status-tag status-tag-warning">Ghi đè cho riêng đơn này</span>
                     </td>
                 </tr>
                 <tr>

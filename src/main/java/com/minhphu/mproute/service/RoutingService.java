@@ -7,7 +7,6 @@ import com.minhphu.mproute.entity.Route;
 import com.minhphu.mproute.entity.RouteStop;
 import com.minhphu.mproute.entity.User;
 import com.minhphu.mproute.entity.Vehicle;
-import com.minhphu.mproute.entity.enums.AlgorithmType;
 import com.minhphu.mproute.entity.enums.EntityType;
 import com.minhphu.mproute.entity.enums.OrderStatus;
 import com.minhphu.mproute.entity.enums.RouteStatus;
@@ -23,10 +22,7 @@ import com.minhphu.mproute.service.optimization.OptimizationPoint;
 import com.minhphu.mproute.service.optimization.OptimizationRoute;
 import com.minhphu.mproute.service.optimization.OptimizationVehicle;
 import com.minhphu.mproute.service.optimization.RouteDistanceCalculator;
-import com.minhphu.mproute.service.optimization.RoutingAlgorithm;
 import com.minhphu.mproute.service.optimization.RoutingResult;
-import com.minhphu.mproute.service.optimization.heuristic.NN2OptSolver;
-import com.minhphu.mproute.service.optimization.heuristic.NearestNeighborSolver;
 import com.minhphu.mproute.service.optimization.ortools.OrToolsSolver;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -110,13 +106,11 @@ public class RoutingService {
      * xe khong lam mat ket qua dang co tren man hinh.
      *
      * @param vehicleIds    cac xe dieu phoi vien tich chon (BR03-02)
-     * @param algorithm     null thi lay tham so DEFAULT_ALGORITHM (BR03-11)
      * @param currentUserId nguoi bam nut, de ghi vao created_by va status_history
      */
     @Transactional
     public RoutingOutcome optimize(LocalDate deliveryDate,
                                    List<Long> vehicleIds,
-                                   AlgorithmType algorithm,
                                    Long currentUserId) {
 
         // ---------- B1: xoa ket qua DRAFT cua lan chay truoc (BR03-09, CN-03-12) ----------
@@ -139,9 +133,9 @@ public class RoutingService {
         List<OptimizationPoint> allPoints = buildPoints(depot, orders);
         DistanceMatrixService.DistanceMatrix matrix = distanceMatrixService.loadMatrix(allPoints);
 
-        // ---------- B6: chay bo giai (CN-03-06, BR03-10) ----------
-        AlgorithmType chosenAlgorithm = (algorithm != null) ? algorithm : defaultAlgorithm();
-        RoutingAlgorithm solver = solverFor(chosenAlgorithm);
+        // ---------- B6: chay bo giai OR-Tools (CN-03-06, BR03-10) ----------
+        // He thong chi con mot bo giai, khong cho chon — xem docs/09 muc A7
+        OrToolsSolver solver = new OrToolsSolver();
 
         /*
          * Diem giao = toan bo danh sach TRU kho o dau. Ban sao moi vi cac bo giai xoa dan
@@ -164,8 +158,8 @@ public class RoutingService {
         OptimizationResult metrics = saveMetrics(result, deliveryDate, savedRoutes);
 
         List<Order> unassignedOrders = unassignedOrdersOf(result, orders);
-        log.info("Phan tuyen ngay {} bang {}: {} tuyen, {} don duoc gan, {} don con sot, {} ms",
-                deliveryDate, chosenAlgorithm, savedRoutes.size(),
+        log.info("Phan tuyen ngay {}: {} tuyen, {} don duoc gan, {} don con sot, {} ms",
+                deliveryDate, savedRoutes.size(),
                 orders.size() - unassignedOrders.size(), unassignedOrders.size(),
                 result.getExecutionTimeMs());
 
@@ -298,40 +292,6 @@ public class RoutingService {
                     vehicle.getMaxWeight(), vehicle.getMaxVolume()));
         }
         return converted;
-    }
-
-    // ==================== B6 ====================
-
-    /**
-     * Chon bo giai theo lua chon cua dieu phoi vien (BR03-11, CN-03-04).
-     *
-     * Ba lua chon nay chinh la ba dong cua bang so sanh chuong 4, cho demo truc tiep truoc
-     * hoi dong: chay OR-Tools ra mot con so, doi sang NN + 2-opt chay lai ra con so khac,
-     * tren cung tap don va cung doi xe.
-     *
-     * MANUAL khong phai mot bo giai — no la nhan danh cho tuyen do dieu phoi vien keo tha
-     * chinh tay o CN-04-01, khong bao gio den duoc day.
-     */
-    private RoutingAlgorithm solverFor(AlgorithmType algorithm) {
-        return switch (algorithm) {
-            case OR_TOOLS -> new OrToolsSolver();
-            case NN -> new NearestNeighborSolver();
-            case NN_2OPT -> new NN2OptSolver();
-            case MANUAL -> throw new IllegalArgumentException(
-                    "Chỉnh tay không phải là thuật toán chạy tự động được.");
-        };
-    }
-
-    /** Thuat toan chon san tren man hinh, lay tu tham so he thong DEFAULT_ALGORITHM. */
-    public AlgorithmType defaultAlgorithm() {
-        String code = systemParameterService.getValue(SystemParameterService.DEFAULT_ALGORITHM);
-        try {
-            return AlgorithmType.valueOf(code);
-        } catch (IllegalArgumentException ex) {
-            // Tham so bi go sai thi van phai chay duoc, chi ghi log de con sua
-            log.warn("Tham so DEFAULT_ALGORITHM dang la '{}', khong khop enum. Dung OR_TOOLS.", code);
-            return AlgorithmType.OR_TOOLS;
-        }
     }
 
     // ==================== B7 ====================

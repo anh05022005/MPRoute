@@ -1,14 +1,12 @@
 package com.minhphu.mproute.service;
 
 import com.minhphu.mproute.entity.SystemParameter;
-import com.minhphu.mproute.entity.enums.AlgorithmType;
 import com.minhphu.mproute.repository.SystemParameterRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
@@ -32,7 +30,6 @@ public class SystemParameterService {
     public static final String LOADING_TIME = "LOADING_TIME";
     public static final String DEPARTURE_TIME = "DEPARTURE_TIME";
     public static final String HAVERSINE_FACTOR = "HAVERSINE_FACTOR";
-    public static final String DEFAULT_ALGORITHM = "DEFAULT_ALGORITHM";
     public static final String OSRM_URL = "OSRM_URL";
     public static final String OSRM_TIMEOUT = "OSRM_TIMEOUT";
     public static final String PAGE_SIZE = "PAGE_SIZE";
@@ -68,8 +65,6 @@ public class SystemParameterService {
              */
             new ParameterDefault(HAVERSINE_FACTOR, "1.45",
                     "Hệ số quy đổi từ đường chim bay sang đường đi thật, dùng khi OSRM không chạy"),
-            new ParameterDefault(DEFAULT_ALGORITHM, AlgorithmType.OR_TOOLS.name(),
-                    "Thuật toán chọn sẵn trên màn hình phân tuyến"),
             new ParameterDefault(OSRM_URL, "http://localhost:5000",
                     "Địa chỉ máy chủ OSRM tính khoảng cách"),
             new ParameterDefault(OSRM_TIMEOUT, "10",
@@ -77,7 +72,7 @@ public class SystemParameterService {
             new ParameterDefault(PAGE_SIZE, "20",
                     "Số dòng mỗi trang trên các màn hình danh sách"),
             new ParameterDefault(LOOKUP_RATE_LIMIT, "20",
-                    "Giới hạn tra cứu công khai (lần/phút/IP) — BR07-09")
+                    "Giới hạn tra cứu công khai (lần/phút/IP)")
     );
 
     private final SystemParameterRepository systemParameterRepository;
@@ -105,13 +100,15 @@ public class SystemParameterService {
     @Transactional(readOnly = true)
     public List<SystemParameter> findAllInDisplayOrder() {
         List<String> orderedCodes = DEFAULTS.stream().map(ParameterDefault::code).toList();
-        List<SystemParameter> parameters = new ArrayList<>(systemParameterRepository.findAll());
-        // Tham so la nhung ma khong co trong MAC_DINH thi xep xuong cuoi
-        parameters.sort(Comparator.comparingInt(item -> {
-            int position = orderedCodes.indexOf(item.getCode());
-            return (position < 0) ? Integer.MAX_VALUE : position;
-        }));
-        return parameters;
+        /*
+         * Chi hien nhung ma con dung. Tham so da bo (DEFAULT_ALGORITHM, docs/09 muc A7) van
+         * con dong cu trong CSDL cua may da chay ban truoc — an di chu khong xoa, de khong
+         * phai viet them buoc don du lieu.
+         */
+        return systemParameterRepository.findAll().stream()
+                .filter(item -> orderedCodes.contains(item.getCode()))
+                .sorted(Comparator.comparingInt(item -> orderedCodes.indexOf(item.getCode())))
+                .toList();
     }
 
     @Transactional(readOnly = true)
@@ -157,9 +154,6 @@ public class SystemParameterService {
             case DEPARTURE_TIME -> HH_MM_PATTERN.matcher(trimmed).matches()
                     ? null : "Giờ xuất phát phải có dạng HH:mm, ví dụ 08:00";
 
-            case DEFAULT_ALGORITHM -> isValidAlgorithmType(trimmed)
-                    ? null : "Thuật toán không hợp lệ";
-
             // Chan ca hai loi thuong gap: go thieu giao thuc, va go du dau / o cuoi
             case OSRM_URL -> {
                 if (!trimmed.startsWith("http://") && !trimmed.startsWith("https://")) {
@@ -170,15 +164,6 @@ public class SystemParameterService {
 
             default -> null;
         };
-    }
-
-    private boolean isValidAlgorithmType(String trimmed) {
-        for (AlgorithmType type : AlgorithmType.values()) {
-            if (type.name().equals(trimmed)) {
-                return true;
-            }
-        }
-        return false;
     }
 
     private String validateDecimal(String trimmed, double min, double max, String errorMessage) {

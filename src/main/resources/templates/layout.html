@@ -104,26 +104,46 @@
 <!-- ============ Vung noi dung ============ -->
 <main class="container-fluid py-3">
 
-    <!-- Vung hien thong bao. Cac Controller dat flash attribute "successMessage" hoac "errorMessage" -->
-    <!-- Thong bao thanh cong tu an sau 5 giay (class auto-dismiss). Thong bao loi thi giu nguyen
-         vi nguoi dung can doc ky de sua, an di la mat thong tin -->
-    <div th:if="${successMessage}" class="alert alert-success py-2 fade show auto-dismiss"
-         th:text="${successMessage}"></div>
-    <div th:if="${errorMessage}" class="alert alert-danger py-2" th:text="${errorMessage}"></div>
-
     <!-- Cho nay duoc thay bang manh noi dung ma trang con truyen vao -->
     <div th:replace="${content}">Nội dung trang</div>
 </main>
 
+<!-- ============ Thong bao dang toast ============ -->
+<!-- Cac Controller dat flash attribute "successMessage" hoac "errorMessage".
+     Dung toast noi o goc phai thay vi alert chen dau trang: alert day noi dung xuong roi lai
+     giat len khi tu an, con toast khong lam xe dich bo cuc.
+     Dat duoi thanh tieu de (app-toast-area) de khong che nut Dang xuat. -->
+<div class="toast-container position-fixed end-0 p-3 app-toast-area">
+
+    <!-- Thanh cong: tu an sau 4 giay — cau ngan, chi de xac nhan da lam xong -->
+    <div th:if="${successMessage}" class="toast align-items-center text-bg-success border-0"
+         role="status" aria-live="polite" aria-atomic="true" data-bs-delay="4000">
+        <div class="d-flex">
+            <div class="toast-body" th:text="${successMessage}"></div>
+            <button type="button" class="btn-close btn-close-white me-2 m-auto"
+                    data-bs-dismiss="toast" aria-label="Đóng"></button>
+        </div>
+    </div>
+
+    <!-- Loi: KHONG tu an, phai bam X moi dong. Nguoi dung can doc ky de biet sua gi
+         (vi du MSG-17 thieu hang ton), tu an la mat thong tin -->
+    <div th:if="${errorMessage}" class="toast align-items-center text-bg-danger border-0"
+         role="alert" aria-live="assertive" aria-atomic="true" data-bs-autohide="false">
+        <div class="d-flex">
+            <div class="toast-body" th:text="${errorMessage}"></div>
+            <button type="button" class="btn-close btn-close-white me-2 m-auto"
+                    data-bs-dismiss="toast" aria-label="Đóng"></button>
+        </div>
+    </div>
+</div>
+
 <script th:src="@{/js/bootstrap.bundle.min.js}"></script>
 
-<!-- Dung bootstrap.Alert.close() de co hieu ung mo dan (fade) roi go han khoi trang,
-     noi dung ben duoi tu dich len thay vi de lai mot khoang trong -->
+<!-- Toast cua Bootstrap khong tu hien, phai goi show(). Thoi gian an doc tu data-bs-delay /
+     data-bs-autohide tren tung toast o tren -->
 <script>
-    document.querySelectorAll('.alert.auto-dismiss').forEach(function (alertEl) {
-        setTimeout(function () {
-            bootstrap.Alert.getOrCreateInstance(alertEl).close();
-        }, 5000);
+    document.querySelectorAll('.app-toast-area .toast').forEach(function (toastEl) {
+        bootstrap.Toast.getOrCreateInstance(toastEl).show();
     });
 </script>
 

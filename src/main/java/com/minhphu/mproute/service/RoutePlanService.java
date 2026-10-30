@@ -304,21 +304,8 @@ public class RoutePlanService {
             vehicleIds.add(route.getVehicle().getId());
         }
 
-        /*
-         * Thuat toan lay tu bang chi so da luu chu khong lay tu route.algorithm: sau khi chinh
-         * tay thi route.algorithm da bi doi thanh MANUAL, ma MANUAL khong phai mot bo giai.
-         */
-        AlgorithmType algorithm = AlgorithmType.MANUAL;
-        var metrics = routingService.latestMetricsOf(deliveryDate);
-        if (metrics != null && metrics.getAlgorithm() != AlgorithmType.MANUAL) {
-            algorithm = metrics.getAlgorithm();
-        }
-        if (algorithm == AlgorithmType.MANUAL) {
-            algorithm = routingService.defaultAlgorithm();
-        }
-
-        routingService.optimize(deliveryDate, vehicleIds, algorithm, currentUserId);
-        log.info("Khoi phuc ket qua tu dong ngay {} bang {}", deliveryDate, algorithm);
+        routingService.optimize(deliveryDate, vehicleIds, currentUserId);
+        log.info("Khoi phuc ket qua tu dong ngay {}", deliveryDate);
     }
 
     // ==================== CN-04-07 chot ke hoach ====================

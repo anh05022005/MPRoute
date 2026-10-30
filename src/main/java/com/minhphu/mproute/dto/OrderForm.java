@@ -2,9 +2,6 @@ package com.minhphu.mproute.dto;
 
 import com.minhphu.mproute.entity.Order;
 import com.minhphu.mproute.entity.enums.PaymentMethod;
-import jakarta.validation.constraints.DecimalMax;
-import jakarta.validation.constraints.DecimalMin;
-import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
 import lombok.Data;
@@ -48,26 +45,10 @@ public class OrderForm {
     private LocalDate deliveryDate = LocalDate.now().plusDays(1);
 
     /*
-     * Chep tu khach hang khi chon khach (BR02-07), sua duoc cho rieng don nay.
-     * Sua o day KHONG doi dia chi trong danh muc khach hang.
+     * KHONG co o dia chi giao va toa do: don luon giao dung dia chi trong danh muc khach
+     * hang, OrderService chep tu Customer luc luu (BR02-07). Bo chuc nang ghi de dia chi
+     * cho rieng don — xem docs/09. Muon giao cho khac thi sua danh muc khach hang.
      */
-    @NotBlank(message = "Vui lòng nhập địa chỉ giao hàng")
-    @Size(max = 255, message = "Địa chỉ tối đa 255 ký tự")
-    private String deliveryAddress;
-
-    /*
-     * BR02-08: ghi de dia chi thi bat buoc xac dinh lai toa do. Chan o OrderController
-     * bang cach doi chieu voi dia chi va toa do trong danh muc khach hang.
-     */
-    @NotNull(message = "Vui lòng nhập vĩ độ")
-    @DecimalMin(value = "-90.0", message = "Vĩ độ phải nằm trong khoảng -90 đến 90")
-    @DecimalMax(value = "90.0", message = "Vĩ độ phải nằm trong khoảng -90 đến 90")
-    private Double latitude;
-
-    @NotNull(message = "Vui lòng nhập kinh độ")
-    @DecimalMin(value = "-180.0", message = "Kinh độ phải nằm trong khoảng -180 đến 180")
-    @DecimalMax(value = "180.0", message = "Kinh độ phải nằm trong khoảng -180 đến 180")
-    private Double longitude;
 
     // Dien san theo khach hang, sua duoc cho rieng don (BR02-15).
     // Doi o nay la so tien phai thu doi theo (BR02-16), tinh lai o tang service
@@ -92,9 +73,6 @@ public class OrderForm {
         form.setCode(order.getCode());
         form.setCustomerId(order.getCustomer().getId());
         form.setDeliveryDate(order.getDeliveryDate());
-        form.setDeliveryAddress(order.getDeliveryAddress());
-        form.setLatitude(order.getLatitude());
-        form.setLongitude(order.getLongitude());
         form.setPaymentMethod(order.getPaymentMethod());
         form.setNote(order.getNote());
 

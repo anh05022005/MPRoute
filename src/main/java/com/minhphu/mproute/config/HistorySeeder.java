@@ -11,7 +11,6 @@ import com.minhphu.mproute.entity.Route;
 import com.minhphu.mproute.entity.RouteStop;
 import com.minhphu.mproute.entity.User;
 import com.minhphu.mproute.entity.Vehicle;
-import com.minhphu.mproute.entity.enums.AlgorithmType;
 import com.minhphu.mproute.entity.enums.EntityType;
 import com.minhphu.mproute.entity.enums.FailureReason;
 import com.minhphu.mproute.entity.enums.OrderStatus;
@@ -258,7 +257,7 @@ public class HistorySeeder implements CommandLineRunner {
 
         List<Long> vehicleIds = fleet.stream().map(Vehicle::getId).toList();
         RoutingService.RoutingOutcome outcome =
-                routingService.optimize(day, vehicleIds, AlgorithmType.OR_TOOLS, dispatcherId);
+                routingService.optimize(day, vehicleIds, dispatcherId);
 
         /*
          * Con don chua xep thi confirmPlan se tu choi chot (dung theo CN-03-14), va ngay do
@@ -346,9 +345,6 @@ public class HistorySeeder implements CommandLineRunner {
         OrderForm form = new OrderForm();
         form.setCustomerId(customer.getId());
         form.setDeliveryDate(day);
-        form.setDeliveryAddress(customer.getAddress());
-        form.setLatitude(customer.getLatitude());
-        form.setLongitude(customer.getLongitude());
         form.setPaymentMethod(customer.getPaymentMethod());
 
         List<Product> pool = new ArrayList<>(products);

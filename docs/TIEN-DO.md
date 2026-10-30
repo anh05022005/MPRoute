@@ -29,7 +29,7 @@
 [ ] T12 Bao cao hoan chinh, slide, luyen van dap
 ```
 
-**14/14 test bắt buộc xanh** (`mvnw.cmd test` → **24 test**: 14 bắt buộc + 2 test cho
+**7/7 test bắt buộc xanh** (đã bỏ NN và 2-opt, xem `09` mục A7) (`mvnw.cmd test` → **18 test**: 7 bắt buộc + 1 test ETA cùng chỗ dừng + 2 test cho
 `VrpFileReader` + 7 test cho `StockSettlementPlanner` + 1 lần nạp Spring context).
 
 **Tồn kho thành phẩm vừa xong.** `products.stock_boxes` = số thùng *còn rảnh*; bảng thứ 17
@@ -86,13 +86,26 @@ chạy thử thật**. Làm được lúc nào cũng được, muộn nhất là
 | **BR07-03** tra SĐT chỉ hiện đơn 30 ngày gần nhất | Đơn cũ nhất mới là 13/08, chưa quá 30 ngày. Seed thêm một ngày thật xa là thử được |
 | **CN-04-08 gửi thư thật** | Mở năm dòng SMTP trong `application.properties`, đặt `MPROUTE_MAIL_USERNAME` / `MPROUTE_MAIL_PASSWORD` bằng mật khẩu ứng dụng Gmail, đổi email một khách thành email thật rồi chốt một tuyến. Nhánh ghi `notifications` và nội dung thư đã kiểm xong |
 | **BR02-11** đơn `ROUTED` ra đúng chữ MSG-07 | Nay đã có đơn `ROUTED` thật trong CSDL nên thử được ngay |
-| **Phân quyền tồn kho với vai trò `DISPATCHER`** (CN-01-10) | Mật khẩu tài khoản `dieuphoi` đã bị đổi, không đăng nhập được để thử. Cần đặt lại mật khẩu qua `/admin/users` rồi: vào `/admin/stock` phải thấy nút Nhập kho, **không** thấy nút Kiểm kê; gửi thẳng `POST /admin/stock/stocktake` → phải ra 403 |
 
 **Đã nghiệm thu bằng HTTP thật** (đăng nhập `admin`, Docker + MySQL bật): `/admin/stock` và
 `/admin/stock/movements` trả 200 và hiện đúng ba con số (SP001: còn rảnh 761 · cam kết 39 ·
 trong kho 800); nhập kho 100 thùng → tồn 761→861 và sổ có một dòng mới; hoàn tác dòng đó → tồn
 về 761, **dòng gốc vẫn còn** và dòng đảo trỏ về nó; hoàn tác lần hai bị chặn; hoàn tác một dòng
 `OUT` bị chặn vì là dòng hệ thống sinh. Cộng sổ khớp `stock_boxes` cho cả 5 sản phẩm.
+
+**Phân quyền tồn kho đã nghiệm thu xong** (đăng nhập `dieuphoi`, vai trò `DISPATCHER`):
+`/admin/stock` ra 200 và hiện **5 biểu mẫu Nhập kho, 0 biểu mẫu Kiểm kê**; gõ thẳng
+`POST /admin/stock/stocktake` → **403**, `POST /admin/stock/movements/1/reverse` → **403**, và
+trang 403 đúng là trang "Không đủ quyền" của hệ thống chứ không phải trang trắng hay lỗi 500
+(CN-00-04). Hai đường dành cho điều phối vẫn thông: `/admin/stock/movements` ra 200,
+`/admin/stock/movements/excel` trả `.xlsx` 4 764 byte.
+
+Để chắc 403 là do **thiếu quyền** chứ không phải do sai đường dẫn, gửi thêm
+`POST /admin/stock/receive` với `boxCount=0`: ra 302 kèm thông báo lỗi đỏ, **không** phải 403
+— tức là điều phối viên qua được cửa phân quyền rồi mới bị chặn ở tầng kiểm tra dữ liệu. Số
+dòng sổ kho trước và sau cả loạt thử đều là 13, không ghi thêm dòng nào.
+
+Vai trò `DRIVER` (`taixe01`) ra **403** ở cả `/admin/stock` và `/admin/stock/movements`.
 
 **Chưa mở file Excel bằng Excel thật.** Ba file `.xlsx` đã kiểm bằng chương trình: đúng
 định dạng zip OOXML, đúng tên trang tính, tiếng Việt có dấu không hỏng, số khớp với màn hình.

@@ -2,7 +2,6 @@ package com.minhphu.mproute.controller;
 
 import com.minhphu.mproute.dto.SettingsForm;
 import com.minhphu.mproute.entity.SystemParameter;
-import com.minhphu.mproute.entity.enums.AlgorithmType;
 import com.minhphu.mproute.service.SystemParameterService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Controller;
@@ -34,12 +33,6 @@ import org.springframework.security.access.prepost.PreAuthorize;
 public class SettingsController {
 
     private final SystemParameterService systemParameterService;
-
-    /** Do vao o chon cua tham so DEFAULT_ALGORITHM. */
-    @ModelAttribute("algorithms")
-    public AlgorithmType[] algorithms() {
-        return AlgorithmType.values();
-    }
 
     @GetMapping
     public String edit(Model model) {

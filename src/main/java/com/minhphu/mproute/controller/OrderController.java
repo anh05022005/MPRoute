@@ -39,7 +39,6 @@ import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Objects;
 import java.util.Optional;
 import java.util.stream.Collectors;
 
@@ -58,8 +57,7 @@ public class OrderController {
 
     private static final int PAGE_SIZE = 15;
 
-    // Bao layout.html nap Leaflet va JavaScript tinh tong cho man hinh nay
-    private static final String NEEDS_MAP = "needsMap";
+    // Bao layout.html nap JavaScript tinh tong cho man hinh nay
     private static final String NEEDS_ORDER_JS = "needsOrderJs";
 
     private static final String VIEW_FORM = "orders/order-form";
@@ -383,8 +381,8 @@ public class OrderController {
                             + "Vui lòng chọn sản phẩm và nhập số thùng lớn hơn 0.");
         }
 
-        if (form.getCustomerId() != null) {
-            validateAddressOverride(form, binding);
+        if (form.getCustomerId() != null && !customerRepository.existsById(form.getCustomerId())) {
+            binding.rejectValue("customerId", "customerNotFound", "Không tìm thấy khách hàng đã chọn.");
         }
 
         // BR02-05: chan don khong xe nao cho noi. Kiem sau cung vi phai co dong chi tiet
@@ -431,32 +429,6 @@ public class OrderController {
                 .ifPresent(message -> binding.reject("stockShortage", message));
     }
 
-    /**
-     * BR02-07 / BR02-08 — ghi de dia chi cho rieng don thi phai xac dinh lai toa do.
-     *
-     * Ly do: dia chi chi la chuoi chu, THUAT TOAN chi doc toa do. Doi chu ma giu nguyen
-     * toa do cu thi don van duoc giao ve dung dia chi cu, ma man hinh lai hien dia chi moi —
-     * sai kieu nguy hiem nhat vi khong ai nhin ra.
-     */
-    private void validateAddressOverride(OrderForm form, BindingResult binding) {
-        Customer customer = customerRepository.findById(form.getCustomerId()).orElse(null);
-        if (customer == null) {
-            binding.rejectValue("customerId", "customerNotFound", "Không tìm thấy khách hàng đã chọn.");
-            return;
-        }
-
-        boolean addressChanged = form.getDeliveryAddress() != null
-                && !form.getDeliveryAddress().trim().equalsIgnoreCase(customer.getAddress().trim());
-        boolean coordinatesUnchanged = Objects.equals(form.getLatitude(), customer.getLatitude())
-                && Objects.equals(form.getLongitude(), customer.getLongitude());
-
-        if (addressChanged && coordinatesUnchanged) {
-            binding.rejectValue("deliveryAddress", "coordinatesRequired",
-                    "Đã sửa địa chỉ giao cho riêng đơn này thì phải xác định lại tọa độ: "
-                            + "bấm \"Tìm tọa độ từ địa chỉ\" hoặc ghim thẳng lên bản đồ.");
-        }
-    }
-
     // ==================== Ham dung chung ====================
 
     /** Do danh sach khach, san pham va cac co bao layout nap thu vien vao model. */
@@ -466,7 +438,6 @@ public class OrderController {
         // So thung con ranh theo productId, de form hien ngay canh o chon san pham —
         // dieu phoi vien dang nghe dien thoai can tra loi "hang con khong" tai cho
         model.addAttribute("availableStock", stockService.availableBoxesByProduct());
-        model.addAttribute(NEEDS_MAP, true);
         model.addAttribute(NEEDS_ORDER_JS, true);
     }
 

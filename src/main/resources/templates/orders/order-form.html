@@ -85,56 +85,14 @@
 
             <!-- ============ Dia chi giao ============ -->
             <div class="col-12">
-                <label for="address" class="form-label">Địa chỉ giao <span class="text-danger">*</span></label>
+                <label for="delivery-address" class="form-label">Địa chỉ giao</label>
                 <!--
-                    id="address" (khong phai deliveryAddress) la CO Y: manh ban do dung chung
-                    fragments/map-picker tim o nhap theo dung ba id address / latitude / longitude.
-                    Ten gui len may chu van la deliveryAddress.
-
-                    De readonly cho toi khi tich o "ghi de": dia chi mac dinh chep tu danh muc
-                    khach hang (BR02-07), sua tay ma quen doi toa do la don di sai cho (BR02-08).
+                    Chi de NHIN, khong co thuoc tinh name nen khong gui len may chu: dia chi va
+                    toa do cua don luon chep tu danh muc khach hang o OrderService (BR02-07).
+                    order-form.js dien o nay khi chon khach. Can giao cho khac thi sua danh muc.
                 -->
-                <input type="text" id="address" name="deliveryAddress" class="form-control"
-                       th:value="*{deliveryAddress}"
-                       th:classappend="${#fields.hasErrors('deliveryAddress')} ? 'is-invalid'"
-                       readonly>
-                <div class="invalid-feedback d-block" th:if="${#fields.hasErrors('deliveryAddress')}"
-                     th:errors="*{deliveryAddress}">Lỗi</div>
-
-                <div class="form-check mt-2">
-                    <input class="form-check-input" type="checkbox" id="override-address">
-                    <label class="form-check-label small" for="override-address">
-                        Ghi đè địa chỉ cho riêng đơn này (giao nhờ sang chỗ khác) —
-                        <strong>phải xác định lại tọa độ</strong>
-                    </label>
-                </div>
-            </div>
-
-            <!--
-                Khoi toa do + ban do. An di khi khong ghi de dia chi, vi truong hop thuong gap
-                la giao dung dia chi trong danh muc, khong ai phai dong toi.
-            -->
-            <div class="col-12 d-none" id="coordinates-block">
-                <div class="row g-3">
-                    <div class="col-md-3">
-                        <label for="latitude" class="form-label">Vĩ độ <span class="text-danger">*</span></label>
-                        <input type="number" step="any" id="latitude" class="form-control" th:field="*{latitude}"
-                               th:classappend="${#fields.hasErrors('latitude')} ? 'is-invalid'" readonly>
-                        <div class="invalid-feedback d-block" th:if="${#fields.hasErrors('latitude')}"
-                             th:errors="*{latitude}">Lỗi</div>
-                    </div>
-                    <div class="col-md-3">
-                        <label for="longitude" class="form-label">Kinh độ <span class="text-danger">*</span></label>
-                        <input type="number" step="any" id="longitude" class="form-control" th:field="*{longitude}"
-                               th:classappend="${#fields.hasErrors('longitude')} ? 'is-invalid'" readonly>
-                        <div class="invalid-feedback d-block" th:if="${#fields.hasErrors('longitude')}"
-                             th:errors="*{longitude}">Lỗi</div>
-                    </div>
-                </div>
-
-                <div class="mt-3">
-                    <div th:replace="~{fragments/map-picker :: map-picker}"></div>
-                </div>
+                <input type="text" id="delivery-address" class="form-control"
+                       placeholder="Chọn khách hàng để hiện địa chỉ" readonly>
             </div>
         </div>
 
@@ -213,14 +171,14 @@
                 <th></th>
             </tr>
             <tr>
-                <th colspan="5" class="text-end">Số tiền phải thu khi giao (BR02-14)</th>
+                <th colspan="5" class="text-end">Số tiền phải thu khi giao</th>
                 <th class="num" id="amount-to-collect">—</th>
                 <th></th>
             </tr>
             </tfoot>
         </table>
 
-        <button type="button" class="btn btn-sm btn-outline-secondary" id="add-line">+ Thêm dòng</button>
+        <button type="button" class="btn btn-sm btn-outline-secondary" id="add-line">+ Thêm sản phẩm</button>
 
         <div class="row g-3 mt-1">
             <div class="col-md-8">

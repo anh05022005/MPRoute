@@ -18,15 +18,15 @@
 <ul th:fragment="tabs(active, fromDate, toDate)" class="report-tabs">
     <li>
         <a th:href="@{/reports/orders(fromDate=${fromDate}, toDate=${toDate})}"
-           th:classappend="${active == 'orders'} ? 'is-active'">RPT-01 · Đơn hàng</a>
+           th:classappend="${active == 'orders'} ? 'is-active'">Đơn hàng</a>
     </li>
     <li>
         <a th:href="@{/reports/delivery(fromDate=${fromDate}, toDate=${toDate})}"
-           th:classappend="${active == 'delivery'} ? 'is-active'">RPT-02 · Tỷ lệ giao thành công</a>
+           th:classappend="${active == 'delivery'} ? 'is-active'">Tỷ lệ giao thành công</a>
     </li>
     <li>
         <a th:href="@{/reports/optimization(fromDate=${fromDate}, toDate=${toDate})}"
-           th:classappend="${active == 'optimization'} ? 'is-active'">RPT-03 · Hiệu quả tối ưu</a>
+           th:classappend="${active == 'optimization'} ? 'is-active'">Hiệu quả tối ưu</a>
     </li>
 </ul>
 

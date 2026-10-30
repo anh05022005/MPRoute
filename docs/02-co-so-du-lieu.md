@@ -185,7 +185,7 @@ Index: `idx_customers_phone` trên `phone` (phục vụ tra cứu).
 | `code` | VARCHAR(20) | NOT NULL, UNIQUE | `MP` + yyMMdd + 4 số |
 | `customer_id` | BIGINT | FK → `customers.id`, NOT NULL | |
 | `delivery_date` | DATE | NOT NULL | |
-| `delivery_address` | VARCHAR(255) | NOT NULL | Chép từ khách, cho phép ghi đè |
+| `delivery_address` | VARCHAR(255) | NOT NULL | Chép từ khách lúc lưu đơn, không ghi đè (`09` mục A6) |
 | `latitude` | DECIMAL(10,7) | NOT NULL | Chép hoặc geocode lại |
 | `longitude` | DECIMAL(10,7) | NOT NULL | |
 | `total_weight` | DECIMAL(10,2) | NOT NULL | Hệ thống tính, không sửa tay |

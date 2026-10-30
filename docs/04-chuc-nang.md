@@ -128,11 +128,11 @@ Leaflet nền OpenStreetMap. Kho là ô vuông đậm, khách là ghim. Rê chu�
 ### ★ CN-03-03 Chọn xe khả dụng
 Danh sách checkbox các xe khả dụng cho ngày giao đang chọn (CBR-05: không bảo trì, chưa có tuyến chốt trong ngày đó) kèm tải trọng, thể tích. Hiện tổng sức chứa đã chọn để đối chiếu tổng nhu cầu.
 
-### ★ CN-03-04 Chọn thuật toán
-Dropdown: `Nearest Neighbor`, `Nearest Neighbor + 2-opt` (mặc định). **Chức năng này để demo so sánh trước hội đồng, bắt buộc có.**
+### ~~CN-03-04 Chọn thuật toán~~ — đã bỏ
+Hệ thống chỉ còn bộ giải OR-Tools nên không có ô chọn thuật toán, chỉ có nút **Chạy tối ưu** (`09` mục A7).
 
-### ★ CN-03-05 Chuẩn bị ma trận khoảng cách
-Gọi `DistanceMatrixService`. Chạy lần hai với cùng tập điểm → không gọi OSRM nữa (kiểm bằng log), chứng tỏ cache hoạt động.
+### ~~CN-03-05 Chuẩn bị ma trận khoảng cách~~ — bỏ nút riêng
+Không còn nút trên màn hình: bấm **Chạy tối ưu** đã tự nạp ma trận qua `DistanceMatrixService` (bước B5). Bộ nhớ đệm vẫn chạy — chạy lần hai với cùng tập điểm thì log không có dòng gọi OSRM nào (`09` mục A8).
 
 ### ★ CN-03-06 Chạy thuật toán
 Bấm nút → sinh các tuyến. Kiểm: **không tuyến nào vượt tải trọng hoặc thể tích**, mọi đơn đều được gán (nếu đủ sức chứa).
@@ -358,8 +358,8 @@ Class có `main()`, chạy được không cần khởi động web.
 ### ★ CN-09-02 Đọc bộ dữ liệu chuẩn Augerat
 Đọc file định dạng `.vrp`, chạy thuật toán, in kết quả và gap so với lời giải tối ưu đã công bố.
 
-### ★ CN-09-03 Bảng so sánh thuật toán
-Chạy cùng dữ liệu qua `NN` và `NN_2OPT`, xuất bảng: quãng đường, mức cải thiện, thời gian chạy.
+### ~~CN-09-03 Bảng so sánh thuật toán~~ — đã bỏ
+Không còn thuật toán tự cài đặt để so với OR-Tools (`09` mục A7). Chương 4 dùng bảng gap của CN-09-02 và hai mốc A, B của CN-03-08.
 
 ### ○ CN-09-04 Chạy thử nhiều lần lấy trung bình
 

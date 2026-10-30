@@ -1,7 +1,5 @@
 package com.minhphu.mproute.service.optimization;
 
-import com.minhphu.mproute.service.optimization.heuristic.NN2OptSolver;
-import com.minhphu.mproute.service.optimization.heuristic.NearestNeighborSolver;
 import com.minhphu.mproute.service.optimization.ortools.OrToolsSolver;
 
 import java.time.LocalDateTime;
@@ -36,7 +34,7 @@ import java.util.Random;
  * Lop nay lam ba viec, ca ba deu can den het do an:
  *   1. Go loi nhanh o tuan 6-7: tach bach loi THUAT TOAN voi loi Spring / JPA / giao dien.
  *      Tuyen ra sai o day thi chac chan la thuat toan sai, khong phai tai cai khac.
- *   2. In BANG SO SANH BON MOC — chinh la bang so lieu cua chuong 4 bao cao.
+ *   2. In BANG SO SANH voi hai moc A, B — chinh la bang so lieu cua chuong 4 bao cao.
  *   3. Tuan 10 dung lai chinh lop nay de chay benchmark Augerat.
  *
  * Du lieu duoi day CHEP TU docs/08-du-lieu-mau.md — 8 don cua ngay mai va 3 xe.
@@ -90,8 +88,6 @@ public final class AlgorithmRunner {
          * sau dong nay, thuat toan chi tra matrix[i][j] chu khong goi lai ham tinh khoang
          * cach nua (dieu cam so 4 trong quy uoc ky thuat).
          *
-         * Ma tran Haversine von da doi xung san, nen 2-opt dung duoc ngay. Ma tran OSRM
-         * that thi phai qua buoc doi xung hoa cua DistanceMatrixService truoc.
          */
         double[][] matrix = DistanceCalculator.buildMatrix(
                 allPoints, new HaversineDistanceCalculator(HAVERSINE_DETOUR_FACTOR));
@@ -101,14 +97,6 @@ public final class AlgorithmRunner {
         // Diem giao = toan bo danh sach TRU kho o dau
         List<OptimizationPoint> deliveryPoints = allPoints.subList(1, allPoints.size());
 
-        /*
-         * Chay ba bo giai tren CUNG mot ma tran va CUNG doi xe. Moi ben nhan mot ban sao
-         * danh sach diem — cac bo giai ghi thu tu diem vao tuyen cua rieng minh.
-         */
-        RoutingResult nearestNeighborResult =
-                new NearestNeighborSolver().solve(new ArrayList<>(deliveryPoints), vehicles, matrix);
-        RoutingResult heuristicResult =
-                new NN2OptSolver().solve(new ArrayList<>(deliveryPoints), vehicles, matrix);
         RoutingResult orToolsResult =
                 new OrToolsSolver().solve(new ArrayList<>(deliveryPoints), vehicles, matrix);
 
@@ -122,7 +110,7 @@ public final class AlgorithmRunner {
         printRoutes("KET QUA OR-TOOLS (bo giai chinh - he thong chay bang cai nay)",
                 orToolsResult, matrix);
 
-        printComparisonTable(nearestNeighborResult, heuristicResult, orToolsResult, matrix);
+        printComparisonTable(orToolsResult);
     }
 
     // ==================== In ket qua ====================
@@ -223,13 +211,9 @@ public final class AlgorithmRunner {
      * Bang so lieu cua chuong 4 bao cao.
      *
      * Cot "giam" deu lay MOC A lam goc, vi moc A la cach Minh Phu dang lam that — do la
-     * con so tra loi cau "de tai giai quyet duoc gi". Rieng dong OR-Tools in them khoang
-     * cach giua ban tu cai dat va bo giai thu vien.
+     * con so tra loi cau "de tai giai quyet duoc gi".
      */
-    private static void printComparisonTable(RoutingResult nearestNeighborResult,
-                                             RoutingResult heuristicResult,
-                                             RoutingResult orToolsResult,
-                                             double[][] matrix) {
+    private static void printComparisonTable(RoutingResult orToolsResult) {
 
         double baselineA = orToolsResult.getBaselineADistance();
         double baselineB = orToolsResult.getBaselineBDistance();
@@ -247,63 +231,12 @@ public final class AlgorithmRunner {
                 orToolsResult.assignedPointCount(), baselineA, baselineA, -1);
         printComparisonRow("Moc B - dung cach chia xe, sai thu tu",
                 orToolsResult.assignedPointCount(), baselineB, baselineA, -1);
-        printSolverRow("Nearest Neighbor (giai doan 1)", nearestNeighborResult, matrix);
-        printSolverRow("NN + 2-opt tu cai dat", heuristicResult, matrix);
-        printSolverRow("OR-Tools (bo giai chinh)", orToolsResult, matrix);
+        printComparisonRow("OR-Tools (bo giai chinh)", orToolsResult.assignedPointCount(),
+                orToolsResult.getOptimizedDistance(), baselineA, orToolsResult.getExecutionTimeMs());
 
         System.out.println("-".repeat(78));
-
-        /*
-         * CANH BAO TRUNG THUC — day la cho de tu lua nhat cua ca bang.
-         *
-         * Hai bo giai phu khac tap diem thi hai con so km KHONG dat canh nhau duoc: ben
-         * bo bot diem di dung nhien tuyen ngan hon, khong phai vi thuat toan tot hon.
-         * Voi bo du lieu mau docs/08 thi Nearest Neighbor bo lai dung mot diem, nen neu
-         * cu lay 40 km cua no dem so voi 51 km cua OR-Tools thi ket luan se nguoc hoan
-         * toan voi su that.
-         *
-         * Vi vay cot "Giam" cua moi dong tinh theo moc A cua RIENG tap diem dong do, va
-         * hai dong duoi chi in ra khi hai ben that su phu cung tap diem.
-         */
-        boolean sameCoverage =
-                nearestNeighborResult.assignedPointCount() == orToolsResult.assignedPointCount()
-                        && heuristicResult.assignedPointCount() == orToolsResult.assignedPointCount();
-
-        System.out.printf(Locale.ROOT,
-                "So diem duoc gan tren tong %d: NN %d, NN+2-opt %d, OR-Tools %d%n",
-                fullPointCount,
-                nearestNeighborResult.assignedPointCount(),
-                heuristicResult.assignedPointCount(),
-                orToolsResult.assignedPointCount());
-
-        if (!sameCoverage) {
-            System.out.println();
-            System.out.println("CANH BAO: ba bo giai KHONG phu cung tap diem, nen cot Km cua chung");
-            System.out.println("khong so sanh truc tiep voi nhau duoc. Cot Giam da tinh rieng theo moc A");
-            System.out.println("cua tung tap diem. Muon so cong bang thi chay lai voi doi xe du suc chua");
-            System.out.println("cho ca ba ben xep het diem - do chinh la viec cua test");
-            System.out.println("bothSolversCoverTheSamePointSet.");
-            return;
-        }
-
-        System.out.printf(Locale.ROOT,
-                "2-opt cai thien them %.1f%% so voi Nearest Neighbor thuan%n",
-                MetricsService.reductionPercent(nearestNeighborResult.getOptimizedDistance(),
-                        heuristicResult.getOptimizedDistance()));
-        System.out.printf(Locale.ROOT,
-                "NN + 2-opt con dai hon OR-Tools %.1f%% (day la gioi han cua ban tu cai dat)%n",
-                MetricsService.gapPercent(heuristicResult.getOptimizedDistance(),
-                        orToolsResult.getOptimizedDistance()));
-    }
-
-    /**
-     * Mot dong bo giai. Muc giam tinh theo moc A cua CHINH tap diem ma bo giai nay phu,
-     * chu khong theo moc A chung — xem comment ve canh bao o ham goi.
-     */
-    private static void printSolverRow(String label, RoutingResult result, double[][] matrix) {
-        double ownBaselineA = MetricsService.baselineA(MetricsService.assignedPoints(result), matrix);
-        printComparisonRow(label, result.assignedPointCount(), result.getOptimizedDistance(),
-                ownBaselineA, result.getExecutionTimeMs());
+        System.out.printf(Locale.ROOT, "So diem duoc gan: %d tren tong %d%n",
+                orToolsResult.assignedPointCount(), fullPointCount);
     }
 
     private static void printComparisonRow(String label, int pointCount, double meters,

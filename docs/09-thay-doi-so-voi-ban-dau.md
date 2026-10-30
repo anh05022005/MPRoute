@@ -205,6 +205,55 @@ giai đoạn muộn của đồ án.
 | Số thùng còn rảnh hiện trên form tạo đơn chỉ là **tham khảo** | Hai đơn chưa duyệt cùng lúc đều thấy cùng một con số. Cửa chặn thật ở bước duyệt — có chủ ý, xem quyết định 3 |
 | Không có lô sản xuất, hạn dùng, nhiều kho | Ngoài phạm vi. Nhiều kho còn là bài toán MDVRP, khác hẳn |
 
+### A6. Bỏ ghi đè địa chỉ giao cho riêng từng đơn
+
+Bản gốc (BR02-07, BR02-08) cho điều phối viên tích ô *"Ghi đè địa chỉ cho riêng đơn này"* rồi
+xác định lại tọa độ trên bản đồ. Đã bỏ: địa chỉ và tọa độ của đơn **luôn chép từ danh mục khách
+hàng**, máy chủ tự chép trong `OrderService` chứ không đọc từ form.
+
+Lý do:
+
+- Khách của Minh Phú là tạp hóa cố định, giao nhờ sang chỗ khác là chuyện hiếm. Đổi lại, ô tích
+  đó là cửa để gõ sai địa chỉ mà không ai để ý, và mỗi lần ghi đè là thêm một tọa độ chưa có
+  trong `distance_matrix` phải gọi OSRM.
+- Chặn ở máy chủ chứ không chỉ ẩn ô trên giao diện: form không còn trường địa chỉ, tọa độ nên
+  request gửi tay cũng không đổi được điểm giao.
+- Đơn vẫn **chép** địa chỉ sang cột của mình chứ không đọc thẳng từ `customers`: sau này sửa
+  danh mục khách thì đơn đã giao không bị đổi theo, báo cáo lịch sử vẫn đúng.
+
+Cần giao chỗ khác thì sửa địa chỉ trong danh mục khách hàng (quản trị viên), rồi mới tạo đơn.
+
+### A7. Bỏ hai bộ giải tự cài đặt, chỉ giữ OR-Tools
+
+Bản trước có ba bộ giải chọn được trên màn hình Phân tuyến: OR-Tools (chính), Nearest Neighbor
+và Nearest Neighbor + 2-opt (tự cài đặt, làm mốc so sánh ở chương 4). Đã **xóa hẳn** hai bộ
+giải tự cài đặt cùng các test của chúng, theo quyết định của người làm đồ án. Màn hình Phân
+tuyến bỏ ô chọn thuật toán, chỉ còn nút **Chạy tối ưu**; tham số `DEFAULT_ALGORITHM` cũng bỏ.
+
+| Thay đổi | Chi tiết |
+|---|---|
+| Đã xóa | `NearestNeighborSolver`, `TwoOptImprover`, `NN2OptSolver` và 3 lớp test của chúng |
+| Giữ lại | `CheapestInsertion` trong `optimization/heuristic/` — màn Sự cố dùng để chèn đơn sang tuyến khác (CN-06-08) |
+| Chức năng bỏ | CN-03-04 (chọn thuật toán), CN-09-03 (bảng so sánh NN với NN + 2-opt) |
+| Test bắt buộc | Từ 14 còn 7. Hai ràng buộc sức chứa do `orToolsRespectsBothCapacityDimensions` canh |
+| Chương 4 | Còn bảng gap OR-Tools trên 10 bài Augerat (CN-09-02) và hai mốc A, B (CN-03-08). Mất bảng "tự cài đặt so với thư viện" |
+| Dữ liệu cũ | Enum `AlgorithmType` vẫn giữ `NN`, `NN_2OPT` làm nhãn cho các dòng đã lưu trong `routes` và `optimization_results`. Không có bộ giải nào phía sau, không hiện ở đâu để chọn |
+
+Câu hội đồng có thể hỏi: *"Vậy em tự cài đặt cái gì?"* Trả lời: mô hình hóa bài toán vào
+OR-Tools (hai Dimension sức chứa, `addDisjunction` cho đơn không xếp được), ma trận khoảng cách
+OSRM có cache và đối xứng hóa, tính ETA, Cheapest Insertion cho xử lý sự cố, và toàn bộ nghiệp
+vụ quanh tuyến (chốt, kéo thả chỉnh tay, giao hàng, sự cố).
+
+### A8. Bỏ nút "Chuẩn bị ma trận khoảng cách"
+
+Nút này (CN-03-05) tính trước ma trận OSRM cho tập điểm của ngày đang xem rồi lưu vào
+`distance_matrix`. Đã bỏ nút và endpoint `/routing/prepare-matrix`: với điều phối viên nó là
+một nút kỹ thuật khó hiểu, mà bấm **Chạy tối ưu** đã tự làm đúng bước đó (B5 trong
+`RoutingService`) — cặp điểm nào chưa có trong bộ nhớ đệm thì lấy từ OSRM, có rồi thì dùng lại.
+
+Bộ nhớ đệm **không đổi gì**. Chứng minh trước hội đồng bằng log: chạy tối ưu hai lần liên tiếp
+cùng một ngày, lần hai không có dòng gọi OSRM nào và thời gian chạy ngắn hẳn.
+
 ---
 
 ## B. Sửa lỗi logic tìm ra khi rà soát đặc tả

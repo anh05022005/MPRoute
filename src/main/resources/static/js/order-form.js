@@ -2,7 +2,7 @@
  * Man hinh don hang (CN-02-02, CN-02-03, CN-02-06).
  *
  * Ba viec:
- *   1. Chon khach -> tu dien dia chi, toa do, hinh thuc thanh toan (BR02-07)
+ *   1. Chon khach -> hien dia chi, tu dien hinh thuc thanh toan (BR02-07)
  *   2. Go so thung -> tong kg / m3 / tien cap nhat NGAY, khong tai lai trang (CN-02-03)
  *   3. Bam "Sao chep" o trang chi tiet -> chep khoi tom tat de dan sang Zalo (CN-02-06)
  *
@@ -38,77 +38,41 @@
 
     function initOrderForm() {
         var customerSelect = document.getElementById('customerId');
-        var addressInput = document.getElementById('address');
-        var latitudeInput = document.getElementById('latitude');
-        var longitudeInput = document.getElementById('longitude');
+        var addressInput = document.getElementById('delivery-address');
         var paymentSelect = document.getElementById('paymentMethod');
         var deliveryNoteBox = document.getElementById('customer-delivery-note');
-        var overrideCheckbox = document.getElementById('override-address');
-        var coordinatesBlock = document.getElementById('coordinates-block');
         var linesBody = document.getElementById('order-lines-body');
         var addLineButton = document.getElementById('add-line');
 
-        // --- Chon khach hang thi dien san moi thu (BR02-07) ---
-        customerSelect.addEventListener('change', function () {
+        /*
+         * Hien dia chi va ghi chu giao hang cua khach dang chon. O dia chi chi de nhin:
+         * may chu tu chep dia chi va toa do tu danh muc khi luu (BR02-07).
+         */
+        function showCustomerInfo() {
             var row = customerSelect.options[customerSelect.selectedIndex];
-            var address = row.getAttribute('data-address');
-
-            if (!address) {           // chon lai dong "— Chon khach hang —"
-                addressInput.value = '';
-                latitudeInput.value = '';
-                longitudeInput.value = '';
-                deliveryNoteBox.textContent = '';
-                return;
-            }
-
-            addressInput.value = address;
-            latitudeInput.value = row.getAttribute('data-latitude');
-            longitudeInput.value = row.getAttribute('data-longitude');
-            paymentSelect.value = row.getAttribute('data-payment-method');
-
-            /*
-             * Gan .value bang JavaScript KHONG tu phat su kien change. Ma location-picker.js
-             * dua vao dung su kien do de di chuyen ghim, nen phai phat tay mot cai —
-             * khong co dong nay thi ghim van nam o kho trong khi hai o toa do da doi.
-             */
-            latitudeInput.dispatchEvent(new Event('change'));
+            addressInput.value = row.getAttribute('data-address') || '';
 
             // Ghi chu giao hang cua khach (BR01-07): "chi nhan buoi sang truoc 11h"
             var note = row.getAttribute('data-delivery-note');
             deliveryNoteBox.textContent = note ? 'Ghi chú của khách: ' + note : '';
+        }
 
+        // --- Chon khach hang thi dien san moi thu (BR02-07) ---
+        customerSelect.addEventListener('change', function () {
+            showCustomerInfo();
+
+            var row = customerSelect.options[customerSelect.selectedIndex];
+            var paymentMethod = row.getAttribute('data-payment-method');
+            if (paymentMethod) {
+                paymentSelect.value = paymentMethod;
+            }
             recalculateAll();      // doi hinh thuc thanh toan thi so tien phai thu doi theo
         });
 
-        // --- Ghi de dia chi cho rieng don nay (BR02-08) ---
-        overrideCheckbox.addEventListener('change', function () {
-            var unlocked = overrideCheckbox.checked;
-            addressInput.readOnly = !unlocked;
-            latitudeInput.readOnly = !unlocked;
-            longitudeInput.readOnly = !unlocked;
-            coordinatesBlock.classList.toggle('d-none', !unlocked);
-
-            if (unlocked) {
-                addressInput.focus();
-                /*
-                 * Leaflet do kich thuoc khung ban do luc khoi tao. Khung dang bi an thi
-                 * kich thuoc do duoc la 0, hien ra sau se chi thay mot mang xam.
-                 * Ban do tu goi invalidateSize khi cua so doi kich thuoc (tuy chon
-                 * trackResize bat san), nen phat mot su kien resize la no ve lai dung.
-                 */
-                window.dispatchEvent(new Event('resize'));
-            }
-        });
-
-        // Sau khi may chu tra ve form kem loi, giu nguyen trang thai da ghi de dia chi:
-        // toa do khac toa do trong danh muc nghia la nguoi dung dang ghi de
-        if (addressInput.value && customerSelect.value) {
-            var selectedOption = customerSelect.options[customerSelect.selectedIndex];
-            if (selectedOption.getAttribute('data-address') !== addressInput.value) {
-                overrideCheckbox.checked = true;
-                overrideCheckbox.dispatchEvent(new Event('change'));
-            }
-        }
+        // Mo man hinh sua don, hoac may chu tra form kem loi: khach da chon san nen phai tu
+        // hien dia chi. Goi showCustomerInfo chu khong phat su kien change, vi change se
+        // ghi de hinh thuc thanh toan nguoi dung da chon cho rieng don nay (BR02-15)
+        showCustomerInfo();
 
         // --- Cac dong chi tiet ---
         addLineButton.addEventListener('click', function () {
@@ -117,6 +81,7 @@
 
             newRow.querySelector('.line-product').selectedIndex = 0;
             newRow.querySelector('.line-box-count').value = '';
+            delete newRow.dataset.capped;
             linesBody.appendChild(newRow);
 
             reindexRows();
@@ -128,8 +93,38 @@
          * JavaScript sau khi trang da tai xong, gan truc tiep thi dong moi khong co
          * su kien nao ca.
          */
-        linesBody.addEventListener('change', recalculateAll);
-        linesBody.addEventListener('input', recalculateAll);
+        linesBody.addEventListener('change', onLineEdited);
+        linesBody.addEventListener('input', onLineEdited);
+
+        function onLineEdited(event) {
+            var row = event.target.closest('.order-line');
+            if (row) {
+                capBoxCountAtStock(row);
+            }
+            recalculateAll();
+        }
+
+        /*
+         * Go qua so thung con trong kho thi keo ve dung bang so do, va danh dau dong de
+         * hien loi nhac. Doi sang san pham it hang hon cung keo ve nhu vay. Day chi la
+         * chan tren giao dien cho tien: duyet don van kiem lai ton kho that o may chu
+         * (MSG-17), vi don cho duyet chua giu hang.
+         */
+        function capBoxCountAtStock(row) {
+            var input = row.querySelector('.line-box-count');
+            var productSelect = row.querySelector('.line-product');
+            var stock = parseInt(productSelect.options[productSelect.selectedIndex].getAttribute('data-stock'), 10);
+            var boxCount = parseInt(input.value, 10);
+
+            if (!isNaN(stock) && !isNaN(boxCount) && boxCount > stock) {
+                input.value = stock;
+                row.dataset.capped = 'true';
+            } else if (isNaN(stock) || isNaN(boxCount) || boxCount < stock) {
+                // Bang dung so ton thi giu loi nhac: su kien change luc roi o nhap ban
+                // ra sau input, xoa o day thi loi vua hien da bien mat
+                delete row.dataset.capped;
+            }
+        }
 
         linesBody.addEventListener('click', function (event) {
             if (!event.target.classList.contains('remove-line')) {
@@ -187,8 +182,10 @@
                 return;
             }
 
-            if (!isNaN(boxCount) && boxCount > stock) {
-                hint.textContent = 'Chỉ còn rảnh ' + stock + ' thùng — sẽ bị chặn khi duyệt đơn';
+            if (row.dataset.capped === 'true') {
+                hint.textContent = (stock === 0)
+                    ? 'Sản phẩm này đã hết hàng trong kho.'
+                    : 'Chỉ còn ' + stock + ' thùng trong kho. Vui lòng nhập tối đa ' + stock + '.';
                 hint.className = 'line-stock text-danger d-block mt-1';
             } else {
                 hint.textContent = 'Còn rảnh ' + stock + ' thùng';
@@ -298,6 +295,19 @@
             resultsBox.innerHTML = '';
             resultsBox.classList.add('d-none');
         }
+
+        /*
+         * Dong hop thoai bang bat ky cach nao (nut X, nut Dong, phim Esc, bam ra ngoai) thi
+         * xoa trang. Bootstrap chi AN hop thoai chu khong dung lai, nen khong xoa thi lan mo
+         * sau van con du lieu cua khach truoc — de luu nham thanh khach trung.
+         * Bat su kien hidden.bs.modal la bat duoc ca bon cach dong trong mot cho.
+         */
+        modal.addEventListener('hidden.bs.modal', function () {
+            customerForm.reset();
+            hideErrors();
+            hideResults();
+            statusLabel.textContent = '';
+        });
 
         // ---- Tim toa do theo dia chi (BR01-05, BR01-06) ----
         searchButton.addEventListener('click', function () {
@@ -417,9 +427,7 @@
             // thanh toan va tinh lai so tien phai thu
             customerSelect.dispatchEvent(new Event('change'));
 
-            customerForm.reset();
-            hideResults();
-            statusLabel.textContent = '';
+            // Xoa trang form do su kien hidden.bs.modal o tren lo
             bootstrap.Modal.getInstance(modal).hide();
 
             // Trung so dien thoai chi la canh bao mem, khach van duoc luu

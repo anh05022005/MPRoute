@@ -78,9 +78,8 @@ public class VrpInstance {
     /**
      * Danh sach diem giao (bo kho o dau), tra ve BAN SAO MOI moi lan goi.
      *
-     * Phai la ban sao vi NearestNeighborSolver xoa dan phan tu khoi danh sach no nhan
-     * duoc. Chay ba bo giai tren cung mot danh sach thi bo thu hai nhan vao mot danh
-     * sach da rong — va no se bao "khong co diem nao" chu khong bao loi, rat kho truy.
+     * Phai la ban sao vi bo giai ghi thu tu diem vao doi tuong tuyen cua no. Chay lai
+     * nhieu lan tren cung mot danh sach thi lan sau nhan dau vao da bi lan truoc dong vao.
      */
     public List<OptimizationPoint> deliveryPoints() {
         return new ArrayList<>(points.subList(1, points.size()));

@@ -69,7 +69,7 @@ public class ReportExcelExporter {
 
             Sheet periods = workbook.createSheet("Đơn hàng theo kỳ");
             int rowIndex = writeTitle(periods, styles,
-                    "RPT-01 — Thống kê đơn hàng (" + report.grouping().getDisplayName().toLowerCase() + ")",
+                    "Thống kê đơn hàng (" + report.grouping().getDisplayName().toLowerCase() + ")",
                     fromDate, toDate, 5);
 
             rowIndex = writeHeader(periods, styles, rowIndex,
@@ -94,7 +94,7 @@ public class ReportExcelExporter {
             autoSize(periods, 5);
 
             Sheet products = workbook.createSheet("Số thùng theo sản phẩm");
-            int productRow = writeTitle(products, styles, "RPT-01 — Số thùng theo sản phẩm",
+            int productRow = writeTitle(products, styles, "Số thùng theo sản phẩm",
                     fromDate, toDate, 6);
             productRow = writeHeader(products, styles, productRow,
                     "Mã", "Sản phẩm", "Số thùng", "Khối lượng (kg)", "Thể tích (m³)", "Số đơn có mặt");
@@ -112,7 +112,7 @@ public class ReportExcelExporter {
 
             return toBytes(workbook);
         } catch (IOException failed) {
-            throw new UncheckedIOException("Không tạo được file Excel cho RPT-01", failed);
+            throw new UncheckedIOException("Không tạo được file Excel báo cáo đơn hàng", failed);
         }
     }
 
@@ -124,7 +124,7 @@ public class ReportExcelExporter {
             Styles styles = new Styles(workbook);
 
             Sheet sheet = workbook.createSheet("Tỷ lệ giao thành công");
-            int rowIndex = writeTitle(sheet, styles, "RPT-02 — Tỷ lệ giao thành công",
+            int rowIndex = writeTitle(sheet, styles, "Tỷ lệ giao thành công",
                     fromDate, toDate, 3);
 
             /*
@@ -133,7 +133,7 @@ public class ReportExcelExporter {
              */
             Row formulaRow = sheet.createRow(rowIndex++);
             text(formulaRow, 0,
-                    "Tỷ lệ thành công = số đơn Đã giao ÷ tổng đơn đã phân tuyến (BR08-06). "
+                    "Tỷ lệ thành công = số đơn Đã giao ÷ tổng đơn đã phân tuyến. "
                             + "Đơn chờ duyệt và đơn đã hủy không nằm trong mẫu số.",
                     styles.note);
             sheet.addMergedRegion(new CellRangeAddress(formulaRow.getRowNum(), formulaRow.getRowNum(), 0, 2));
@@ -162,7 +162,7 @@ public class ReportExcelExporter {
             autoSize(sheet, 3);
 
             Sheet failures = workbook.createSheet("Lý do giao thất bại");
-            int failureRow = writeTitle(failures, styles, "RPT-02 — Phân tích lý do giao thất bại",
+            int failureRow = writeTitle(failures, styles, "Phân tích lý do giao thất bại",
                     fromDate, toDate, 3);
             failureRow = writeHeader(failures, styles, failureRow, "Lý do", "Số lần", "Tỷ lệ (%)");
 
@@ -176,7 +176,7 @@ public class ReportExcelExporter {
 
             return toBytes(workbook);
         } catch (IOException failed) {
-            throw new UncheckedIOException("Không tạo được file Excel cho RPT-02", failed);
+            throw new UncheckedIOException("Không tạo được file Excel báo cáo tỷ lệ giao", failed);
         }
     }
 
@@ -188,7 +188,7 @@ public class ReportExcelExporter {
             Styles styles = new Styles(workbook);
 
             Sheet sheet = workbook.createSheet("Hiệu quả tối ưu");
-            int rowIndex = writeTitle(sheet, styles, "RPT-03 — Báo cáo hiệu quả tối ưu",
+            int rowIndex = writeTitle(sheet, styles, "Báo cáo hiệu quả tối ưu",
                     report.fromDate(), report.toDate(), 10);
 
             rowIndex = writeHeader(sheet, styles, rowIndex,
@@ -215,7 +215,7 @@ public class ReportExcelExporter {
             rowIndex++;
             Row noteRow = sheet.createRow(rowIndex);
             text(noteRow, 0,
-                    "Quãng đường đã gồm chặng cuối quay về kho (CBR-01). Mỗi ngày lấy lần chạy "
+                    "Quãng đường đã gồm chặng cuối quay về kho. Mỗi ngày lấy lần chạy "
                             + "gần nhất. Phần trăm toàn kỳ tính từ tổng quãng đường, không phải "
                             + "trung bình cộng phần trăm từng ngày.",
                     styles.note);
@@ -230,7 +230,7 @@ public class ReportExcelExporter {
             if (!report.approximateRows().isEmpty()) {
                 Sheet approximate = workbook.createSheet("Ngày dùng khoảng cách xấp xỉ");
                 int approximateRow = writeTitle(approximate, styles,
-                        "RPT-03 — Ngày dùng khoảng cách xấp xỉ, KHÔNG tính vào trung bình (BR08-03)",
+                        "Ngày dùng khoảng cách xấp xỉ, KHÔNG tính vào trung bình",
                         report.fromDate(), report.toDate(), 10);
                 approximateRow = writeHeader(approximate, styles, approximateRow,
                         "Ngày giao", "Số đơn", "Số tuyến", "Mốc A (km)", "Mốc B (km)",
@@ -244,7 +244,7 @@ public class ReportExcelExporter {
 
             return toBytes(workbook);
         } catch (IOException failed) {
-            throw new UncheckedIOException("Không tạo được file Excel cho RPT-03", failed);
+            throw new UncheckedIOException("Không tạo được file Excel báo cáo hiệu quả tối ưu", failed);
         }
     }
 

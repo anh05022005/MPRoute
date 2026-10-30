@@ -5,19 +5,15 @@ import com.minhphu.mproute.entity.enums.AlgorithmType;
 import java.util.List;
 
 /**
- * Mot cach phan tuyen. Do an co hai cai dat:
+ * Mot cach phan tuyen. Hien chi con mot cai dat: ortools/OrToolsSolver, dung thu vien
+ * Google OR-Tools. Hai bo giai tu cai dat NN va NN + 2-opt da bo (docs/09 muc A7).
  *
- *   ortools/OrToolsSolver     — bo giai CHINH, dung thu vien Google OR-Tools
- *   heuristic/NN2OptSolver    — ban TU CAI DAT, giu lam moc so sanh o chuong thuc nghiem
- *
- * Day la Strategy pattern thu hai cua do an (cai thu nhat la DistanceCalculator).
- * Ca hai nhan cung dau vao va tra cung kieu ket qua, nen chay lan luot ca hai tren
- * CUNG MOT MA TRAN roi dat hai con so canh nhau la xong bang so sanh chuong 4 —
- * khong phai sua mot dong nao cua man hinh phan tuyen de doi bo giai (CN-03-04).
+ * Van giu interface nay de RoutingService va cac test chi phu thuoc vao hop dong
+ * "dau vao - ket qua", khong dinh chat vao lop cua thu vien.
  *
  * LUU Y VE HIEU NANG: tham so matrix la ma tran DA NAP SAN vao bo nho. Cai dat cua
- * interface nay khong duoc goi OSRM hay truy van CSDL ben trong vong lap — 2-opt hoi
- * khoang cach hang nghin lan cho mot tuyen.
+ * interface nay khong duoc goi OSRM hay truy van CSDL ben trong vong lap — bo giai hoi
+ * khoang cach hang nghin lan cho mot lan chay.
  */
 public interface RoutingAlgorithm {
 
@@ -33,6 +29,6 @@ public interface RoutingAlgorithm {
                         List<OptimizationVehicle> vehicles,
                         double[][] matrix);
 
-    /** De ghi vao bang ket qua va hien ra o chon thuat toan tren man hinh. */
+    /** De ghi vao bang ket qua cua lan chay. */
     AlgorithmType algorithmType();
 }

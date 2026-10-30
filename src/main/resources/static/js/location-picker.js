@@ -47,6 +47,11 @@
         currentCoordinates || DEFAULT_CENTER,
         currentCoordinates ? ZOOM_NEAR : ZOOM_FAR);
 
+    /*
+     * Nen OpenStreetMap chuan: cung nguon du lieu voi OSRM nen duong ve khop so km, va
+     * khong can khoa API. Da thu CARTO Voyager nhung nen do nay doi khoa API, khong co
+     * khoa thi moi o ban do hien chu "API KEY REQUIRED".
+     */
     L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
         maxZoom: 19,
         attribution: '&copy; OpenStreetMap'

@@ -27,16 +27,7 @@
         </table>
     </div>
 
-    <div sec:authorize="hasRole('ADMIN')">
-        <p class="text-sub">Bạn quản lý danh mục, tài khoản và tham số hệ thống. Chọn chức năng trên thanh menu.</p>
-    </div>
-
-    <div sec:authorize="hasRole('DISPATCHER')">
-        <p class="text-sub">Bạn tiếp nhận đơn hàng, phân tuyến và theo dõi giao hàng. Chọn chức năng trên thanh menu.</p>
-    </div>
-
     <div sec:authorize="hasRole('DRIVER')">
-        <p class="text-sub">Xem tuyến giao hàng hôm nay của bạn.</p>
         <a class="btn btn-primary" th:href="@{/driver/my-route}">Tuyến của tôi</a>
     </div>
 

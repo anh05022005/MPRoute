@@ -20,16 +20,6 @@
             <button type="submit" class="btn btn-sm btn-outline-secondary">Xem đơn</button>
         </form>
 
-        <!--
-            CN-03-05: nap truoc ma tran khoang cach. Bam lan hai voi cung tap diem thi
-            so o "phai lay moi" phai bang 0 — do la cach chung minh bo nho dem chay dung.
-        -->
-        <form th:action="@{/routing/prepare-matrix}" method="post"
-              class="push-right" sec:authorize="hasRole('DISPATCHER')">
-            <input type="hidden" name="deliveryDate" th:value="${deliveryDate}">
-            <button type="submit" class="btn btn-sm btn-outline-secondary"
-                    th:disabled="${orders.isEmpty()}">Chuẩn bị ma trận khoảng cách</button>
-        </form>
     </div>
 
     <!-- ============ CN-03-01 Tong quan nhu cau cua ngay ============ -->
@@ -64,12 +54,12 @@
           sec:authorize="hasRole('DISPATCHER')">
         <input type="hidden" name="deliveryDate" th:value="${deliveryDate}">
 
-        <div class="section-label">Chọn xe và thuật toán</div>
+        <div class="section-label">Chọn xe</div>
         <div class="panel mb-3">
 
             <div th:if="${vehicles.isEmpty()}" class="text-sub small">
                 Không có xe nào ở trạng thái <strong>Sẵn sàng</strong>. Chỉ xe sẵn sàng mới
-                được đưa vào phân tuyến (CBR-05).
+                được đưa vào phân tuyến.
             </div>
 
             <div class="field-grid" th:unless="${vehicles.isEmpty()}">
@@ -101,17 +91,8 @@
                 Sức chứa đã chọn: <strong id="fleet-capacity">—</strong>
             </div>
 
-            <div class="d-flex align-items-end gap-2 mt-3">
-                <div>
-                    <label for="algorithm" class="form-label mb-1 small">Thuật toán</label>
-                    <select id="algorithm" name="algorithm" class="form-select form-select-sm"
-                            style="width: 240px;">
-                        <option th:each="option : ${algorithms}"
-                                th:value="${option}"
-                                th:text="${option.displayName}"
-                                th:selected="${option == selectedAlgorithm}">OR-Tools</option>
-                    </select>
-                </div>
+            <!-- Chi con mot bo giai OR-Tools nen khong co o chon thuat toan (docs/09 muc A7) -->
+            <div class="mt-3">
                 <button type="submit" class="btn btn-sm btn-primary"
                         th:disabled="${orders.isEmpty() or vehicles.isEmpty()}">Chạy tối ưu</button>
             </div>
@@ -193,9 +174,9 @@
                                          + ${#numbers.formatDecimal(metrics.volumeUtilization * 100, 1, 'POINT', 1, 'COMMA')} + '% m³'">93,3% kg · 55,0% m³</td>
                         </tr>
                         <tr>
-                            <td>Thuật toán · thời gian chạy</td>
+                            <td>Thời gian chạy</td>
                             <td class="num"
-                                th:text="${metrics.algorithm.displayName} + ' · ' + ${metrics.executionTimeMs} + ' ms'">OR-Tools · 412 ms</td>
+                                th:text="${metrics.executionTimeMs} + ' ms'">412 ms</td>
                         </tr>
                         </tbody>
                     </table>
@@ -285,17 +266,12 @@
                         <strong th:text="${route.driver != null} ? ${route.driver.fullName} : '—'">Nguyễn Văn Hùng</strong>
                     </div>
 
-                    <!--
-                        Ly do huy bat buoc nhap: tuyen bi huy la don quay lai hang cho va xe duoc
-                        tha ra, sau nay doi chieu bao cao phai biet vi sao (BR04-09).
-                    -->
-                    <form th:action="@{/routing/routes/{id}/cancel(id=${route.id})}" method="post"
-                          class="d-flex align-items-center gap-2 push-right">
-                        <input type="hidden" name="deliveryDate" th:value="${deliveryDate}">
-                        <input type="text" name="reason" class="form-control form-control-sm"
-                               style="width: 220px;" maxlength="500" placeholder="Lý do hủy tuyến">
-                        <button type="submit" class="btn btn-sm btn-outline-danger">Hủy tuyến</button>
-                    </form>
+                    <!-- Chi mo hop thoai xac nhan o cuoi trang, khong gui gi len may chu.
+                         Duong dan huy cua dung tuyen nay di theo data-cancel-url -->
+                    <button type="button" class="btn btn-sm btn-outline-danger push-right"
+                            data-bs-toggle="modal" data-bs-target="#cancel-route-modal"
+                            th:attr="data-cancel-url=@{/routing/routes/{id}/cancel(id=${route.id})},
+                                     data-route-code=${route.code}">Hủy tuyến</button>
                 </div>
 
                 <table class="table table-striped table-sm align-middle">
@@ -349,14 +325,6 @@
                     </tr>
                     </tfoot>
                 </table>
-            </div>
-
-            <div th:if="${!routes.isEmpty()}" class="system-note">
-                Tổng quãng đường
-                <strong id="total-distance"
-                        th:data-value="${totalRouteDistance}"
-                        th:text="${#numbers.formatDecimal(totalRouteDistance / 1000, 1, 'POINT', 2, 'COMMA')} + ' km'">59,50 km</strong>
-                — đã gồm chặng cuối về kho của từng tuyến (CBR-01).
             </div>
 
             <!-- ============ CN-04-04 so sanh tu dong voi chinh tay · CN-04-05 khoi phuc ============ -->
@@ -487,7 +455,7 @@
     <div th:if="${unassignedOrders.isEmpty() and orders.isEmpty() and routes.isEmpty()}"
          class="text-sub small mt-4">
         Ngày này chưa có đơn nào ở trạng thái <strong>Đã duyệt</strong>.
-        Đơn phải được duyệt mới vào được danh sách chờ phân tuyến (BR03-01).
+        Đơn phải được duyệt mới vào được danh sách chờ phân tuyến.
     </div>
 
     <div th:if="${unassignedOrders.isEmpty() and !routes.isEmpty()}" class="system-note mt-4">
@@ -511,6 +479,90 @@
 
     <!-- CN-04-01/02: ma tran khoang cach de tinh THU km va ETA ngay khi keo tha -->
     <div id="plan-data" hidden th:text="${planJson}">null</div>
+
+    <!--
+        ============ CN-04-09 Hop thoai xac nhan huy tuyen ============
+
+        Huy tuyen la viec kho quay lai: don ve hang cho, xe va tai xe duoc tha, tuyen da
+        chot thi tai xe mat lich. Nen phai hoi lai mot lan chu khong de mot cu bam la mat.
+
+        Ly do bat buoc nhap: sau nay doi chieu bao cao phai biet vi sao tuyen bi huy (BR04-09).
+        Thuoc tinh required chi de trinh duyet chan truoc cho de dung, cho chan that van la
+        RoutePlanService.cancelRoute.
+
+        Mot hop thoai dung chung cho moi tuyen: th:action o day chi la cho de Thymeleaf tu chen
+        the an CSRF token, script ben duoi thay bang duong dan huy cua dung tuyen vua bam.
+    -->
+    <div class="modal fade" id="cancel-route-modal" tabindex="-1" sec:authorize="hasRole('DISPATCHER')">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <form th:action="@{/routing/routes/0/cancel}" method="post" id="cancel-route-form">
+                    <input type="hidden" name="deliveryDate" th:value="${deliveryDate}">
+
+                    <div class="modal-header py-2">
+                        <h2 class="h6 modal-title">Hủy tuyến</h2>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Đóng"></button>
+                    </div>
+
+                    <div class="modal-body">
+                        <p class="mb-3">
+                            Bạn có chắc chắn muốn hủy tuyến <strong id="cancel-route-code">TT26082501</strong>?
+                            Các đơn của tuyến này sẽ quay lại danh sách chờ phân tuyến.
+                        </p>
+                        <label for="cancel-route-reason" class="form-label">
+                            Lý do hủy tuyến <span class="text-danger">*</span>
+                        </label>
+                        <textarea id="cancel-route-reason" name="reason" class="form-control" rows="3"
+                                  maxlength="500" required
+                                  placeholder="Ví dụ: xe hỏng, cần xếp lại bằng xe khác."></textarea>
+                    </div>
+
+                    <div class="modal-footer py-2">
+                        <button type="button" class="btn btn-outline-secondary btn-sm"
+                                data-bs-dismiss="modal">Không, giữ tuyến</button>
+                        <button type="submit" class="btn btn-danger btn-sm">Có, hủy tuyến</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        (function () {
+            var modal = document.getElementById('cancel-route-modal');
+            if (!modal) {
+                return;
+            }
+            var form = document.getElementById('cancel-route-form');
+            var reasonInput = document.getElementById('cancel-route-reason');
+
+            // relatedTarget la nut "Huy tuyen" vua bam: lay dung duong dan va ma tuyen cua no
+            modal.addEventListener('show.bs.modal', function (event) {
+                var button = event.relatedTarget;
+                form.action = button.getAttribute('data-cancel-url');
+                document.getElementById('cancel-route-code').textContent =
+                    button.getAttribute('data-route-code');
+            });
+
+            modal.addEventListener('shown.bs.modal', function () {
+                reasonInput.focus();
+            });
+
+            // Dong hop thoai thi xoa ly do vua go, mo cho tuyen khac khong bi dinh chu cu
+            modal.addEventListener('hidden.bs.modal', function () {
+                form.reset();
+            });
+
+            // Chi go dau cach thi required van cho qua — chan luon cho may chu khoi phai bao loi
+            form.addEventListener('submit', function (event) {
+                if (reasonInput.value.trim() === '') {
+                    event.preventDefault();
+                    reasonInput.value = '';
+                    reasonInput.reportValidity();
+                }
+            });
+        })();
+    </script>
 
 </div>
 
