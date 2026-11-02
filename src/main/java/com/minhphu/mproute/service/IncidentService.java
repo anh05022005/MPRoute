@@ -17,6 +17,7 @@ import com.minhphu.mproute.entity.enums.RouteStatus;
 import com.minhphu.mproute.entity.enums.SolutionType;
 import com.minhphu.mproute.entity.enums.StopStatus;
 import com.minhphu.mproute.entity.enums.VehicleStatus;
+import com.minhphu.mproute.repository.DriverRepository;
 import com.minhphu.mproute.repository.IncidentRepository;
 import com.minhphu.mproute.repository.NotificationRepository;
 import com.minhphu.mproute.repository.RouteRepository;
@@ -68,6 +69,9 @@ public class IncidentService {
     private final CustomerNotificationService customerNotificationService;
     private final RoutingService routingService;
     private final VehicleService vehicleService;
+    private final IncidentSolutionService incidentSolutionService;
+    private final RoutePlanService routePlanService;
+    private final DriverRepository driverRepository;
 
     /** Ket qua mot lan bao su co, du de man hinh tai xe biet phai hien gi tiep theo. */
     public record ReportResult(Incident incident, int affectedStopCount, boolean needsDispatcher) {}
@@ -252,7 +256,7 @@ public class IncidentService {
      */
     @Transactional
     public Incident applySolution(Long incidentId, SolutionType solutionType,
-                                  Long targetId, Long currentUserId) {
+                                  Long targetId, Long rescueDriverId, Long currentUserId) {
 
         Incident incident = incidentRepository.findById(incidentId).orElseThrow(() ->
                 new IllegalArgumentException("Không tìm thấy sự cố cần xử lý."));
@@ -271,7 +275,7 @@ public class IncidentService {
         }
 
         double extraDistance = switch (solutionType) {
-            case A_RESCUE_VEHICLE -> applyRescueVehicle(brokenRoute, targetId, currentUserId);
+            case A_RESCUE_VEHICLE -> applyRescueVehicle(incident, targetId, rescueDriverId, currentUserId);
             case B_INSERT_OTHER_ROUTE -> applyInsertIntoRoute(brokenRoute, remainingStops, targetId, currentUserId);
             case C_POSTPONE -> applyPostpone(brokenRoute, remainingStops, currentUserId);
             case MANUAL -> throw new IllegalArgumentException(
@@ -301,15 +305,23 @@ public class IncidentService {
     }
 
     /**
-     * Phuong an A — doi tuyen sang xe cuu ho roi cho chay tiep.
+     * Phuong an A — doi tuyen sang xe cuu ho VA tai xe cuu ho, roi cho chay tiep.
+     *
+     * Phai co tai xe: xe cuu ho khong tu chay tu kho ra diem su co. Nguoi lai xe ra la nguoi
+     * nhan tuyen chay not, tai xe cu o lai voi xe hong cho cuu ho. Dieu phoi vien cung co the
+     * chon chinh tai xe cu chay tiep, khi do nguoi dua xe ra khong can theo doi trong he thong.
      *
      * Tuyen quay lai IN_PROGRESS vi xe moi da nhan hang va dang tren duong. Xe hong o lai
      * MAINTENANCE cho toi khi quan tri vien sua xong va tu doi trang thai.
      */
-    private double applyRescueVehicle(Route route, Long vehicleId, Long userId) {
+    private double applyRescueVehicle(Incident incident, Long vehicleId, Long driverId, Long userId) {
         if (vehicleId == null) {
             throw new IllegalArgumentException("Chưa chọn xe cứu hộ.");
         }
+        if (driverId == null) {
+            throw new IllegalArgumentException("Chưa chọn tài xế lái xe cứu hộ.");
+        }
+        Route route = incident.getRoute();
         Vehicle rescue = vehicleRepository.findById(vehicleId).orElseThrow(() ->
                 new IllegalArgumentException("Không tìm thấy xe cứu hộ được chọn."));
 
@@ -320,21 +332,66 @@ public class IncidentService {
                     rescue.getLicensePlate()));
         }
 
-        double beforeDistance = route.getTotalDistance();
+        /*
+         * Km phat sinh lay tu CHINH phuong an da hien cho dieu phoi vien, tinh lai ngay luc bam
+         * nut. Khong lay hieu tong quang duong truoc va sau: thu tu diem khong doi nen hieu do
+         * bang 0, trong khi xe cuu ho that su phai chay tu kho ra diem su co (BR06-06).
+         */
+        var option = incidentSolutionService.generateOptions(incident).stream()
+                .filter(candidate -> candidate.type() == SolutionType.A_RESCUE_VEHICLE)
+                .filter(candidate -> vehicleId.equals(candidate.targetVehicleId()))
+                .findFirst()
+                .orElseThrow(() -> new IllegalStateException(
+                        "Phương án điều xe cứu hộ không còn khả thi. Tải lại trang để xem phương án mới."));
 
+        // Cung luat voi gan tai xe o man Phan tuyen: khong lay nguoi dang chay tuyen khac
+        Driver rescueDriver = routePlanService.selectableDriversFor(route.getDeliveryDate(), route).stream()
+                .filter(driver -> driver.getId().equals(driverId))
+                .findFirst()
+                .orElseThrow(() -> new IllegalStateException(
+                        "Tài xế được chọn đang có tuyến khác trong ngày nên không điều đi cứu hộ được."));
+
+        Driver previousDriver = route.getDriver();
+        Vehicle brokenVehicle = route.getVehicle();
         route.setVehicle(rescue);
+        route.setDriver(rescueDriver);
         route.setStatus(RouteStatus.IN_PROGRESS);
         routeRepository.save(route);
         statusHistoryService.recordChange(EntityType.ROUTE, route.getId(),
                 RouteStatus.INCIDENT.name(), RouteStatus.IN_PROGRESS.name(), userId,
-                "Dieu xe cuu ho " + rescue.getLicensePlate());
+                "Dieu xe cuu ho " + rescue.getLicensePlate() + ", tai xe " + rescueDriver.getFullName());
 
         rescue.setStatus(VehicleStatus.IN_USE);
         vehicleRepository.save(rescue);
 
         // Tinh lai quang duong va ETA theo dung ham cua thuat toan
         routingService.recalculate(List.of(route));
-        return Math.max(route.getTotalDistance() - beforeDistance, 0);
+
+        // NTF-04 — ca nguoi nhan tuyen lan nguoi vua giao tuyen lai deu phai biet
+        notifyDriver(rescueDriver, String.format(
+                "Bạn được điều lái xe %s ra điểm sự cố để chạy tiếp tuyến %s (%d điểm chưa giao).",
+                rescue.getLicensePlate(), route.getCode(), remainingStopsOf(route).size()));
+        if (previousDriver != null && !previousDriver.getId().equals(rescueDriver.getId())) {
+            notifyDriver(previousDriver, String.format(
+                    "Tuyến %s đã chuyển cho tài xế %s lái xe %s. Bạn ở lại với xe %s chờ cứu hộ.",
+                    route.getCode(), rescueDriver.getFullName(), rescue.getLicensePlate(),
+                    brokenVehicle.getLicensePlate()));
+        }
+        return option.extraDistanceMeters();
+    }
+
+    /** Thong bao trong he thong cho mot tai xe, bo qua neu tai xe chua co tai khoan. */
+    private void notifyDriver(Driver driver, String content) {
+        if (driver.getUser() == null) {
+            return;
+        }
+        Notification notification = new Notification();
+        notification.setRecipient(driver.getUser());
+        notification.setEventCode("NTF-04");
+        notification.setContent(content);
+        notification.setLink("/driver/my-route");
+        notification.setSendStatus(NotificationSendStatus.SENT);
+        notificationRepository.save(notification);
     }
 
     /**

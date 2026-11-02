@@ -72,6 +72,14 @@
                               ? ${#numbers.formatDecimal(incident.extraDistance / 1000, 1, 'POINT', 2, 'COMMA')} + ' km'
                               : '0,00 km'">12,40 km</div>
             </div>
+            <!-- Phuong an A: tuyen da doi sang xe va tai xe cuu ho, doc thang tu tuyen -->
+            <div class="field" th:if="${incident.appliedSolution != null and incident.appliedSolution.name() == 'A_RESCUE_VEHICLE'}">
+                <div class="field-label">Xe cứu hộ</div>
+                <div class="field-value"
+                     th:text="${incident.route.vehicle.licensePlate}
+                              + (${incident.route.driver != null} ? ' · ' + ${incident.route.driver.fullName} : '')">
+                    29C-678.90 · Lê Văn Nam</div>
+            </div>
             <div class="field" th:if="${incident.resolvedAt != null}">
                 <div class="field-label">Thời điểm xử lý</div>
                 <div class="field-value"
@@ -183,6 +191,25 @@
                         <input type="hidden" name="solutionType" th:value="${option.type()}">
                         <input type="hidden" name="targetVehicleId" th:value="${option.targetVehicleId()}">
                         <input type="hidden" name="targetRouteId" th:value="${option.targetRouteId()}">
+
+                        <!-- Phuong an A: xe cuu ho phai co nguoi lai, nguoi do nhan tuyen chay tiep -->
+                        <div th:if="${option.type().name() == 'A_RESCUE_VEHICLE'}" class="mb-2">
+                            <label class="form-label mb-1 small" th:for="'rescue-driver-' + ${optionStat.index}">
+                                Tài xế lái xe cứu hộ và chạy tiếp tuyến</label>
+                            <select name="rescueDriverId" class="form-select" required
+                                    th:id="'rescue-driver-' + ${optionStat.index}">
+                                <option value="" selected disabled>— Chọn tài xế —</option>
+                                <option th:each="driver : ${rescueDrivers}"
+                                        th:value="${driver.id}"
+                                        th:text="${driver.fullName}
+                                                 + (${incident.route.driver != null and driver.id == incident.route.driver.id}
+                                                    ? ' (tài xế hiện tại, chạy tiếp)' : '')">Lê Văn Nam</option>
+                            </select>
+                            <div th:if="${rescueDrivers.isEmpty()}" class="form-text text-danger">
+                                Không còn tài xế nào rảnh trong ngày này.
+                            </div>
+                        </div>
+
                         <button type="submit"
                                 th:class="${optionStat.first} ? 'btn btn-primary w-100' : 'btn btn-outline-secondary w-100'"
                                 th:text="'Áp dụng phương án ' + ${optionStat.count}">Áp dụng phương án 1</button>

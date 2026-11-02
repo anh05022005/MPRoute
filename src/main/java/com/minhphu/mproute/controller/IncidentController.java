@@ -3,6 +3,7 @@ package com.minhphu.mproute.controller;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.minhphu.mproute.entity.Incident;
+import com.minhphu.mproute.entity.Route;
 import com.minhphu.mproute.entity.RouteStop;
 import com.minhphu.mproute.entity.enums.IncidentStatus;
 import com.minhphu.mproute.entity.enums.SolutionType;
@@ -11,6 +12,7 @@ import com.minhphu.mproute.repository.IncidentRepository;
 import com.minhphu.mproute.security.CurrentUser;
 import com.minhphu.mproute.service.IncidentService;
 import com.minhphu.mproute.service.IncidentSolutionService;
+import com.minhphu.mproute.service.RoutePlanService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -44,6 +46,7 @@ public class IncidentController {
     private final IncidentRepository incidentRepository;
     private final IncidentService incidentService;
     private final IncidentSolutionService incidentSolutionService;
+    private final RoutePlanService routePlanService;
     private final ObjectMapper objectMapper;
 
     /** Mot ghim tren ban do su co. Chi chua thu can ve. */
@@ -81,6 +84,11 @@ public class IncidentController {
          */
         if (incident.getStatus() == IncidentStatus.PENDING) {
             model.addAttribute("options", incidentSolutionService.generateOptions(incident));
+
+            // Phuong an A can mot nguoi lai xe cuu ho: tai xe ranh trong ngay, ke ca tai xe cu
+            Route route = incident.getRoute();
+            model.addAttribute("rescueDrivers",
+                    routePlanService.selectableDriversFor(route.getDeliveryDate(), route));
         }
 
         model.addAttribute("mapPointsJson", buildMapPointsJson(incident));
@@ -96,6 +104,7 @@ public class IncidentController {
                         @RequestParam(required = false) SolutionType solutionType,
                         @RequestParam(required = false) Long targetVehicleId,
                         @RequestParam(required = false) Long targetRouteId,
+                        @RequestParam(required = false) Long rescueDriverId,
                         @AuthenticationPrincipal CurrentUser currentUser,
                         RedirectAttributes redirectAttributes) {
         try {
@@ -103,7 +112,8 @@ public class IncidentController {
             Long targetId = (solutionType == SolutionType.A_RESCUE_VEHICLE)
                     ? targetVehicleId : targetRouteId;
 
-            Incident incident = incidentService.applySolution(id, solutionType, targetId, currentUser.getId());
+            Incident incident = incidentService.applySolution(id, solutionType, targetId,
+                    rescueDriverId, currentUser.getId());
             redirectAttributes.addFlashAttribute("successMessage", String.format(
                     "Đã áp dụng phương án \"%s\". Khách bị ảnh hưởng đã được báo giờ giao mới.",
                     incident.getAppliedSolution().getDisplayName()));
