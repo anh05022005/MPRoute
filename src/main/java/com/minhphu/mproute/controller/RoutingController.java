@@ -34,6 +34,7 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
 import java.time.LocalDate;
+import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -59,6 +60,7 @@ public class RoutingController {
 
     private static final String NEEDS_MAP = "needsMap";
     private static final String NEEDS_ROUTING_JS = "needsRoutingJs";
+    private static final DateTimeFormatter DAY_MONTH_YEAR = DateTimeFormatter.ofPattern("dd/MM/yyyy");
 
     private final OrderRepository orderRepository;
     private final VehicleService vehicleService;
@@ -314,6 +316,28 @@ public class RoutingController {
                         result.customersWithoutMailCount());
             }
             redirectAttributes.addFlashAttribute("successMessage", message);
+        } catch (IllegalArgumentException | IllegalStateException ex) {
+            redirectAttributes.addFlashAttribute("errorMessage", ex.getMessage());
+        }
+        return "redirect:/routing?deliveryDate=" + deliveryDate;
+    }
+
+    /** CN-03-14, BR03-14 — day don khong xep duoc sang hom sau de chot duoc ke hoach hom nay. */
+    @PreAuthorize("hasRole('DISPATCHER')")
+    @PostMapping("/orders/{orderId}/postpone")
+    public String postponeUnassignedOrder(@PathVariable Long orderId,
+                                          @RequestParam
+                                          @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate deliveryDate,
+                                          @AuthenticationPrincipal CurrentUser currentUser,
+                                          RedirectAttributes redirectAttributes) {
+
+        try {
+            Order order = routingService.postponeUnassignedOrder(orderId, currentUser.getId());
+            redirectAttributes.addFlashAttribute("successMessage", String.format(
+                    "Đã hoãn đơn %s sang ngày %s. Đơn này sẽ được ưu tiên xếp trước trong lần phân tuyến tới. "
+                            + "Nhớ gọi điện báo khách %s.",
+                    order.getCode(), order.getDeliveryDate().format(DAY_MONTH_YEAR),
+                    order.getCustomer().getName()));
         } catch (IllegalArgumentException | IllegalStateException ex) {
             redirectAttributes.addFlashAttribute("errorMessage", ex.getMessage());
         }

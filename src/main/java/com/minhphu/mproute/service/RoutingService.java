@@ -166,6 +166,45 @@ public class RoutingService {
         return new RoutingOutcome(savedRoutes, unassignedOrders, metrics);
     }
 
+    /**
+     * Day mot don chua xep duoc sang ngay hom sau (CN-03-14, BR03-14).
+     *
+     * Khong dung chung voi luong hoan cua tai xe (DeliveryService.postpone): ben do don da
+     * len xe nen phai giu don cu lam dau vet va tao don moi. O day don chua tung len tuyen
+     * nao, chi doi ngay giao — giong sua ngay giao o CN-02-08, ma don giu nguyen.
+     *
+     * Khac sua ngay giao o dung mot cho: tang postponeCount. Ngay mai don nay nam o nhom
+     * uu tien cao nhat, het cho thi don khac bi bo chu khong phai no lan nua.
+     */
+    @Transactional
+    public Order postponeUnassignedOrder(Long orderId, Long currentUserId) {
+        Order order = orderRepository.findById(orderId)
+                .orElseThrow(() -> new IllegalArgumentException("Không tìm thấy đơn hàng."));
+
+        // Don APPROVED trong ngay da co tuyen nhap chinh la don thuat toan khong xep duoc
+        boolean hasDraftRoutes = !routeRepository
+                .findByDeliveryDateAndStatus(order.getDeliveryDate(), RouteStatus.DRAFT).isEmpty();
+        if (order.getStatus() != OrderStatus.APPROVED || !hasDraftRoutes) {
+            throw new IllegalStateException(
+                    "Chỉ hoãn được đơn đã phân tuyến nhưng không xếp được lên xe nào.");
+        }
+
+        LocalDate previousDate = order.getDeliveryDate();
+        order.setDeliveryDate(previousDate.plusDays(1));
+        order.setPostponeCount(order.getPostponeCount() + 1);
+        Order saved = orderRepository.save(order);
+
+        // Trang thai khong doi nhung van ghi lich su, de tra lai duoc vi sao don doi ngay
+        statusHistoryService.recordChange(EntityType.ORDER, saved.getId(),
+                OrderStatus.APPROVED.name(), OrderStatus.APPROVED.name(), currentUserId,
+                "Het cho tren xe ngay " + previousDate + ", hoan sang " + saved.getDeliveryDate()
+                        + " (lan hoan thu " + saved.getPostponeCount() + ")");
+
+        log.info("Hoan don {} tu {} sang {} vi het cho, lan thu {}",
+                saved.getCode(), previousDate, saved.getDeliveryDate(), saved.getPostponeCount());
+        return saved;
+    }
+
     // ==================== B1 ====================
 
     /**
@@ -272,16 +311,53 @@ public class RoutingService {
         List<OptimizationPoint> points = new ArrayList<>();
         points.add(OptimizationPoint.depot(depot.getLatitude(), depot.getLongitude()));
 
+        Map<Long, Long> priorities = dropPriorities(orders);
         for (Order order : orders) {
-            points.add(OptimizationPoint.forOrder(
+            OptimizationPoint point = OptimizationPoint.forOrder(
                     order.getId(),
                     order.getCustomer().getName(),
                     order.getLatitude(),
                     order.getLongitude(),
                     order.getTotalWeight(),
-                    order.getTotalVolume()));
+                    order.getTotalVolume());
+            point.setDropPriority(priorities.get(order.getId()));
+            points.add(point);
         }
         return points;
+    }
+
+    /**
+     * Do uu tien khi het cho tren xe (BR03-14): don nao duoc giu lai truoc.
+     *
+     * Xep hang: hoan nhieu lan hon dung truoc, cung so lan hoan thi dat som hon dung truoc.
+     * Don dung dau nhan hang n, don cuoi nhan hang 1.
+     *
+     * Rieng don DA BI HOAN duoc cong them postponeCount x tierStep, voi tierStep lon hon
+     * TONG hang cua moi don. Nho vay mot don da hoan khong bao gio bi bo de nhuong cho chua
+     * hoan, ke ca khi bo no thi xep vua duoc ca chuc don chua hoan.
+     *
+     * Trong cung nhom thi hang chi tang deu tung bac, nen dam bao duoc tung cap: khong bao
+     * gio bo mot don dat som de cho MOT don dat muon hon. Nhung neu bo mot don dat som ma
+     * xep vua HAI don dat muon co tong hang lon hon thi bo giai chon cach do — bat thu tu
+     * tuyet doi cho moi tap don can tien phat tang theo luy thua 2, tran so long khi mot
+     * ngay qua khoang 40 don (docs/03 muc 5.3c).
+     */
+    private Map<Long, Long> dropPriorities(List<Order> orders) {
+        List<Order> ranked = new ArrayList<>(orders);
+        ranked.sort(Comparator.comparingInt(Order::getPostponeCount).reversed()
+                .thenComparing(Order::getCreatedAt)
+                .thenComparing(Order::getId));
+
+        long orderCount = ranked.size();
+        long tierStep = orderCount * (orderCount + 1) / 2 + 1;
+
+        Map<Long, Long> priorities = new LinkedHashMap<>();
+        for (int position = 0; position < ranked.size(); position++) {
+            Order order = ranked.get(position);
+            long rank = orderCount - position;
+            priorities.put(order.getId(), rank + order.getPostponeCount() * tierStep);
+        }
+        return priorities;
     }
 
     /** Doi xe trong danh muc sang xe cua bai toan — thuat toan chi can bon con so. */

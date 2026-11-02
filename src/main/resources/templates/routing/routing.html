@@ -405,7 +405,7 @@
                 <div th:unless="${canConfirmPlan}" class="form-text">
                     <span th:if="${!unassignedOrders.isEmpty()}">
                         Chưa chốt được: còn <strong th:text="${unassignedOrders.size()}">1</strong>
-                        đơn chưa xếp vào tuyến nào. Chọn thêm xe rồi chạy lại.
+                        đơn chưa xếp vào tuyến nào. Chọn thêm xe rồi chạy lại, hoặc hoãn đơn đó sang ngày mai.
                     </span>
                     <span th:if="${unassignedOrders.isEmpty()}">
                         Chưa chốt được: mọi tuyến nháp phải được giao cho một tài xế trước đã.
@@ -434,6 +434,8 @@
                 <th>Khách hàng</th>
                 <th class="num" style="width: 110px;">Khối lượng</th>
                 <th class="num" style="width: 110px;">Thể tích</th>
+                <th th:if="${!routes.isEmpty()}" style="width: 170px;"
+                    sec:authorize="hasRole('DISPATCHER')"></th>
             </tr>
             </thead>
             <tbody>
@@ -441,15 +443,29 @@
                 <td><a th:href="@{/orders/{id}(id=${order.id})}" th:text="${order.code}">MP2608160001</a></td>
                 <td>
                     <span th:text="${order.customer.name}">Tạp hóa Bà Lan</span>
+                    <!-- BR03-14: don da bi hoan duoc xep truoc, dieu phoi vien can nhin ra ngay -->
+                    <span th:if="${order.postponeCount > 0}" class="status-tag status-tag-warning ms-1"
+                          th:text="'Đã hoãn ' + ${order.postponeCount} + ' lần'">Đã hoãn 1 lần</span>
                     <div class="small text-sub" th:text="${order.deliveryAddress}">91 Chùa Bộc</div>
                 </td>
                 <td class="num"
                     th:text="${#numbers.formatDecimal(order.totalWeight, 1, 'POINT', 1, 'COMMA')} + ' kg'">67,6 kg</td>
                 <td class="num"
                     th:text="${#numbers.formatDecimal(order.totalVolume, 1, 'POINT', 3, 'COMMA')} + ' m³'">0,317 m³</td>
+                <!-- CN-03-14: chi hien khi da phan tuyen, tuc don nay that su khong xep duoc -->
+                <td th:if="${!routes.isEmpty()}" class="text-end" sec:authorize="hasRole('DISPATCHER')">
+                    <form th:action="@{/routing/orders/{id}/postpone(id=${order.id})}" method="post">
+                        <input type="hidden" name="deliveryDate" th:value="${order.deliveryDate}">
+                        <button type="submit" class="btn btn-sm btn-outline-secondary">Hoãn sang ngày mai</button>
+                    </form>
+                </td>
             </tr>
             </tbody>
         </table>
+        <div th:if="${!routes.isEmpty()}" class="form-text mt-2" sec:authorize="hasRole('DISPATCHER')">
+            Không thêm được xe thì hoãn đơn sang ngày mai để chốt kế hoạch hôm nay.
+            Đơn đã hoãn sẽ được xếp trước mọi đơn khác trong lần phân tuyến tới.
+        </div>
     </div>
 
     <div th:if="${unassignedOrders.isEmpty() and orders.isEmpty() and routes.isEmpty()}"

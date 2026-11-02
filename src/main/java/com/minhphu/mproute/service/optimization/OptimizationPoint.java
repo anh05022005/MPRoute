@@ -40,6 +40,15 @@ public class OptimizationPoint {
     private boolean depot;
 
     /*
+     * Do uu tien khi BUOC PHAI BO DIEM vi het cho tren xe — so cang lon cang kho bi bo.
+     *
+     * Mac dinh 0 la moi diem ngang nhau, nhu bo benchmark Augerat va man Su co. Man Phan
+     * tuyen dat so nay theo so lan hoan va gio dat don (RoutingService.dropPriorities).
+     * OrToolsSolver doi no thanh tien phat rieng cua tung diem.
+     */
+    private long dropPriority;
+
+    /*
      * Vi tri cua diem trong ma tran khoang cach: matrix[i][j] la khoang cach tu
      * diem co matrixIndex = i toi diem co matrixIndex = j.
      *

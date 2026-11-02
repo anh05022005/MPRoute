@@ -23,13 +23,9 @@ import java.util.List;
 /**
  * BO GIAI CHINH cua he thong — Google OR-Tools Routing Library (docs/03 muc 5).
  *
- * Tuyen ma Minh Phu thuc su chay la ket qua cua lop nay. Ban tu cai dat NN+2-opt o
- * package heuristic/ giu lai lam moc so sanh o chuong thuc nghiem.
- *
- * VI SAO DUNG THU VIEN CHO SAN PHAM, con tu viet de so sanh: NN+2-opt cach loi giai tot
- * nhat khoang 10-25%, OR-Tools khoang 0-5% (docs/07). San pham giao cho doanh nghiep nen
- * chay bang cai tot hon; phan tu viet van con nguyen gia tri vi no do duoc minh lam duoc
- * den dau va con kem bao nhieu.
+ * Day la bo giai DUY NHAT: tuyen ma Minh Phu thuc su chay la ket qua cua lop nay. Hai
+ * bo giai tu cai dat NN va NN + 2-opt da bo (docs/09 muc A7) — OR-Tools cho tuyen ngan
+ * hon ro ret, giu them hai bo giai chi de so sanh thi phai bao tri gap doi.
  *
  * ==================================================================================
  * BON QUYET DINH PHAI GIAI THICH DUOC KHI VAN DAP — moi cai co comment tai cho:
@@ -129,9 +125,8 @@ public class OrToolsSolver implements RoutingAlgorithm {
          * diem ket thuc cua MOI xe. Vi vay cung "diem cuoi -> kho" la mot phan cua mo
          * hinh chu khong phai thu ta cong them, va objectiveValue() da bao gom no.
          *
-         * Day la khac biet voi ban tu cai dat: ben do RouteDistanceCalculator phai tu
-         * cong chang cuoi. Ket qua cuoi cung cua ca hai ben deu tinh lai bang chinh
-         * RouteDistanceCalculator (xem cuoi ham) de hai con so so sanh duoc voi nhau.
+         * Tong cuoi cung van tinh lai bang RouteDistanceCalculator (xem cuoi ham), ham
+         * tu cong chang cuoi, de moi con so cua he thong do bang cung mot thuoc do.
          */
         RoutingIndexManager indexManager =
                 new RoutingIndexManager(nodeCount, vehicleCount, DEPOT_NODE);
@@ -141,7 +136,7 @@ public class OrToolsSolver implements RoutingAlgorithm {
         /*
          * Ham nay bi goi HANG CHUC NGHIN lan trong mot lan giai. Tuyet doi khong duoc
          * goi OSRM hay truy van CSDL o day — do la dieu cam so 4 cua quy uoc ky thuat,
-         * va no ap dung cho ca bo giai thu vien chu khong rieng ban tu viet.
+         * va no ap dung ca cho bo giai thu vien.
          */
         int distanceCallback = model.registerTransitCallback((fromIndex, toIndex) -> {
             int from = matrixIndexOfNode[indexManager.indexToNode(fromIndex)];
@@ -203,30 +198,32 @@ public class OrToolsSolver implements RoutingAlgorithm {
          *
          * addDisjunction bien viec bo mot diem thanh mot lua chon CO GIA: bo giai chi bo
          * khi that su khong con cach nao khac. Cac diem bi bo doc ra o duoi va do vao
-         * unassignedPoints de hien canh bao CN-03-14 / MSG-08 — dung nhu ban tu cai dat.
+         * unassignedPoints de hien canh bao CN-03-14 / MSG-08.
          *
          * TIEN PHAT phai LON HON quang duong xa nhat co the cua mot diem, khong thi bo
          * giai thay bo diem re hon la di giao. Lay 10 lan o lon nhat cua ma tran la du xa.
+         *
+         * Tien phat RIENG tung diem theo dropPriority (BR03-14): het cho thi bo giai bo
+         * diem uu tien thap truoc, du diem do gan hay xa. Xem dropPenaltiesFor.
          */
-        long dropPenalty = dropPenaltyFor(matrix);
+        long[] dropPenalties = dropPenaltiesFor(deliveryPoints, matrix, vehicleCount);
         for (int node = 1; node < nodeCount; node++) {
-            model.addDisjunction(new long[]{indexManager.nodeToIndex(node)}, dropPenalty);
+            model.addDisjunction(new long[]{indexManager.nodeToIndex(node)}, dropPenalties[node - 1]);
         }
 
         // ---------- Tham so tim kiem ----------
         RoutingSearchParameters searchParameters = main.defaultRoutingSearchParameters()
                 .toBuilder()
                 /*
-                 * Loi giai ban dau: PATH_CHEAPEST_ARC — dung y tuong voi Nearest Neighbor
-                 * tu cai dat, moi buoc noi them cung duong re nhat. Noi duoc cho nay khi
-                 * van dap la mot diem cong: phan tu viet chinh la giai doan 1 cua bo giai
-                 * thu vien.
+                 * Loi giai ban dau: PATH_CHEAPEST_ARC — cung y tuong voi Nearest Neighbor,
+                 * moi buoc noi them cung duong re nhat tu diem dang dung. Nhanh ra mot loi
+                 * giai hop le de buoc sau co cai ma cai thien.
                  */
                 .setFirstSolutionStrategy(FirstSolutionStrategy.Value.PATH_CHEAPEST_ARC)
                 /*
-                 * Cai thien: GUIDED_LOCAL_SEARCH. Manh hon 2-opt tu cai dat o mot diem
-                 * mau chot — no CHUYEN DUOC DIEM TU XE NAY SANG XE KHAC, con 2-opt chi
-                 * sap lai thu tu ben trong mot tuyen. Do la ly do chinh no thang (docs/07).
+                 * Cai thien: GUIDED_LOCAL_SEARCH. Ngoai dao doan ben trong mot tuyen
+                 * (giong 2-opt), no con CHUYEN DIEM TU XE NAY SANG XE KHAC — tuc la sua
+                 * ca cach chia don cho xe, cho ma heuristic tham lam hay sai nhat (docs/07).
                  */
                 .setLocalSearchMetaheuristic(LocalSearchMetaheuristic.Value.GUIDED_LOCAL_SEARCH)
                 /*
@@ -253,11 +250,11 @@ public class OrToolsSolver implements RoutingAlgorithm {
         readUnassignedPoints(result, solution, model, indexManager, deliveryPoints);
 
         /*
-         * Tinh lai tong bang CHINH ham ma ban tu cai dat dung, khong lay objectiveValue().
+         * Tinh lai tong bang RouteDistanceCalculator, khong lay objectiveValue().
          *
          * Hai ly do: objectiveValue() la so nguyen da lam tron tung chang, va sau nay neu
          * them chi phi phu vao ham muc tieu thi no khong con la quang duong thuan nua.
-         * Bang so sanh chuong 4 chi co nghia khi ca hai cot do bang cung mot thuoc do.
+         * Moc A, moc B va gap benchmark deu tinh bang ham do, phai cung mot thuoc do.
          */
         result.setOptimizedDistance(
                 RouteDistanceCalculator.totalDistanceOfRoutes(result.getRoutes(), matrix));
@@ -320,13 +317,28 @@ public class OrToolsSolver implements RoutingAlgorithm {
     }
 
     /**
-     * Tien phat khi bo mot diem = 10 lan o lon nhat cua ma tran.
+     * Tien phat khi bo tung diem = PHAN CO SO + BAC UU TIEN x dropPriority.
      *
-     * Phai lon hon quang duong xa nhat mot diem co the gay ra (toi da la mot chuyen khu
-     * hoi rieng, tuc 2 lan o lon nhat). He so 10 la de du xa: bo giai chi bo diem khi
-     * that su khong con cach nao xep vua, chu khong bo vi thay re.
+     * PHAN CO SO = 10 lan o lon nhat cua ma tran. Phai lon hon quang duong xa nhat mot
+     * diem co the gay ra (toi da la mot chuyen khu hoi rieng, tuc 2 lan o lon nhat). He so
+     * 10 la de du xa: bo giai chi bo diem khi that su khong con cach nao xep vua, chu khong
+     * bo vi thay re. Moi diem dropPriority = 0 thi tien phat dung bang phan co so — bo
+     * benchmark Augerat chay y nhu truoc.
+     *
+     * BAC UU TIEN phai LON HON MOI chenh lech quang duong giua hai phuong an bat ky. Vi du
+     * het cho cho mot trong hai don: don A uu tien cao nhung o xa (+20 km), don B o gan
+     * (+2 km). Bo B thi tong tang 18 km, nhung tien phat chenh nhau it nhat mot bac — bac
+     * lon hon 18 km thi bo giai van chon giu A. Bac nho hon thi so km thang, A bi bo.
+     *
+     * Chan tren cua chenh lech, de bac luon thang:
+     *   - quang duong: moi tuyen di qua toi da (so diem + so xe) canh, moi canh khong dai
+     *     hon o lon nhat
+     *   - so diem bi bo co the khac nhau giua hai phuong an, moi diem lech toi da mot
+     *     phan co so
      */
-    private long dropPenaltyFor(double[][] matrix) {
+    private long[] dropPenaltiesFor(List<OptimizationPoint> deliveryPoints,
+                                    double[][] matrix,
+                                    int vehicleCount) {
         double longestLeg = 0;
         for (double[] row : matrix) {
             for (double cell : row) {
@@ -336,7 +348,20 @@ public class OrToolsSolver implements RoutingAlgorithm {
             }
         }
         // Ma tran toan 0 (moi diem trung toa do) van phai cho ra tien phat duong
-        return Math.max(1, Math.round(longestLeg * 10));
+        long basePenalty = Math.max(1, Math.round(longestLeg * 10));
+
+        int pointCount = deliveryPoints.size();
+        long priorityStep = Math.addExact(
+                Math.multiplyExact(pointCount + vehicleCount + 1L, Math.round(longestLeg) + 1),
+                Math.multiplyExact((long) pointCount, basePenalty));
+
+        // multiplyExact / addExact: lo tran so long thi nem loi ngay, khong am tham ra so am
+        long[] penalties = new long[pointCount];
+        for (int i = 0; i < pointCount; i++) {
+            long priority = deliveryPoints.get(i).getDropPriority();
+            penalties[i] = Math.addExact(basePenalty, Math.multiplyExact(priorityStep, priority));
+        }
+        return penalties;
     }
 
     @Override

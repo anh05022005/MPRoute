@@ -16,12 +16,11 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
- * Hai test bat buoc cho bo giai chinh OrToolsSolver.
+ * Hai test bat buoc cho bo giai chinh OrToolsSolver, cong mot test cho uu tien khi het
+ * cho (BR03-14).
  *
- * Test thu ba cua bo giai chinh — orToolsSolvesSmallCvrpToHandCalculatedOptimum — nam o
- * OrToolsSmokeTest, viet truoc de kiem chung thu vien chay duoc tren may nay. Test thu tu
- * — bothSolversCoverTheSamePointSet — nam o SolverComparisonTest vi no dung toi ca hai
- * bo giai.
+ * Test bat buoc thu ba — orToolsSolvesSmallCvrpToHandCalculatedOptimum — nam o
+ * OrToolsSmokeTest, viet truoc de kiem chung thu vien chay duoc tren may nay.
  *
  * Gioi han thoi gian dat 1 giay thay vi 5 giay mac dinh: cac bai o day chi 4 diem, mot
  * giay la thua, va bo test khong nen ngoi cho.
@@ -217,5 +216,84 @@ class OrToolsSolverTest {
          */
         assertEquals(4000, result.getOptimizedDistance(), 1.0,
                 "Xe phai giu lai hai diem gan kho nhat: KHO->A->B->KHO = 4000 m");
+    }
+
+    private OptimizationPoint pointAt(int matrixIndex, String name, double weight, long dropPriority) {
+        OptimizationPoint point = OptimizationPoint.forOrder((long) matrixIndex, name, 0, 0, weight, 0.1);
+        point.setMatrixIndex(matrixIndex);
+        point.setDropPriority(dropPriority);
+        return point;
+    }
+
+    private List<String> namesOf(List<OptimizationPoint> points) {
+        return points.stream().map(OptimizationPoint::getName).sorted().toList();
+    }
+
+    /**
+     * Het cho tren xe thi bo don UU TIEN THAP, du don uu tien cao o xa hon (BR03-14).
+     *
+     * Day la tinh huong "khach dat tu sang som nhung o xa": chi xet so km thi bo giai bo
+     * khach do de giu khach gan. Test chay ba lan tren cung mot hinh, moi lan doi uu tien.
+     */
+    @Test
+    void orToolsDropsLowerPriorityPointsFirstWhenCapacityRunsOut() {
+
+        OrToolsSolver solver = new OrToolsSolver(1);
+
+        /*
+         * ============ LAN 1: MOI DIEM NGANG NHAU — chi so km quyet dinh ============
+         *
+         * A o 1 km, D o 4 km, moi diem 600 kg. Mot xe 1000 kg -> chi cho duoc MOT diem.
+         *   Giu A: KHO -> A -> KHO = 1 + 1 = 2 km = 2000 m   <-- re hon
+         *   Giu D: KHO -> D -> KHO = 4 + 4 = 8 km = 8000 m
+         * Tien phat bang nhau nen bo giai giu A, bo D. Day chinh la cho bat cong.
+         */
+        RoutingResult equal = solver.solve(
+                List.of(pointAt(1, "A", 600, 0), pointAt(4, "D", 600, 0)),
+                vehicles(1, 1000, 10.0), MATRIX);
+
+        assertEquals(List.of("D"), namesOf(equal.getUnassignedPoints()),
+                "Uu tien bang nhau thi bo giai bo diem xa");
+        assertEquals(2000, equal.getOptimizedDistance(), 1.0);
+
+        /*
+         * ============ LAN 2: D DAT SOM HON (hang 2), A DAT MUON (hang 1) ============
+         *
+         * Giu D thi xe chay them 6 km, nhung tien phat cua D lon hon cua A dung mot bac uu
+         * tien, ma bac do lon hon moi chenh lech quang duong. Bo giai phai giu D:
+         *   KHO -> D -> KHO = 8000 m, A bi bo.
+         */
+        RoutingResult earlyFirst = solver.solve(
+                List.of(pointAt(1, "A", 600, 1), pointAt(4, "D", 600, 2)),
+                vehicles(1, 1000, 10.0), MATRIX);
+
+        assertEquals(List.of("A"), namesOf(earlyFirst.getUnassignedPoints()),
+                "Don dat som hon phai duoc giu du o xa hon");
+        assertEquals(8000, earlyFirst.getOptimizedDistance(), 1.0);
+
+        /*
+         * ============ LAN 3: D DA BI HOAN, dau voi HAI don chua hoan ============
+         *
+         * A o 1 km va B o 2 km, moi diem 400 kg — xe 1000 kg cho vua ca hai (800 kg).
+         * D o 4 km, 900 kg — cho D thi khong con cho cho ai nua.
+         *
+         * Uu tien tinh theo RoutingService.dropPriorities voi 3 don, D da hoan 1 lan:
+         *   tierStep = 3 x 4 / 2 + 1 = 7
+         *   D: hang 3 + 1 x 7 = 10      A: hang 2      B: hang 1
+         *
+         *   Giu A, B: bo D, tong uu tien bi bo = 10
+         *   Giu D   : bo A va B, tong uu tien bi bo = 2 + 1 = 3   <-- nho hon, phai chon
+         *
+         * Neu D chua tung hoan (D = 3) thi hai phuong an hoa nhau ve uu tien (3 = 2 + 1), va
+         * bo giai se bo D vi chi phai bo mot diem. Phan "+ 7" chinh la thu lam don hoan thang.
+         *   KHO -> D -> KHO = 8000 m
+         */
+        RoutingResult postponedFirst = solver.solve(
+                List.of(pointAt(1, "A", 400, 2), pointAt(2, "B", 400, 1), pointAt(4, "D", 900, 10)),
+                vehicles(1, 1000, 10.0), MATRIX);
+
+        assertEquals(List.of("A", "B"), namesOf(postponedFirst.getUnassignedPoints()),
+                "Don da hoan phai duoc giu, ke ca khi phai bo hai don chua hoan");
+        assertEquals(8000, postponedFirst.getOptimizedDistance(), 1.0);
     }
 }

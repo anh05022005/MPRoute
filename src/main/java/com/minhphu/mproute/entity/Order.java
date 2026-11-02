@@ -94,6 +94,16 @@ public class Order {
     @Column(name = "status", nullable = false, length = 30)
     private OrderStatus status = OrderStatus.PENDING_APPROVAL;
 
+    /*
+     * So lan don nay da bi day sang ngay khac vi het cho tren xe (BR03-14). Don hoan cang
+     * nhieu lan thi lan phan tuyen sau cang kho bi bo lai, de khong khach nao bi hoan mai.
+     *
+     * DEFAULT 0 trong columnDefinition de ddl-auto them cot vao bang da co du lieu ma cac
+     * don cu tu nhan 0, khong phai sua tay.
+     */
+    @Column(name = "postpone_count", nullable = false, columnDefinition = "INT NOT NULL DEFAULT 0")
+    private int postponeCount;
+
     // Huy don bat buoc nhap ly do, khong xoa khoi DB (BR02-12)
     @Column(name = "cancel_reason", length = 500)
     private String cancelReason;
