@@ -15,6 +15,7 @@ import org.springframework.security.web.savedrequest.HttpSessionRequestCache;
 import org.springframework.security.web.savedrequest.RequestCache;
 import org.springframework.security.web.servlet.util.matcher.PathPatternRequestMatcher;
 import org.springframework.security.web.util.matcher.NegatedRequestMatcher;
+import org.springframework.security.web.util.matcher.OrRequestMatcher;
 
 /**
  * Cau hinh dang nhap va phan quyen (CN-00-03, CN-00-04).
@@ -95,6 +96,11 @@ public class SecurityConfig {
                  * /.well-known/appspecific/com.chrome.devtools.json; neu nho dia chi nay thi
                  * dang nhap xong bi dua toi trang 404. Nen chi nho cac dia chi KHONG thuoc
                  * /.well-known/. Khong mo cong khai duong dan nay, chi la khong nho no.
+                 *
+                 * Trang loi /403 va /error cung khong nho. Trang mo tu phien cu (khoi dong lai
+                 * app, phien het han, dang xuat o tab khac) mang token CSRF cu; bam Dang xuat
+                 * thi CSRF tu choi va chuyen tiep sang /403 voi tu cach nguoi chua dang nhap.
+                 * Nho /403 thi dang nhap tai khoan nao xong cung bi dua thang toi trang loi.
                  */
                 .requestCache(cache -> cache.requestCache(savedRequestCache()))
                 // Dang nhap roi nhung khong du quyen -> trang 403 tu viet,
@@ -108,8 +114,9 @@ public class SecurityConfig {
 
     private RequestCache savedRequestCache() {
         HttpSessionRequestCache cache = new HttpSessionRequestCache();
-        cache.setRequestMatcher(new NegatedRequestMatcher(
-                PathPatternRequestMatcher.withDefaults().matcher("/.well-known/**")));
+        PathPatternRequestMatcher.Builder path = PathPatternRequestMatcher.withDefaults();
+        cache.setRequestMatcher(new NegatedRequestMatcher(new OrRequestMatcher(
+                path.matcher("/.well-known/**"), path.matcher("/403"), path.matcher("/error"))));
         return cache;
     }
 }
