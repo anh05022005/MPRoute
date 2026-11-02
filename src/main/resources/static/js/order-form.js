@@ -2,7 +2,7 @@
  * Man hinh don hang (CN-02-02, CN-02-03, CN-02-06).
  *
  * Ba viec:
- *   1. Chon khach -> hien dia chi, tu dien hinh thuc thanh toan (BR02-07)
+ *   1. Go de tim va chon khach -> hien dia chi, tu dien hinh thuc thanh toan (BR02-07)
  *   2. Go so thung -> tong kg / m3 / tien cap nhat NGAY, khong tai lai trang (CN-02-03)
  *   3. Bam "Sao chep" o trang chi tiet -> chep khoi tom tat de dan sang Zalo (CN-02-06)
  *
@@ -245,197 +245,276 @@
         reindexRows();
         recalculateAll();
 
-        initQuickCustomerDialog(customerSelect, deliveryNoteBox);
+        initCustomerSearch(customerSelect);
     }
 
-    // ==================== Phan 2: hop thoai them khach nhanh (CN-02-10) ====================
+    // ==================== Phan 2: o go de tim khach hang ====================
 
     /*
-     * Them khach ngay tren man hinh tao don, khong tai lai trang: don dang go do,
-     * tai lai la mat het cac dong chi tiet vua nhap.
+     * Bien o chon khach thanh o go de tim: danh muc co vai tram cua hang, cuon tim tung dong
+     * trong danh sach tha xuong la cham. Go mot doan ten, so dien thoai hoac dia chi la loc;
+     * go khong dau van ra ("van xuan" tim duoc "Van Xuan" co dau).
      *
-     * Phan tim toa do o day viet rieng chu khong dung lai location-picker.js, vi file do
-     * gan cung vao ba o co id address / latitude / longitude cua chinh trang. Sua no
-     * thanh dung chung duoc thi phai sua ca man hinh khach hang va man hinh kho dang
-     * chay tot — khong dang doi lay may chuc dong.
-     * Hop thoai nay CO Y khong co ban do ghim tay: chi tim theo dia chi hoac go tay
-     * toa do. Muon ghim tay thi vao man hinh Khach hang.
+     * KHONG thay the <select>: <select id="customerId"> van la o that gui len may chu va van
+     * giu cac data-* de Phan 1 doc. O go chi doc danh sach tu <select>, chon xong thi gan
+     * lai gia tri vao <select> roi phat su kien change — dien dia chi, hinh thuc thanh toan,
+     * tinh lai tien chay dung nhu khi chon bang chuot. May chu khong biet co o go nay.
      */
-    function initQuickCustomerDialog(customerSelect, deliveryNoteBox) {
-        var modal = document.getElementById('quick-customer-modal');
-        if (!modal) {
+    function initCustomerSearch(customerSelect) {
+        var combo = document.getElementById('customer-combo');
+        var input = document.getElementById('customer-search');
+        var menu = document.getElementById('customer-options');
+        if (!combo || !input || !menu) {
             return;
         }
 
-        var customerForm = document.getElementById('quick-customer-form');
-        var errorBox = document.getElementById('quick-customer-errors');
-        var searchButton = document.getElementById('qc-geocode-search');
-        var statusLabel = document.getElementById('qc-geocode-status');
-        var resultsBox = document.getElementById('qc-geocode-results');
-        var addressInput = document.getElementById('qc-address');
-        var latitudeInput = document.getElementById('qc-latitude');
-        var longitudeInput = document.getElementById('qc-longitude');
-
-        function showErrors(messages) {
-            errorBox.innerHTML = '';
-            messages.forEach(function (message) {
-                var row = document.createElement('div');
-                row.textContent = message;   // textContent chu khong innerHTML
-                errorBox.appendChild(row);
+        // Doc danh sach mot lan, bo dong rong "— Chon khach hang —"
+        var customers = Array.prototype.slice.call(customerSelect.options)
+            .filter(function (option) {
+                return option.value !== '';
+            })
+            .map(function (option) {
+                var address = option.getAttribute('data-address') || '';
+                return {
+                    value: option.value,
+                    label: option.textContent.trim(),
+                    address: address,
+                    labelText: normalize(option.textContent),
+                    searchText: normalize(option.textContent + ' ' + address)
+                };
             });
-            errorBox.classList.remove('d-none');
-        }
 
-        function hideErrors() {
-            errorBox.innerHTML = '';
-            errorBox.classList.add('d-none');
-        }
+        var matches = [];
+        var activeIndex = -1;
 
-        function hideResults() {
-            resultsBox.innerHTML = '';
-            resultsBox.classList.add('d-none');
+        // Co JavaScript thi moi hien o go va an <select>; tat JavaScript van chon duoc bang <select>
+        combo.hidden = false;
+        customerSelect.hidden = true;
+        var label = document.querySelector('label[for="customerId"]');
+        if (label) {
+            label.setAttribute('for', 'customer-search');
         }
+        input.value = selectedLabel();
+
+        // Bam vao o: boi den chu dang co de go la thay luon, va mo ca danh sach
+        var justFocused = false;
+        input.addEventListener('focus', function () {
+            input.select();
+            justFocused = true;
+            render('');
+        });
+        // Chrome bo vung boi den ngay luc nha chuot sau cu bam lay focus — chan dung lan do
+        input.addEventListener('mouseup', function (event) {
+            if (justFocused) {
+                event.preventDefault();
+                justFocused = false;
+            }
+        });
+        input.addEventListener('click', function () {
+            if (menu.hidden) {
+                render('');
+            }
+        });
+        input.addEventListener('input', function () {
+            render(input.value);
+        });
+        input.addEventListener('keydown', onKeyDown);
 
         /*
-         * Dong hop thoai bang bat ky cach nao (nut X, nut Dong, phim Esc, bam ra ngoai) thi
-         * xoa trang. Bootstrap chi AN hop thoai chu khong dung lai, nen khong xoa thi lan mo
-         * sau van con du lieu cua khach truoc — de luu nham thanh khach trung.
-         * Bat su kien hidden.bs.modal la bat duoc ca bon cach dong trong mot cho.
+         * Roi o ma chua chon dong nao thi tra chu ve ten khach dang chon — khong de o go hien
+         * mot doan chu trong khi khach that gui len lai la nguoi khac. Xoa trang roi roi o
+         * nghia la bo chon khach.
          */
-        modal.addEventListener('hidden.bs.modal', function () {
-            customerForm.reset();
-            hideErrors();
-            hideResults();
-            statusLabel.textContent = '';
-        });
-
-        // ---- Tim toa do theo dia chi (BR01-05, BR01-06) ----
-        searchButton.addEventListener('click', function () {
-            var address = (addressInput.value || '').trim();
-            if (address === '') {
-                statusLabel.textContent = 'Nhập địa chỉ ở ô trên trước đã.';
-                addressInput.focus();
-                return;
+        input.addEventListener('blur', function () {
+            close();
+            if (input.value.trim() === '' && customerSelect.value !== '') {
+                customerSelect.value = '';
+                customerSelect.dispatchEvent(new Event('change'));
             }
-
-            statusLabel.textContent = 'Đang tìm…';
-            hideResults();
-
-            fetch('/admin/geocode?q=' + encodeURIComponent(address), {
-                headers: { 'Accept': 'application/json' }
-            })
-                .then(function (response) {
-                    if (!response.ok) {
-                        throw new Error('HTTP ' + response.status);
-                    }
-                    return response.json();
-                })
-                .then(function (results) {
-                    if (!results || results.length === 0) {
-                        statusLabel.textContent =
-                            'Không tìm thấy. Gõ tay hai ô tọa độ, hoặc thử tên đường ngắn hơn.';
-                        return;
-                    }
-                    statusLabel.textContent = 'Chọn một dòng để điền tọa độ:';
-                    results.forEach(function (result) {
-                        var button = document.createElement('button');
-                        button.type = 'button';   // trong form thi mac dinh la nut submit
-                        button.className = 'list-group-item list-group-item-action py-1 small';
-
-                        var nameLine = document.createElement('div');
-                        nameLine.textContent = result.displayName;
-
-                        // Hien ca toa do de soat bang mat: noi thanh Ha Noi phai vao khoang
-                        // 20.9-21.1 va 105.7-105.9, lech xa la Nominatim doan sai
-                        var coordinateLine = document.createElement('div');
-                        coordinateLine.className = 'text-sub';
-                        coordinateLine.textContent = Number(result.latitude).toFixed(7)
-                            + ', ' + Number(result.longitude).toFixed(7);
-
-                        button.appendChild(nameLine);
-                        button.appendChild(coordinateLine);
-                        button.addEventListener('click', function () {
-                            latitudeInput.value = Number(result.latitude).toFixed(7);
-                            longitudeInput.value = Number(result.longitude).toFixed(7);
-                            hideResults();
-                            statusLabel.textContent = 'Đã điền tọa độ. Sửa tay được nếu chưa đúng.';
-                        });
-                        resultsBox.appendChild(button);
-                    });
-                    resultsBox.classList.remove('d-none');
-                })
-                .catch(function (error) {
-                    // Nuot loi co chu y: Nominatim chet khong duoc lam hong ca man hinh tao don
-                    console.warn('Loi goi /admin/geocode:', error);
-                    statusLabel.textContent = 'Không gọi được dịch vụ tìm tọa độ. Gõ tay hai ô tọa độ.';
-                });
+            input.value = selectedLabel();
         });
 
-        // ---- Gui form bang fetch, khong tai lai trang ----
-        customerForm.addEventListener('submit', function (event) {
+        // Bam vao danh sach (ke ca thanh cuon) khong duoc lam o go mat focus truoc khi chon xong
+        menu.addEventListener('mousedown', function (event) {
             event.preventDefault();
-            hideErrors();
+        });
+
+        function render(query) {
+            var phrase = normalize(query);
+            var tokens = phrase.split(' ').filter(Boolean);
+            matches = customers.filter(function (customer) {
+                return tokens.every(function (token) {
+                    return customer.searchText.indexOf(token) !== -1;
+                });
+            });
 
             /*
-             * URLSearchParams gui dang x-www-form-urlencoded, dung khuon ma @ModelAttribute
-             * ben may chu doc duoc. FormData cung chay nhung gui dang multipart, khong can.
-             * The an chua CSRF token do Thymeleaf tu chen nam trong form nen di theo luon.
+             * Xep dong khop trong TEN / SO DIEN THOAI len truoc dong chi khop nho dia chi.
+             * Khong xep thi go "van xuan" ra "Cua hang Kim Ngan" dau tien vi dia chi la
+             * "Le Van Luong, Thanh Xuan" — Enter se chon nham. sort cua trinh duyet la on
+             * dinh nen trong cung mot bac van giu thu tu ten nhu danh muc.
              */
-            var payload = new URLSearchParams(new FormData(customerForm));
+            matches.sort(function (a, b) {
+                return rankOf(a) - rankOf(b);
+            });
 
-            fetch(customerForm.action, {
-                method: 'POST',
-                headers: { 'Accept': 'application/json' },
-                body: payload
-            })
-                .then(function (response) {
-                    return response.json().then(function (body) {
-                        return { ok: response.ok, body: body };
-                    });
-                })
-                .then(function (result) {
-                    if (!result.ok) {
-                        var error = result.body.errorMessage || {};
-                        var messages = Object.keys(error).map(function (key) { return error[key]; });
-                        showErrors(messages.length ? messages : ['Không thêm được khách hàng.']);
-                        return;
-                    }
-                    addCustomerOption(result.body);
-                })
-                .catch(function (error) {
-                    console.warn('Loi goi /orders/quick-customer:', error);
-                    showErrors(['Không gọi được máy chủ. Vui lòng thử lại.']);
+            function rankOf(customer) {
+                if (customer.labelText.indexOf(phrase) !== -1) {
+                    return 0;   // ca cum vua go nam lien trong ten hoac so dien thoai
+                }
+                var allInLabel = tokens.every(function (token) {
+                    return customer.labelText.indexOf(token) !== -1;
                 });
-        });
-
-        /** Them khach vua luu vao o chon roi CHON LUON cho don dang tao (CN-02-10). */
-        function addCustomerOption(customer) {
-            var row = document.createElement('option');
-            row.value = customer.id;
-            row.textContent = customer.name + ' — ' + customer.phone;
-            row.setAttribute('data-address', customer.address);
-            row.setAttribute('data-latitude', customer.latitude);
-            row.setAttribute('data-longitude', customer.longitude);
-            row.setAttribute('data-payment-method', customer.paymentMethod);
-            if (customer.deliveryNote) {
-                row.setAttribute('data-delivery-note', customer.deliveryNote);
+                return allInLabel ? 1 : 2;
             }
-            customerSelect.appendChild(row);
-            customerSelect.value = String(customer.id);
 
-            // Phat su kien change de dung doan da co: tu dien dia chi, toa do, hinh thuc
-            // thanh toan va tinh lai so tien phai thu
-            customerSelect.dispatchEvent(new Event('change'));
+            menu.innerHTML = '';
+            if (matches.length === 0) {
+                var empty = document.createElement('div');
+                empty.className = 'combo-empty';
+                empty.textContent = 'Không tìm thấy khách hàng nào.';
+                menu.appendChild(empty);
+            }
+            matches.forEach(function (customer) {
+                var item = document.createElement('div');
+                item.className = 'combo-option';
+                item.id = 'customer-option-' + customer.value;
+                item.setAttribute('role', 'option');
 
-            // Xoa trang form do su kien hidden.bs.modal o tren lo
-            bootstrap.Modal.getInstance(modal).hide();
+                // textContent chu khong innerHTML: ten khach do nguoi dung nhap
+                var name = document.createElement('div');
+                name.textContent = customer.label;
+                item.appendChild(name);
+                if (customer.address) {
+                    var address = document.createElement('div');
+                    address.className = 'combo-option-sub';
+                    address.textContent = customer.address;
+                    item.appendChild(address);
+                }
 
-            // Trung so dien thoai chi la canh bao mem, khach van duoc luu
-            if (customer.warning) {
-                deliveryNoteBox.textContent =
-                    (deliveryNoteBox.textContent ? deliveryNoteBox.textContent + ' · ' : '') + customer.warning;
+                item.addEventListener('click', function () {
+                    choose(customer);
+                });
+                menu.appendChild(item);
+            });
+
+            // Chua go gi thi to dong khach dang chon; da go thi to dong dau de Enter la chon
+            activeIndex = query.trim() ? (matches.length ? 0 : -1) : indexOfSelected();
+            highlight();
+            menu.hidden = false;
+            input.setAttribute('aria-expanded', 'true');
+        }
+
+        function onKeyDown(event) {
+            switch (event.key) {
+                case 'ArrowDown':
+                    event.preventDefault();
+                    if (menu.hidden) {
+                        render('');
+                    } else if (activeIndex < matches.length - 1) {
+                        activeIndex++;
+                        highlight();
+                    }
+                    break;
+                case 'ArrowUp':
+                    event.preventDefault();
+                    if (activeIndex > 0) {
+                        activeIndex--;
+                        highlight();
+                    }
+                    break;
+                case 'Enter':
+                    // Enter trong o tim khong bao gio duoc gui ca form don hang di
+                    event.preventDefault();
+                    if (!menu.hidden && activeIndex >= 0) {
+                        choose(matches[activeIndex]);
+                    }
+                    break;
+                case 'Escape':
+                    if (!menu.hidden) {
+                        event.preventDefault();
+                        close();
+                        input.value = selectedLabel();
+                        input.select();
+                    }
+                    break;
+                case 'Tab':
+                    // Da go chu va dang to mot dong thi Tab chon luon dong do roi moi sang o sau
+                    if (!menu.hidden && activeIndex >= 0 && input.value !== selectedLabel()) {
+                        choose(matches[activeIndex]);
+                    }
+                    break;
+                default:
+                    break;
             }
         }
+
+        function choose(customer) {
+            var changed = customerSelect.value !== customer.value;
+            customerSelect.value = customer.value;
+            input.value = customer.label;
+            input.classList.remove('is-invalid');
+            close();
+            /*
+             * Chi phat change khi doi sang khach KHAC: change se dat lai hinh thuc thanh toan
+             * theo danh muc, chon lai dung khach cu thi khong duoc ghi de lua chon rieng cua
+             * don nay (BR02-15).
+             */
+            if (changed) {
+                customerSelect.dispatchEvent(new Event('change'));
+            }
+        }
+
+        function highlight() {
+            var items = menu.querySelectorAll('.combo-option');
+            items.forEach(function (item, index) {
+                item.classList.toggle('is-active', index === activeIndex);
+            });
+            var active = items[activeIndex];
+            if (active) {
+                active.scrollIntoView({ block: 'nearest' });
+                input.setAttribute('aria-activedescendant', active.id);
+            } else {
+                input.removeAttribute('aria-activedescendant');
+            }
+        }
+
+        function close() {
+            menu.hidden = true;
+            input.setAttribute('aria-expanded', 'false');
+            input.removeAttribute('aria-activedescendant');
+        }
+
+        function selectedLabel() {
+            return customerSelect.value
+                ? customerSelect.options[customerSelect.selectedIndex].textContent.trim()
+                : '';
+        }
+
+        function indexOfSelected() {
+            for (var i = 0; i < matches.length; i++) {
+                if (matches[i].value === customerSelect.value) {
+                    return i;
+                }
+            }
+            return -1;
+        }
+    }
+
+    /**
+     * Chuan hoa de so khop khong phan biet hoa thuong va dau tieng Viet. NFD tach dau ra
+     * khoi chu cai roi xoa; rieng chu "đ" la mot chu cai rieng chu khong phai d + dau nen
+     * phai doi tay. Gop moi khoang trang lien nhau thanh mot.
+     */
+    function normalize(text) {
+        return (text || '')
+            .normalize('NFD')
+            .replace(/[̀-ͯ]/g, '')
+            .replace(/đ/g, 'd')
+            .replace(/Đ/g, 'D')
+            .toLowerCase()
+            .replace(/\s+/g, ' ')
+            .trim();
     }
 
     // ==================== Phan 3: nut sao chep o trang chi tiet ====================

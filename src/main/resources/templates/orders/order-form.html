@@ -27,6 +27,21 @@
             <div class="col-md-6">
                 <label for="customerId" class="form-label">Khách hàng <span class="text-danger">*</span></label>
                 <!--
+                    O go de tim khach theo ten, so dien thoai hoac dia chi. Danh sach khach that
+                    van la the <select> ben duoi — o go nay chi la lop tim kiem dat len tren:
+                    chon xong thi order-form.js gan gia tri vao <select>, nen form gui len may
+                    chu y nhu cu (customerId). Tat JavaScript thi o go an di, <select> hien lai.
+                -->
+                <div class="combo" id="customer-combo" hidden>
+                    <input type="text" id="customer-search" class="form-select" autocomplete="off"
+                           placeholder="Gõ tên, số điện thoại hoặc địa chỉ để tìm khách"
+                           role="combobox" aria-autocomplete="list" aria-expanded="false"
+                           aria-controls="customer-options"
+                           th:classappend="${#fields.hasErrors('customerId')} ? 'is-invalid'">
+                    <div class="combo-menu" id="customer-options" role="listbox" hidden></div>
+                </div>
+
+                <!--
                     Cac thuoc tinh data-* la nguon de JavaScript tu dien dia chi, toa do,
                     hinh thuc thanh toan khi chon khach (BR02-07). Chi khach ACTIVE moi
                     co trong danh sach nay.
@@ -45,16 +60,6 @@
                 </select>
                 <div class="invalid-feedback d-block" th:if="${#fields.hasErrors('customerId')}"
                      th:errors="*{customerId}">Lỗi</div>
-
-                <!--
-                    CN-02-10: khach goi dat hang lan dau thi don dang go do, khong the bat ho
-                    cho toi khi quan tri vien them khach xong. Hop thoai nay them khach roi
-                    tu chon luon cho don dang tao, khong tai lai trang.
-                -->
-                <button type="button" class="btn btn-sm btn-outline-secondary mt-2"
-                        data-bs-toggle="modal" data-bs-target="#quick-customer-modal">
-                    + Khách mới chưa có trong danh mục
-                </button>
 
                 <!-- Ghi chu giao hang cua khach (BR01-07) — dieu phoi vien can thay truoc khi chot -->
                 <div id="customer-delivery-note" class="form-text"></div>
@@ -196,119 +201,6 @@
             <a th:href="@{/orders}" class="btn btn-outline-secondary">Hủy</a>
         </div>
     </form>
-
-    <!--
-        ============ CN-02-10 Hop thoai them khach nhanh ============
-
-        Dat NGOAI the <form> o tren. HTML khong cho long form trong form: de ben trong
-        thi trinh duyet tu dong cat, ket qua la mot trong hai form mat nut gui.
-
-        The <form> rieng nay khong bao gio submit theo kieu thuong — order-form.js chan lai
-        va goi bang fetch. Van de la <form> that de Thymeleaf tu chen the an chua CSRF token,
-        khoi phai tu di lay token o cho khac.
-    -->
-    <div class="modal fade" id="quick-customer-modal" tabindex="-1">
-        <div class="modal-dialog modal-lg">
-            <div class="modal-content">
-                <div class="modal-header py-2">
-                    <h2 class="h6 modal-title">Thêm khách hàng mới</h2>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-                </div>
-
-                <form id="quick-customer-form" th:action="@{/orders/quick-customer}" method="post">
-                    <div class="modal-body">
-
-                        <div id="quick-customer-errors" class="alert alert-danger py-2 d-none"></div>
-
-                        <div class="row g-3">
-                            <div class="col-md-7">
-                                <label for="qc-name" class="form-label">
-                                    Tên cửa hàng <span class="text-danger">*</span>
-                                </label>
-                                <input type="text" id="qc-name" name="name" class="form-control"
-                                       placeholder="Tạp hóa Bà Lan">
-                            </div>
-
-                            <div class="col-md-5">
-                                <label for="qc-contactPerson" class="form-label">Người liên hệ</label>
-                                <input type="text" id="qc-contactPerson" name="contactPerson"
-                                       class="form-control" placeholder="Bà Lan">
-                            </div>
-
-                            <div class="col-md-4">
-                                <label for="qc-phone" class="form-label">
-                                    Số điện thoại <span class="text-danger">*</span>
-                                </label>
-                                <!-- type="text" chu khong phai number: o kieu number cat mat so 0 dau -->
-                                <input type="text" id="qc-phone" name="phone" class="form-control"
-                                       maxlength="10" inputmode="numeric" placeholder="0912345678">
-                            </div>
-
-                            <div class="col-md-8">
-                                <label for="qc-email" class="form-label">Email</label>
-                                <input type="text" id="qc-email" name="email" class="form-control"
-                                       placeholder="tapholaban@gmail.com">
-                            </div>
-
-                            <div class="col-12">
-                                <label for="qc-address" class="form-label">
-                                    Địa chỉ giao hàng <span class="text-danger">*</span>
-                                </label>
-                                <div class="d-flex gap-2">
-                                    <input type="text" id="qc-address" name="address" class="form-control"
-                                           placeholder="Số 12 ngõ 5 Phan Trọng Tuệ, Thanh Trì">
-                                    <button type="button" id="qc-geocode-search"
-                                            class="btn btn-outline-secondary text-nowrap">Tìm tọa độ</button>
-                                </div>
-                                <div id="qc-geocode-status" class="form-text"></div>
-                                <!-- Nominatim tra nhieu ket qua thi hien danh sach de chon (BR01-06) -->
-                                <div id="qc-geocode-results" class="list-group mt-1 d-none"
-                                     style="max-height: 160px; overflow-y: auto;"></div>
-                            </div>
-
-                            <div class="col-md-3">
-                                <label for="qc-latitude" class="form-label">
-                                    Vĩ độ <span class="text-danger">*</span>
-                                </label>
-                                <input type="number" step="any" id="qc-latitude" name="latitude"
-                                       class="form-control" placeholder="21.0031">
-                            </div>
-
-                            <div class="col-md-3">
-                                <label for="qc-longitude" class="form-label">
-                                    Kinh độ <span class="text-danger">*</span>
-                                </label>
-                                <input type="number" step="any" id="qc-longitude" name="longitude"
-                                       class="form-control" placeholder="105.8201">
-                            </div>
-
-                            <div class="col-md-6">
-                                <label for="qc-paymentMethod" class="form-label">Hình thức thanh toán</label>
-                                <select id="qc-paymentMethod" name="paymentMethod" class="form-select">
-                                    <option th:each="paymentMethodOption : ${paymentMethods}"
-                                            th:value="${paymentMethodOption}" th:text="${paymentMethodOption.displayName}"
-                                            th:selected="${paymentMethodOption.name() == 'CASH'}">Tiền mặt</option>
-                                </select>
-                            </div>
-
-                            <div class="col-12">
-                                <label for="qc-deliveryNote" class="form-label">Ghi chú giao hàng</label>
-                                <input type="text" id="qc-deliveryNote" name="deliveryNote"
-                                       class="form-control"
-                                       placeholder="Chỉ nhận buổi sáng trước 11h. Xe lớn không vào được ngõ.">
-                            </div>
-                        </div>
-                    </div>
-
-                    <div class="modal-footer py-2">
-                        <button type="submit" class="btn btn-primary btn-sm">Thêm và chọn cho đơn này</button>
-                        <button type="button" class="btn btn-outline-secondary btn-sm"
-                                data-bs-dismiss="modal">Đóng</button>
-                    </div>
-                </form>
-            </div>
-        </div>
-    </div>
 
 </div>
 
