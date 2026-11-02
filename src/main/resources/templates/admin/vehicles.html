@@ -11,10 +11,10 @@
     <div class="toolbar d-flex justify-content-between align-items-end flex-wrap gap-2">
 
         <form th:action="@{/admin/vehicles}" method="get" class="d-flex align-items-end gap-2">
-            <div>
+            <div class="me-3">
                 <label for="keyword" class="form-label mb-1 small">Tìm theo biển số hoặc loại xe</label>
                 <input type="text" id="keyword" name="keyword" class="form-control form-control-sm"
-                       style="width: 240px;" th:value="${keyword}" placeholder="Ví dụ: 29H hoặc xe tải 1.5">
+                       style="width: 340px;" th:value="${keyword}" placeholder="Ví dụ: 29H hoặc xe tải 1.5">
             </div>
             <div>
                 <label for="status" class="form-label mb-1 small">Trạng thái</label>
@@ -26,7 +26,7 @@
                             th:selected="${statusOption == status}">Trạng thái</option>
                 </select>
             </div>
-            <button type="submit" class="btn btn-sm btn-outline-secondary">Tìm</button>
+            <button type="submit" class="btn btn-sm btn-primary">Tìm</button>
             <a th:href="@{/admin/vehicles}" class="btn btn-sm btn-outline-secondary">Bỏ lọc</a>
         </form>
 
@@ -42,7 +42,7 @@
             <th style="width: 130px;" class="num">Thể tích (m³)</th>
             <th style="width: 120px;">Trạng thái</th>
             <th>Ghi chú</th>
-            <th style="width: 170px;">Thao tác</th>
+            <th style="width: 230px;">Thao tác</th>
         </tr>
         </thead>
         <tbody>
@@ -65,29 +65,38 @@
                       th:text="${vehicle.status.displayName}">Sẵn sàng</span>
             </td>
 
-            <td class="text-sub small" th:text="${vehicle.note}"></td>
+            <td class="text-sub" th:text="${vehicle.note}"></td>
 
             <td>
-                <span sec:authorize="!hasRole('ADMIN')" class="text-sub small">Chỉ xem</span>
-                <a class="btn btn-sm btn-outline-secondary py-0" sec:authorize="hasRole('ADMIN')"
-                   th:href="@{/admin/vehicles/{id}/edit(id=${vehicle.id})}">Sửa</a>
+                <span sec:authorize="!hasRole('ADMIN')" class="text-sub">Chỉ xem</span>
+                <div class="row-actions" sec:authorize="hasRole('ADMIN')">
+                    <a class="btn btn-sm btn-outline-secondary"
+                       th:href="@{/admin/vehicles/{id}/edit(id=${vehicle.id})}">Sửa</a>
 
-                <!--
-                    Xe dang chay tuyen thi khong doi trang thai duoc. O day chi lam mo nut,
-                    con viec chan that nam o VehicleService.toggleMaintenance (BR01-04, CBR-15).
-                -->
-                <span th:if="${vehicle.status.name() == 'IN_USE'}"
-                      class="btn btn-sm btn-outline-secondary py-0 disabled"
-                      title="Xe đang chạy tuyến">Đang chạy</span>
+                    <!--
+                        Xe dang chay tuyen thi khong doi trang thai duoc. O day chi lam mo nut,
+                        con viec chan that nam o VehicleService.toggleMaintenance (BR01-04, CBR-15).
+                    -->
+                    <span th:if="${vehicle.status.name() == 'IN_USE'}"
+                          class="btn btn-sm btn-toggle disabled"
+                          title="Xe đang chạy tuyến">Đang chạy</span>
 
-                <form th:unless="${vehicle.status.name() == 'IN_USE'}" sec:authorize="hasRole('ADMIN')"
-                      th:action="@{/admin/vehicles/{id}/toggle-status(id=${vehicle.id})}" method="post"
-                      class="d-inline"
-                      onsubmit="return confirm('Bạn có chắc chắn muốn thực hiện thao tác này?');">
-                    <button type="submit" class="btn btn-sm btn-outline-secondary py-0"
-                            th:text="${vehicle.status.name() == 'AVAILABLE'} ? 'Chuyển bảo trì' : 'Cho chạy lại'">
-                        Chuyển bảo trì</button>
-                </form>
+                    <form th:unless="${vehicle.status.name() == 'IN_USE'}"
+                          th:action="@{/admin/vehicles/{id}/toggle-status(id=${vehicle.id})}" method="post"
+                          th:with="toMaintenance=${vehicle.status.name() == 'AVAILABLE'}"
+                          th:data-confirm-title="${toMaintenance} ? 'Chuyển xe sang bảo trì' : 'Cho xe chạy lại'"
+                          th:data-confirm-message="${toMaintenance}
+                              ? 'Xe {subject} sẽ chuyển sang “Bảo trì” và không được chọn khi phân tuyến cho đến khi được cho chạy lại. Bạn xác nhận?'
+                              : 'Xe {subject} sẽ chuyển từ “Bảo trì” sang “Sẵn sàng” và có thể được chọn khi phân tuyến. Bạn xác nhận?'"
+                          th:data-confirm-subject="${vehicle.licensePlate}"
+                          th:data-confirm-button="${toMaintenance} ? 'Chuyển bảo trì' : 'Cho chạy lại'"
+                          th:data-confirm-variant="${toMaintenance} ? 'warning' : 'success'">
+                        <button type="submit" class="btn btn-sm btn-toggle"
+                                th:classappend="${vehicle.status.name() == 'AVAILABLE'} ? 'btn-turn-off' : 'btn-turn-on'"
+                                th:text="${vehicle.status.name() == 'AVAILABLE'} ? 'Chuyển bảo trì' : 'Cho chạy lại'">
+                            Chuyển bảo trì</button>
+                    </form>
+                </div>
             </td>
         </tr>
         </tbody>

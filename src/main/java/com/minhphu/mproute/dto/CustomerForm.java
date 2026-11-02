@@ -5,7 +5,6 @@ import com.minhphu.mproute.entity.enums.PaymentMethod;
 import com.minhphu.mproute.entity.enums.RecordStatus;
 import jakarta.validation.constraints.DecimalMax;
 import jakarta.validation.constraints.DecimalMin;
-import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Pattern;
@@ -43,10 +42,7 @@ public class CustomerForm {
             message = "Số điện thoại phải đúng 10 chữ số và bắt đầu bằng số 0")
     private String phone;
 
-    // Dung de gui thong bao ETA sau khi chot tuyen (BR04-11, NTF-08)
-    @Email(message = "Email không đúng định dạng")
-    @Size(max = 100, message = "Email tối đa 100 ký tự")
-    private String email;
+    // Khong co o email: da bo khoi form theo yeu cau, xem CustomerService.save
 
     @NotBlank(message = "Vui lòng nhập địa chỉ giao hàng")
     @Size(max = 255, message = "Địa chỉ tối đa 255 ký tự")
@@ -87,7 +83,6 @@ public class CustomerForm {
         form.setName(customer.getName());
         form.setContactPerson(customer.getContactPerson());
         form.setPhone(customer.getPhone());
-        form.setEmail(customer.getEmail());
         form.setAddress(customer.getAddress());
         form.setLatitude(customer.getLatitude());
         form.setLongitude(customer.getLongitude());

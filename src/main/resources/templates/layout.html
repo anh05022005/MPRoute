@@ -32,38 +32,55 @@
 
 <!-- ============ Thanh tieu de ============ -->
 <header class="app-header d-flex justify-content-between align-items-center">
-    <span class="app-name">Minh Phú — Quản lý giao hàng</span>
+    <div class="app-brand">
+        <span class="app-logo" aria-hidden="true">MP</span>
+        <span class="app-name">Minh Phú — Quản lý giao hàng</span>
+    </div>
 
-    <div class="d-flex align-items-center gap-3" sec:authorize="isAuthenticated()">
+    <div class="app-user" sec:authorize="isAuthenticated()">
         <span>
-            <span th:text="${#authentication.principal.fullName}">Người dùng</span>
-            <span class="text-white-50"
+            <span class="app-user-name" th:text="${#authentication.principal.fullName}">Người dùng</span>
+            <span class="app-user-role"
                   th:text="'(' + ${#authentication.principal.role.displayName} + ')'">(Vai trò)</span>
         </span>
+        <span class="app-user-divider" aria-hidden="true"></span>
         <a th:href="@{/change-password}">Đổi mật khẩu</a>
         <!-- Dang xuat phai la form POST: neu de link GET thi ke khac chi can du
              nguoi dung bam vao mot duong dan la da dang xuat ho (tan cong CSRF) -->
         <form th:action="@{/logout}" method="post" class="m-0">
-            <button type="submit" class="btn btn-sm btn-outline-light">Đăng xuất</button>
+            <button type="submit" class="btn btn-sm btn-outline-light btn-logout">Đăng xuất</button>
         </form>
     </div>
 </header>
 
 <!-- ============ Thanh menu, hien theo vai tro ============ -->
 <!-- Tai xe khong co menu, chi co mot man hinh duy nhat (docs/05-giao-dien.md) -->
-<nav class="app-nav" sec:authorize="hasAnyRole('ADMIN', 'DISPATCHER')">
+<!-- currentPath do NavigationAdvice dua vao. Trang loi khong qua Controller thuong co the
+     khong co bien nay, nen doi null ve chuoi rong truoc khi so khop -->
+<nav class="app-nav" sec:authorize="hasAnyRole('ADMIN', 'DISPATCHER')"
+     th:with="path=${currentPath ?: ''}">
     <ul class="nav">
 
         <!-- Dieu phoi vien XEM duoc danh muc nhung khong sua. Nut Them/Sua bi an trong
              tung man hinh, va chan that o @PreAuthorize cua Controller (CBR-15) -->
         <li class="nav-item dropdown" sec:authorize="hasAnyRole('ADMIN', 'DISPATCHER')">
-            <a class="nav-link dropdown-toggle" href="#" data-bs-toggle="dropdown">Danh mục</a>
+            <a class="nav-link dropdown-toggle" href="#" data-bs-toggle="dropdown"
+               th:classappend="${#strings.startsWith(path, '/admin/products')
+                                 or #strings.startsWith(path, '/admin/vehicles')
+                                 or #strings.startsWith(path, '/admin/drivers')
+                                 or #strings.startsWith(path, '/admin/customers')
+                                 or #strings.startsWith(path, '/admin/depot')} ? 'is-active'">Danh mục</a>
             <ul class="dropdown-menu">
-                <li><a class="dropdown-item" th:href="@{/admin/products}">Sản phẩm</a></li>
-                <li><a class="dropdown-item" th:href="@{/admin/vehicles}">Phương tiện</a></li>
-                <li><a class="dropdown-item" th:href="@{/admin/drivers}">Tài xế</a></li>
-                <li><a class="dropdown-item" th:href="@{/admin/customers}">Khách hàng</a></li>
-                <li><a class="dropdown-item" th:href="@{/admin/depot}">Kho</a></li>
+                <li><a class="dropdown-item" th:href="@{/admin/products}"
+                       th:classappend="${#strings.startsWith(path, '/admin/products')} ? 'active'">Sản phẩm</a></li>
+                <li><a class="dropdown-item" th:href="@{/admin/vehicles}"
+                       th:classappend="${#strings.startsWith(path, '/admin/vehicles')} ? 'active'">Phương tiện</a></li>
+                <li><a class="dropdown-item" th:href="@{/admin/drivers}"
+                       th:classappend="${#strings.startsWith(path, '/admin/drivers')} ? 'active'">Tài xế</a></li>
+                <li><a class="dropdown-item" th:href="@{/admin/customers}"
+                       th:classappend="${#strings.startsWith(path, '/admin/customers')} ? 'active'">Khách hàng</a></li>
+                <li><a class="dropdown-item" th:href="@{/admin/depot}"
+                       th:classappend="${#strings.startsWith(path, '/admin/depot')} ? 'active'">Kho</a></li>
             </ul>
         </li>
 
@@ -74,29 +91,37 @@
             Gop vao mot menu la mo duong cho nham lan ve quyen.
         -->
         <li class="nav-item" sec:authorize="hasAnyRole('ADMIN', 'DISPATCHER')">
-            <a class="nav-link" th:href="@{/admin/stock}">Tồn kho</a>
+            <a class="nav-link" th:href="@{/admin/stock}"
+               th:classappend="${#strings.startsWith(path, '/admin/stock')} ? 'is-active'">Tồn kho</a>
         </li>
         <li class="nav-item" sec:authorize="hasRole('ADMIN')">
-            <a class="nav-link" th:href="@{/admin/users}">Tài khoản</a>
+            <a class="nav-link" th:href="@{/admin/users}"
+               th:classappend="${#strings.startsWith(path, '/admin/users')} ? 'is-active'">Tài khoản</a>
         </li>
         <li class="nav-item" sec:authorize="hasRole('ADMIN')">
-            <a class="nav-link" th:href="@{/admin/settings}">Tham số</a>
+            <a class="nav-link" th:href="@{/admin/settings}"
+               th:classappend="${#strings.startsWith(path, '/admin/settings')} ? 'is-active'">Tham số</a>
         </li>
 
         <li class="nav-item" sec:authorize="hasAnyRole('ADMIN', 'DISPATCHER')">
-            <a class="nav-link" th:href="@{/orders}">Đơn hàng</a>
+            <a class="nav-link" th:href="@{/orders}"
+               th:classappend="${#strings.startsWith(path, '/orders')} ? 'is-active'">Đơn hàng</a>
         </li>
         <li class="nav-item" sec:authorize="hasAnyRole('ADMIN', 'DISPATCHER')">
-            <a class="nav-link" th:href="@{/routing}">Phân tuyến</a>
+            <a class="nav-link" th:href="@{/routing}"
+               th:classappend="${#strings.startsWith(path, '/routing')} ? 'is-active'">Phân tuyến</a>
         </li>
         <li class="nav-item" sec:authorize="hasAnyRole('ADMIN', 'DISPATCHER')">
-            <a class="nav-link" th:href="@{/tracking}">Theo dõi</a>
+            <a class="nav-link" th:href="@{/tracking}"
+               th:classappend="${#strings.startsWith(path, '/tracking')} ? 'is-active'">Theo dõi</a>
         </li>
         <li class="nav-item" sec:authorize="hasAnyRole('ADMIN', 'DISPATCHER')">
-            <a class="nav-link" th:href="@{/incidents}">Sự cố</a>
+            <a class="nav-link" th:href="@{/incidents}"
+               th:classappend="${#strings.startsWith(path, '/incidents')} ? 'is-active'">Sự cố</a>
         </li>
         <li class="nav-item" sec:authorize="hasAnyRole('ADMIN', 'DISPATCHER')">
-            <a class="nav-link" th:href="@{/reports}">Báo cáo</a>
+            <a class="nav-link" th:href="@{/reports}"
+               th:classappend="${#strings.startsWith(path, '/reports')} ? 'is-active'">Báo cáo</a>
         </li>
     </ul>
 </nav>
@@ -137,7 +162,31 @@
     </div>
 </div>
 
+<!-- ============ Hop xac nhan dung chung ============ -->
+<!-- Thay cho confirm() cua trinh duyet ("localhost says"). Noi dung do tung form tu khai
+     bang data-confirm-*, xem huong dan o dau file js/confirm-dialog.js -->
+<div class="modal fade confirm-dialog" id="confirm-dialog" tabindex="-1"
+     aria-labelledby="confirm-dialog-title" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="confirm-dialog-title">Xác nhận</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Đóng"></button>
+            </div>
+            <div class="modal-body" id="confirm-dialog-message"></div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-outline-secondary" id="confirm-dialog-cancel"
+                        data-bs-dismiss="modal">Hủy</button>
+                <button type="button" class="btn btn-primary" id="confirm-dialog-ok">Đồng ý</button>
+            </div>
+        </div>
+    </div>
+</div>
+
 <script th:src="@{/js/bootstrap.bundle.min.js}"></script>
+<!-- Bao loi nhap lieu bang chu do duoi o thay cho bong bong tieng Anh cua trinh duyet -->
+<script th:src="@{/js/form-validation.js}"></script>
+<script th:src="@{/js/confirm-dialog.js}"></script>
 
 <!-- Toast cua Bootstrap khong tu hien, phai goi show(). Thoi gian an doc tu data-bs-delay /
      data-bs-autohide tren tung toast o tren -->

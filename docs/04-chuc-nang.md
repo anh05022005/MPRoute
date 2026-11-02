@@ -37,19 +37,26 @@ Có `layout.html` dùng chung: thanh tiêu đề, menu theo vai trò, vùng nộ
 Thêm, sửa, tìm kiếm, phân trang. Bắt buộc nhập `weight_per_box` và `volume_per_box` > 0 — để trống hoặc nhập 0 thì báo lỗi ngay dưới trường.
 
 ### ★ CN-01-02 Quản lý phương tiện
-Thêm, sửa, đổi trạng thái. Bắt buộc `max_weight` và `max_volume` > 0. Không cho chọn tay trạng thái `IN_USE`.
+Thêm, sửa, đổi trạng thái. Bắt buộc `max_weight` 300–5.000 kg và `max_volume` 1–25 m³ (BR01-03).
+Biển số sai định dạng (`29H-1234.56`, `ABC-123`) → báo lỗi ngay dưới ô; gõ `29h 12345` thì tự
+chuẩn hóa thành `29H-123.45`. Không cho chọn tay trạng thái `IN_USE`.
 
 ### ★ CN-01-03 Quản lý tài xế
 Thêm, sửa, gán xe mặc định. Số điện thoại không đúng 10 chữ số bắt đầu bằng 0 → báo lỗi.
 
 ### ★ CN-01-04 Quản lý khách hàng
 Thêm, sửa, chọn hình thức thanh toán, nhập ghi chú giao hàng.
+Form **không có ô Email**. Cột `email` trong CSDL vẫn giữ: khách
+cũ đã có email vẫn nhận thư ETA (CN-04-08), sửa thông tin khách không xóa mất email đó. Khách thêm
+mới không có email → thông báo ghi `NOT_SENT` (BR04-12).
 
 ### ★ CN-01-05 Xác định tọa độ khách hàng
 Nhập địa chỉ → bấm "Tìm tọa độ" → Nominatim trả kết quả → hiện ghim trên bản đồ. Không tìm được → bấm được vào bản đồ để ghim tay, tọa độ tự điền vào hai ô.
 
 ### ★ CN-01-06 Quản lý kho
 Sửa được tên, địa chỉ, tọa độ. Có sẵn một kho Phan Trọng Tuệ từ dữ liệu mẫu.
+Công ty chuyển địa điểm thì **thêm kho mới** rồi đặt làm kho chính — kho cũ tự chuyển ngừng dùng,
+luôn đúng một kho đang dùng (BR01-10). Tuyến cũ vẫn trỏ về kho cũ nên lịch sử và báo cáo không đổi.
 
 ### ★ CN-01-07 Quản lý tài khoản
 Thêm tài khoản, gán vai trò, khóa/mở khóa. Không có nút xóa cứng.

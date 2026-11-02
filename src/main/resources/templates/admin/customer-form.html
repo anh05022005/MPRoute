@@ -7,7 +7,13 @@
 
 <div th:fragment="content">
 
-    <div class="page-title mb-3" th:text="${form.id == null} ? 'Thêm khách hàng' : 'Sửa khách hàng'">Thêm khách hàng</div>
+    <div th:replace="~{fragments/form-header :: form-header(
+             rootLabel    = 'Danh mục',
+             sectionLabel = 'Khách hàng',
+             listPath     = '/admin/customers',
+             isNew        = ${form.id == null},
+             newTitle     = 'Thêm khách hàng',
+             editTitle    = 'Sửa khách hàng')}"></div>
 
     <!--
         Bo cuc hai cot: o nhap ben trai, ban do ben phai (docs/05-giao-dien.md).
@@ -15,7 +21,7 @@
         tren ban do roi phai nhin thay ngay hai o vi do / kinh do doi theo.
         Duoi 991px thi .split tu xep thanh mot cot.
     -->
-    <form th:action="@{/admin/customers/save}" th:object="${form}" method="post">
+    <form th:action="@{/admin/customers/save}" th:object="${form}" method="post" class="entry-form">
 
         <input type="hidden" th:field="*{id}">
 
@@ -51,14 +57,6 @@
                                th:classappend="${#fields.hasErrors('phone')} ? 'is-invalid'"
                                maxlength="10" inputmode="numeric" placeholder="0912345678">
                         <div class="invalid-feedback" th:errors="*{phone}">Lỗi</div>
-                    </div>
-
-                    <div class="col-12">
-                        <label for="email" class="form-label">Email</label>
-                        <input type="text" id="email" class="form-control" th:field="*{email}"
-                               th:classappend="${#fields.hasErrors('email')} ? 'is-invalid'"
-                               placeholder="tapholaban@gmail.com">
-                        <div class="invalid-feedback" th:errors="*{email}">Lỗi</div>
                     </div>
 
                     <div class="col-12">
@@ -114,7 +112,7 @@
 
                     <div class="col-12">
                         <label for="deliveryNote" class="form-label">Ghi chú giao hàng</label>
-                        <textarea id="deliveryNote" class="form-control" rows="2" th:field="*{deliveryNote}"
+                        <textarea id="deliveryNote" class="form-control" rows="3" th:field="*{deliveryNote}"
                                   th:classappend="${#fields.hasErrors('deliveryNote')} ? 'is-invalid'"
                                   placeholder="Chỉ nhận buổi sáng trước 11h. Xe lớn không vào được ngõ."></textarea>
                         <div class="invalid-feedback" th:errors="*{deliveryNote}">Lỗi</div>
@@ -128,7 +126,7 @@
                 <div th:replace="~{fragments/map-picker :: map-picker}"></div>
 
                 <!-- Nut hanh dong dat duoi ban do, phia phai — theo docs/05-giao-dien.md -->
-                <div class="d-flex justify-content-end gap-2 mt-3">
+                <div class="map-form-actions">
                     <a th:href="@{/admin/customers}" class="btn btn-outline-secondary">Hủy</a>
                     <button type="submit" class="btn btn-primary">Lưu</button>
                 </div>

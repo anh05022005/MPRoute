@@ -81,6 +81,9 @@ Khai báo một lần trong `src/main/resources/static/css/style.css`:
 | Xanh 900 chỉ dùng cho thanh tiêu đề trên cùng | Tạo lớp lang |
 | Xanh 700 cho thanh menu, xanh 500 cho tab đang chọn và nút chính | |
 | **Mỗi màn hình chỉ một nút xanh đặc.** Nút còn lại nền trắng viền xám | Ba nút cùng xanh thì không biết bấm cái nào |
+| Ngoại lệ: nút **Tìm** / **Lọc** / **Xem báo cáo** trên thanh lọc cũng xanh đặc (cỡ nhỏ), hover đậm hơn. Ô tìm kiếm đứng cách các ô lọc bên cạnh một khoảng | Nút gửi bộ lọc là việc làm nhiều nhất trên màn danh sách, phải thấy ngay |
+| Ngoại lệ ở cột Thao tác của màn danh mục: nút đổi trạng thái viền **cam** khi tắt (bảo trì, ngừng dùng, khóa), viền **xanh lá** khi bật lại (`.btn-turn-off` / `.btn-turn-on`). Nút không bấm được thì nền xám | Cùng màu với nhãn trạng thái mà nút dẫn tới, nhìn là biết bấm vào sẽ thành gì |
+| Nút trong cột Thao tác có độ rộng tối thiểu cố định (`.row-actions`) | Cùng một thao tác thẳng cột từ dòng này xuống dòng kia |
 | Màu trạng thái chỉ dùng cho trạng thái, không trang trí | |
 | Bảng dữ liệu giữ trắng và xám, kẻ sọc bằng `--nen-soc` | |
 
@@ -101,11 +104,11 @@ Năm màu phân biệt tuyến đã chọn cùng độ đậm nhưng khác độ
 ## Bố cục chung
 
 ```
-┌──────────────────────────────────────────────────┐
-│ Minh Phu — Quan ly giao hang     user | Dang xuat│  xanh-900
-├──────────────────────────────────────────────────┤
-│ Phan tuyen | Don hang | Theo doi | Su co | Bao cao│  xanh-700
-├──────────────────────────────────────────────────┤
+┌──────────────────────────────────────────────────────────────┐
+│ [MP] Minh Phu — Quan ly giao hang  Ten (vai tro) │ Doi MK (Dang xuat)│  xanh-900
+├──────────────────────────────────────────────────────────────┤
+│ Danh muc▾ | Ton kho | [Don hang] | Phan tuyen | ... | Bao cao│  xanh-700
+├──────────────────────────────────────────────────────────────┤
 │ [thanh cong cu / bo loc]                          │  trang
 ├──────────────────────────────────────────────────┤
 │                                                   │
@@ -114,6 +117,13 @@ Năm màu phân biệt tuyến đã chọn cùng độ đậm nhưng khác độ
 └──────────────────────────────────────────────────┘
 ```
 
+Thanh tiêu đề: ô vuông xanh bo góc chữ **MP** thay cho logo, tên hệ thống in đậm; bên phải là
+tên người dùng kèm vai trò chữ nhỏ mờ, một vạch ngăn, **Đổi mật khẩu** và nút **Đăng xuất** viền
+trắng bo tròn. Thanh menu tô mục đang mở: chữ đậm, nền sáng hơn một chút, gạch chân trắng — mục
+*Danh mục* sáng khi đang ở bất kỳ màn danh mục nào, và mục con tương ứng trong menu thả được tô
+nền. Đường dẫn hiện tại do `NavigationAdvice` đưa vào model (`currentPath`) vì Thymeleaf 3.1
+không còn cho template đọc `#request`.
+
 Menu hiển thị theo vai trò:
 
 | Vai trò | Menu |
@@ -121,6 +131,60 @@ Menu hiển thị theo vai trò:
 | Quản trị | Danh mục, Tài khoản, Tham số, Báo cáo |
 | Điều phối | Đơn hàng, Phân tuyến, Theo dõi, Sự cố, Báo cáo |
 | Tài xế | (không có menu, chỉ một màn hình duy nhất) |
+
+### Cỡ chữ
+
+**Chỉ năm bậc**, khai một lần thành biến ở đầu `style.css`, không chỗ nào ghi số px riêng.
+Trước đây mỗi màn tự chọn (bảng 14px, nút 16px, ô lọc 14px, tiêu đề `h4` 24px, số liệu
+`style="font-size: 17px"` viết tay) nên chuyển màn là thấy chữ to nhỏ khác nhau.
+
+| Biến | Cỡ | Dùng cho |
+|---|---|---|
+| `--fs-meta` | 13px | Đường dẫn, gợi ý dưới ô, câu báo lỗi dưới ô, nhãn trạng thái, chú thích, `.small` |
+| `--fs-label` | 14px | Nhãn ô nhập, nhãn mục, nhãn trường chỉ đọc |
+| `--fs-base` | 15px | Chữ thường, bảng, **mọi** ô nhập và nút (kể cả cỡ `-sm`), menu, menu thả, phân trang, toast |
+| `--fs-heading` | 17px | Tiêu đề hộp thoại, tên hệ thống trên thanh tiêu đề, số liệu phụ (`.metric-value-sm`), nút lớn ở màn tài xế |
+| `--fs-title` | 22px | Tiêu đề trang (`.page-title`, `h1`–`h4`), số liệu chính |
+
+Lớp `-sm` của Bootstrap (`btn-sm`, `form-control-sm`) giờ **chỉ làm thấp hơn, không làm chữ nhỏ
+đi**. Ngoại lệ duy nhất là chữ trong biểu đồ SVG và số trên ghim bản đồ — chúng cố định theo
+kích thước hình chứ không theo chữ xung quanh.
+
+Trong bảng, **giá trị của một cột không bao giờ dùng `.small`** — địa chỉ, tọa độ, hình thức
+thanh toán cùng cỡ với tên và số điện thoại bên cạnh. Chữ nhỏ chỉ dành cho dòng phụ nằm dưới
+giá trị chính trong cùng một ô (ghi chú giao hàng dưới tên cửa hàng, địa chỉ dưới tên khách).
+
+Căn phải (`.num`) chỉ dành cho số lượng đem so hoặc cộng theo cột: số thùng, kg, m³, tiền.
+Tọa độ là định danh vị trí chứ không phải số lượng, nên căn trái như địa chỉ. Ô tiền không
+xuống dòng (`text-nowrap`) — "0đ · Chuyển khoản trước" bị ngắt đôi đọc như hai ý rời.
+
+### Form thêm / sửa
+
+Mọi form dùng chung một khuôn (`fragments/form-header.html` + lớp `.entry-form`):
+
+- Đầu trang: đường dẫn *Danh mục › Phương tiện › Sửa phương tiện* (khúc cuối viết đủ, trùng tiêu đề), tiêu đề, nút **← Quay lại danh sách** bên phải
+- Rộng hết màn hình; ô nhập cao hơn ô lọc trên danh sách, nhãn đậm đặt trên ô
+- Ô số có đơn vị dính liền phía sau (`kg`, `m³`, `đ`)
+- Form không có bản đồ: nút **Lưu** · **Hủy** ở dưới cùng bên trái, sau một đường kẻ
+- Form có bản đồ (khách hàng, kho): ô nhập bên trái, bản đồ bên phải, **Hủy** · **Lưu** dưới bản đồ
+
+### Báo lỗi nhập liệu
+
+**Không để trình duyệt hiện bong bóng** kiểu "Value must be less than or equal to 5000" — tiếng
+Anh, tự tắt sau vài giây, trông khác hẳn lỗi máy chủ trả về. `js/form-validation.js` (nạp ở
+`layout.html` và `login.html`) tắt bong bóng trên mọi form, tự kiểm lại các thuộc tính
+`required` / `min` / `max` / `step` / `type="email"` và hiện **dòng chữ đỏ ngay dưới ô**, viền ô
+đỏ — cùng kiểu với lỗi `th:errors` từ máy chủ. Câu báo ghép từ nhãn của ô: *"Vui lòng nhập tải
+trọng tối đa từ 300 đến 5.000 kg"*, nên ô nào viết đúng nhãn là có câu đúng. Bắt đầu sửa ô là chữ
+đỏ tắt. Câu báo phía máy chủ (`@DecimalMin`…) viết giống hệt câu phía trình duyệt.
+
+### Hộp xác nhận
+
+**Không dùng `confirm()` / `alert()` của trình duyệt** — chúng hiện hộp "localhost says", không
+đặt được tiêu đề, không tô màu nút. Mọi thao tác cần xác nhận dùng hộp chung đặt sẵn trong
+`layout.html`; form chỉ khai nội dung bằng thuộc tính `data-confirm-*` (xem đầu file
+`js/confirm-dialog.js`). Nút đồng ý cùng màu với thao tác: cam khi tắt, xanh lá khi bật lại,
+đỏ khi hủy đơn. Con trỏ đặt sẵn ở nút **Hủy** để lỡ tay bấm Enter không thành đồng ý.
 
 ---
 

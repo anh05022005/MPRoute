@@ -7,7 +7,10 @@
     khong co entity Order nao ca, nen khong the lo gia tri don hang hay bien so xe du co vo y
     them mot dong th:text (BR07-04).
 
-    MOI COMMENT CUA FILE NAY VIET DANG <!--/* */--> chu khong phai <!-- -->. Dang nay Thymeleaf
+    MOI COMMENT CUA FILE NAY VIET DANG chu thich cap parser cua Thymeleaf (mo bang dau
+    nhon-cham than-gach-gach-gach cheo-sao) chu khong phai chu thich HTML thuong. Khong
+    viet nguyen van dau dong vao day: no lam chu thich dong som va lo phan con lai ra trang.
+    Dang nay Thymeleaf
     go bo khoi ket qua tra ve, dang thuong thi gui thang ra trinh duyet. Cac man hinh khac chi
     nguoi trong cong ty xem nen khong quan trong, rieng trang nay thi bat ky ai cung mo duoc va
     bam xem ma nguon — khong co ly do gi de ho doc duoc ghi chu noi bo cua he thong.
@@ -28,7 +31,7 @@
                    maxlength="30" required autofocus
                    placeholder="MP2608260002 hoặc 0912345678"
                    th:value="${query}">
-            <button type="submit" class="btn btn-primary">Tra cứu</button>
+            <button type="submit" class="btn btn-primary text-nowrap">Tra cứu</button>
         </div>
         <div class="form-text">
             Tra bằng số điện thoại sẽ hiện các đơn trong <strong>30 ngày</strong> gần nhất.

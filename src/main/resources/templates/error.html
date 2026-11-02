@@ -15,11 +15,11 @@
 
     <div class="info-block" style="max-width: 520px;">
         <div th:if="${status == 404}">
-            <h1 class="h4 mb-2">404 — Không tìm thấy trang</h1>
+            <h1 class="page-title mb-2">404 — Không tìm thấy trang</h1>
             <p class="mb-3">Đường dẫn này không tồn tại hoặc đã bị gỡ.</p>
         </div>
         <div th:unless="${status == 404}">
-            <h1 class="h4 mb-2">Có lỗi xảy ra</h1>
+            <h1 class="page-title mb-2">Có lỗi xảy ra</h1>
             <p class="mb-3">Hệ thống chưa xử lý được yêu cầu này. Vui lòng thử lại, nếu vẫn lỗi thì báo cho quản trị viên.</p>
         </div>
         <a class="btn btn-primary" th:href="@{/}">Về trang chủ</a>

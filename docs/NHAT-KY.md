@@ -935,3 +935,111 @@ Bấm "Đăng xuất" thì CSRF từ chối và chuyển tiếp sang `/403` khi 
 `/.well-known/`. Kiểm bằng một bản app tạm ở cổng 8081: đăng xuất bằng token cũ rồi đăng nhập
 `admin` về `/`; vào `/orders` khi chưa đăng nhập vẫn được đưa về `/orders`; tài xế vào
 `/admin/products` vẫn ra 403.
+
+## 31/10/2026 — Đồng bộ nút thao tác ở các màn danh mục, giữ danh mục kho
+
+**Nút thao tác ở các màn danh mục** (Sản phẩm, Phương tiện, Tài xế, Khách hàng, Kho, Tài khoản):
+cao bình thường, rộng tối thiểu cố định để thẳng cột, viền cam khi tắt và xanh lá khi bật lại —
+quy ước ghi ở `docs/05`.
+
+**Danh mục kho: đã thử bỏ rồi giữ lại.** Lúc đầu định bỏ hẳn vì đặc tả chỉ có một kho Phan Trọng
+Tuệ. Giữ lại vì công ty chuyển địa điểm thì kho cũng phải đổi: thêm kho mới rồi đặt làm kho chính,
+kho cũ tự ngừng dùng. Không sửa đè địa chỉ kho cũ là có chủ ý — `routes.depot_id` của các tuyến đã
+chạy vẫn trỏ về kho cũ, nên quãng đường và báo cáo của những ngày trước vẫn đúng với nơi xe thật sự
+xuất phát. Ghi rõ vào CN-01-06 ở `docs/04`.
+
+Sửa một lỗi cũ của màn danh sách kho: template kiểm `danhSach` (tên sót lại sau lần đổi định danh
+sang tiếng Anh) trong khi controller truyền `depots`, nên câu "Chưa có kho nào…" luôn hiện kể cả
+khi đã có kho. Đổi luôn hằng `CO_BAN_DO` còn sót ở `DepotController`, `CustomerController` thành
+`NEEDS_MAP`.
+
+**Chỗ vấp:** `curl --data-urlencode "name=Kho Minh Phú"` trong Git Bash trên Windows làm hỏng
+chữ có dấu trước khi gửi — tham số dòng lệnh đi qua bảng mã ANSI, nên tên kho trong CSDL thành
+`Kho Minh Ph�`. Đã ghi lại đúng giá trị cũ bằng cách để chuỗi trong file UTF-8 rồi gửi
+`--data-urlencode "name@file.txt"`. Thử form tiếng Việt bằng curl thì luôn gửi từ file.
+
+### Cỡ chữ, khuôn form, hộp xác nhận, kiểm biển số xe
+
+**Cỡ chữ nền 14px → 15px**, các cỡ khác xếp bậc theo (bảng 14px, tiêu đề trang 22px) — bảng
+cỡ chữ ghi ở `docs/05`. **Sáu form thêm/sửa** dùng chung một khuôn: đầu trang có đường dẫn và
+nút "← Quay lại danh sách" (`fragments/form-header.html`), rộng hết màn hình, ô nhập cao hơn,
+ô số có đơn vị dính liền (`kg`, `m³`, `đ`).
+
+**Bỏ hết `confirm()` của trình duyệt** (7 chỗ: 6 nút đổi trạng thái ở danh mục và nút hủy đơn).
+Thay bằng một modal Bootstrap đặt sẵn trong `layout.html`, form khai nội dung bằng
+`data-confirm-*`, chữ do người dùng nhập (biển số, tên khách) chèn bằng `textContent` chứ
+không ghép vào HTML. Gửi lại bằng `requestSubmit()` chứ không `submit()` để ô `required` của
+form hủy đơn vẫn được trình duyệt kiểm.
+
+**Phương tiện (BR01-03):** biển số phải đúng dạng `29H-123.45` / `29C-1234`; `VehicleForm`
+tự chuẩn hóa `29h 12345` → `29H-123.45` trước khi kiểm, để cùng một xe không lưu được hai cách
+viết rồi lọt qua kiểm trùng. Tải trọng 300–5.000 kg, thể tích 1–25 m³ — khoảng của xe tải nhẹ
+giao hàng nội thành (Suzuki Carry ~650 kg đến xe 5 tấn ~20 m³), chủ yếu để bắt lỗi gõ thiếu
+hoặc thừa một chữ số. Xe nào đang lưu biển số sai dạng (ví dụ `29H-1234.56` nhập tay lúc thử)
+vẫn hiện bình thường, chỉ khi bấm Sửa mới bị bắt sửa lại biển số.
+
+## 01/11/2026 — Thang cỡ chữ chung, thanh tiêu đề mới, bỏ ô email khách hàng
+
+**Cỡ chữ chỉ còn năm bậc** (13 · 14 · 15 · 17 · 22px), khai thành biến `--fs-*` ở đầu
+`style.css`. Lần trước mới nâng nền lên 15px nhưng chữ vẫn lệch giữa các màn, vì Bootstrap tự
+đặt cỡ theo `rem` cho từng thành phần chứ không theo `body`: nút thường 16px, `btn-sm` và ô lọc
+14px, menu thả và phân trang 16px, `.small` bằng 0,875 lần chữ cha (trong bảng ra 12,25px, ngoài
+bảng 13,1px). Thêm vào đó vài trang tự viết `style="font-size: 17px"` hoặc dùng `h4` làm tiêu
+đề (24px) trong khi trang khác dùng `.page-title` (22px). Giờ ghi đè các biến `--bs-*-font-size`
+của Bootstrap về thang chung, `-sm` chỉ còn làm ô và nút thấp đi; bỏ hết `font-size` viết tay
+trong template (thay bằng `.metric-value-sm`, `.panel-title`, `.page-title`).
+
+**Thanh tiêu đề theo mẫu:** ô vuông **MP**, tên người dùng kèm vai trò chữ nhỏ, vạch ngăn, nút
+Đăng xuất bo tròn. Mục menu đang mở được tô đậm và gạch chân. Thymeleaf 3.1 đã bỏ `#request`
+nên template không tự biết mình đang ở URL nào — thêm `NavigationAdvice` (`@ControllerAdvice`)
+đưa `currentPath` vào model của mọi trang; layout đổi `null` thành chuỗi rỗng để trang lỗi
+không có biến này vẫn hiện được.
+
+**Bỏ ô Email ở form khách hàng, giữ cột trong CSDL.** Bỏ luôn trường `email` khỏi
+`CustomerForm` và dòng `setEmail` trong `CustomerService.save` — nếu chỉ xóa ô trên form mà để
+nguyên dòng đó thì lần sửa khách tiếp theo sẽ ghi `null` đè lên email cũ, khách mất thư báo giờ
+giao (CN-04-08) mà không ai hay.
+
+Kiểm trên bản chạy thử cổng 8081: 20 màn của quản trị và điều phối trả 200 và tô đúng mục menu,
+form khách hàng không còn ô email, màn tài xế ở khổ 500px tự xuống dòng thanh tiêu đề.
+
+Nút **Tìm** / **Lọc** trên thanh lọc của 7 màn danh sách đổi sang xanh đặc (hover đậm hơn —
+dùng lại `.btn-primary` sẵn có). Ô tìm kiếm cách các ô lọc bên cạnh một khoảng; riêng màn khách
+hàng kéo ô tìm từ 300 lên 420px vì nhãn "Tìm theo tên cửa hàng, người liên hệ hoặc số điện
+thoại" dài hơn ô, đè sang nhãn "Trạng thái".
+
+### Báo lỗi nhập liệu bằng chữ đỏ dưới ô, đường dẫn form viết đủ, cột bảng cùng cỡ chữ
+
+**Bỏ bong bóng báo lỗi của trình duyệt** ("Value must be less than or equal to 5000", "Please
+fill out this field"). Bong bóng hiện ra vì các ô có sẵn `required` / `min` / `max` — 13 màn có
+thuộc tính này, kể cả trang đăng nhập, màn tài xế, hộp nhập kho, hủy đơn, hủy tuyến. Thay vì gỡ
+thuộc tính (mất chặn sớm phía trình duyệt), thêm `js/form-validation.js`: tắt bong bóng
+(`noValidate`), tự kiểm lại đúng các thuộc tính đó và hiện chữ đỏ dưới ô như lỗi `th:errors`.
+Câu báo ghép từ nhãn ô nên không phải khai thêm gì ở từng form. Bắt ở pha capture của
+`document` để chạy trước `confirm-dialog.js` — form chưa nhập lý do hủy thì không bật hộp "có chắc
+không". Câu `@DecimalMin/@DecimalMax` của `VehicleForm` sửa giống hệt câu phía trình duyệt.
+
+Đường dẫn đầu form khúc cuối viết đủ: *Danh mục › Sản phẩm › Sửa sản phẩm* thay cho *› Sửa*.
+Ô bảng là giá trị của cả cột (địa chỉ, tọa độ, thanh toán ở màn khách hàng; tương tự ở kho, sổ
+kho, tham số, chi tiết đơn) bỏ lớp `.small` để cùng cỡ với các cột khác. Ô tìm kiếm các màn danh
+mục rộng 340px, nút "Xem đơn" ở màn phân tuyến cũng xanh như các nút lọc khác.
+
+**Lỗi cũ tìm ra khi chụp màn:** trang tra cứu công khai `/track` lộ một đoạn ghi chú nội bộ ở đầu
+trang. Ghi chú đầu `track.html` có nhắc nguyên văn cú pháp chú thích của Thymeleaf, nên dấu đóng
+trong câu đó đóng chú thích sớm và phần còn lại in thẳng ra trình duyệt. Viết lại câu không chứa
+dấu đóng.
+
+Chi tiết đơn hàng: tọa độ bỏ căn phải, thẳng hàng với địa chỉ ở dòng trên (sửa luôn cột tọa độ
+ở danh sách khách hàng và kho — tiêu đề cột căn trái mà giá trị căn phải). Cột *Thành tiền*
+rộng 170px, ô "Số tiền phải thu khi giao" không xuống dòng. Hai cột của trang giờ chỉ đứng cạnh
+nhau từ 1200px trở lên: ở khổ 1000px, bảng hàng 6 cột không còn chỗ co nên tràn đè sang khối
+"Đọc lại cho khách".
+
+**Lỗi hiển thị chặng về kho (CBR-01).** Màn phân tuyến hiện tuyến 6,27 km nhưng hai chặng
+cộng lại 3,13 + 3,10 = 6,23. Số lưu trong CSDL đúng (6.265,2 m, đi 3.132,6 m và về 3.132,6 m),
+chỉ dòng "Về kho" in sai. Template tính `(tổng − #aggregates.sum(chặng)) / 1000`: `sum` trả về
+`BigDecimal`, mà SpEL chia `BigDecimal` thì giữ số chữ số lẻ của số bị chia (1 chữ số), nên
+3.132,6 / 1000 ra 3,1 và hiện "3,10 km". Mọi chặng về kho đều bị cắt còn một chữ số lẻ. Vai trò
+điều phối không thấy vì `routing-arrange.js` tính lại từ ma trận ngay khi mở trang; quản trị
+viên xem chỉ đọc, không nạp phần kéo thả nên thấy nguyên số sai của máy chủ. Sửa: chuyển phép
+trừ vào `Route.getReturnLegDistance()` tính bằng `double`.

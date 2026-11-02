@@ -7,15 +7,21 @@
 
 <div th:fragment="content">
 
-    <div class="page-title mb-3" th:text="${form.id == null} ? 'Thêm tài xế' : 'Sửa tài xế'">Thêm tài xế</div>
+    <div th:replace="~{fragments/form-header :: form-header(
+             rootLabel    = 'Danh mục',
+             sectionLabel = 'Tài xế',
+             listPath     = '/admin/drivers',
+             isNew        = ${form.id == null},
+             newTitle     = 'Thêm tài xế',
+             editTitle    = 'Sửa tài xế')}"></div>
 
-    <form th:action="@{/admin/drivers/save}" th:object="${form}" method="post" style="max-width: 640px;">
+    <form th:action="@{/admin/drivers/save}" th:object="${form}" method="post" class="entry-form">
 
         <input type="hidden" th:field="*{id}">
 
         <div class="row g-3">
 
-            <div class="col-md-7">
+            <div class="col-md-6 col-xl-5">
                 <label for="fullName" class="form-label">Họ tên <span class="text-danger">*</span></label>
                 <input type="text" id="fullName" class="form-control" th:field="*{fullName}"
                        th:classappend="${#fields.hasErrors('fullName')} ? 'is-invalid'"
@@ -23,10 +29,8 @@
                 <div class="invalid-feedback" th:errors="*{fullName}">Lỗi</div>
             </div>
 
-            <div class="col-md-5">
-                <label for="phone" class="form-label">
-                    Số điện thoại <span class="text-danger">*</span>
-                </label>
+            <div class="col-md-6 col-xl-3">
+                <label for="phone" class="form-label">Số điện thoại <span class="text-danger">*</span></label>
                 <!--
                     De type="text" chu KHONG de type="number": so dien thoai bat dau bang so 0,
                     o nhap kieu number se cat mat so 0 dau va cho nhap ca dau tru, dau cham.
@@ -38,14 +42,14 @@
                 <div class="invalid-feedback" th:errors="*{phone}">Lỗi</div>
             </div>
 
-            <div class="col-md-5">
+            <div class="col-md-6 col-xl-4">
                 <label for="licenseNumber" class="form-label">Số giấy phép lái xe</label>
                 <input type="text" id="licenseNumber" class="form-control" th:field="*{licenseNumber}"
                        th:classappend="${#fields.hasErrors('licenseNumber')} ? 'is-invalid'">
                 <div class="invalid-feedback" th:errors="*{licenseNumber}">Lỗi</div>
             </div>
 
-            <div class="col-md-7">
+            <div class="col-md-6 col-xl-4">
                 <label for="userId" class="form-label">Tài khoản đăng nhập</label>
 
                 <!--
@@ -64,7 +68,7 @@
                      th:errors="*{userId}">Lỗi</div>
             </div>
 
-            <div class="col-md-7">
+            <div class="col-md-6 col-xl-5">
                 <label for="defaultVehicleId" class="form-label">Xe mặc định</label>
                 <select id="defaultVehicleId" class="form-select" th:field="*{defaultVehicleId}"
                         th:classappend="${#fields.hasErrors('defaultVehicleId')} ? 'is-invalid'">
@@ -78,7 +82,7 @@
                      th:errors="*{defaultVehicleId}">Lỗi</div>
             </div>
 
-            <div class="col-md-5">
+            <div class="col-md-6 col-xl-3">
                 <label for="status" class="form-label">Trạng thái</label>
                 <select id="status" class="form-select" th:field="*{status}"
                         th:classappend="${#fields.hasErrors('status')} ? 'is-invalid'">
@@ -90,7 +94,7 @@
             </div>
         </div>
 
-        <div class="mt-3">
+        <div class="form-actions">
             <button type="submit" class="btn btn-primary">Lưu</button>
             <a th:href="@{/admin/drivers}" class="btn btn-outline-secondary">Hủy</a>
         </div>

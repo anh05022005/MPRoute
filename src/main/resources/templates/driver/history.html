@@ -46,22 +46,22 @@
         <div class="metric-row mt-2">
             <div>
                 <div class="metric-label">Thành công</div>
-                <div class="metric-value" style="font-size: 17px;"
+                <div class="metric-value metric-value-sm"
                      th:text="${entry.summary().deliveredCount()} + ' / ' + ${entry.route().stops.size()}">1 / 3</div>
             </div>
             <div>
                 <div class="metric-label">Thất bại</div>
-                <div class="metric-value" style="font-size: 17px;"
+                <div class="metric-value metric-value-sm"
                      th:text="${entry.summary().failedCount()}">1</div>
             </div>
             <div>
                 <div class="metric-label">Hoãn</div>
-                <div class="metric-value" style="font-size: 17px;"
+                <div class="metric-value metric-value-sm"
                      th:text="${entry.summary().postponedCount()}">1</div>
             </div>
             <div>
                 <div class="metric-label">Tiền đã thu</div>
-                <div class="metric-value" style="font-size: 17px;"
+                <div class="metric-value metric-value-sm"
                      th:text="${#numbers.formatInteger(entry.summary().collectedAmount(), 0, 'POINT')} + 'đ'">5.000.000đ</div>
             </div>
         </div>

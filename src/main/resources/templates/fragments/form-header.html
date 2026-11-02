@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<!--
+    Dau trang dung chung cho moi form them / sua (docs/05-giao-dien.md):
+    duong dan, tieu de, nut quay lai danh sach ben phai.
+
+    Cach dung:
+        <div th:replace="~{fragments/form-header :: form-header(
+                 rootLabel    = 'Danh mục',
+                 sectionLabel = 'Phương tiện',
+                 listPath     = '/admin/vehicles',
+                 isNew        = ${form.id == null},
+                 newTitle     = 'Thêm phương tiện',
+                 editTitle    = 'Sửa phương tiện')}"></div>
+
+    rootLabel = null thi bo khuc dau — man Tai khoan khong nam trong menu Danh muc.
+-->
+<html lang="vi" xmlns:th="http://www.thymeleaf.org">
+<body>
+
+<div th:fragment="form-header(rootLabel, sectionLabel, listPath, isNew, newTitle, editTitle)" class="form-header">
+    <div>
+        <div class="breadcrumb-trail">
+            <th:block th:if="${rootLabel != null}"><span th:text="${rootLabel}">Danh mục</span> ›</th:block>
+            <a th:href="@{${listPath}}" th:text="${sectionLabel}">Phương tiện</a> ›
+            <b th:text="${isNew} ? ${newTitle} : ${editTitle}">Thêm phương tiện</b>
+        </div>
+        <div class="page-title" th:text="${isNew} ? ${newTitle} : ${editTitle}">Thêm phương tiện</div>
+    </div>
+    <a th:href="@{${listPath}}" class="btn btn-sm btn-outline-secondary">← Quay lại danh sách</a>
+</div>
+
+</body>
+</html>

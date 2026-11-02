@@ -62,7 +62,8 @@ public class CustomerService {
         customer.setName(form.getName().trim());
         customer.setContactPerson(blankToNull(form.getContactPerson()));
         customer.setPhone(form.getPhone().trim());
-        customer.setEmail(blankToNull(form.getEmail()));
+        // Khong dong vao email: o nhap da bo khoi form, nhung khach cu da co email
+        // van giu nguyen de con nhan thu bao gio giao (CN-04-08)
         customer.setAddress(form.getAddress().trim());
         customer.setLatitude(form.getLatitude());
         customer.setLongitude(form.getLongitude());

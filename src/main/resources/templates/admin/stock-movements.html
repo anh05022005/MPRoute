@@ -42,7 +42,7 @@
                 <input type="date" id="toDate" name="toDate" class="form-control form-control-sm"
                        style="width: 150px;" th:value="${toDate}">
             </div>
-            <button type="submit" class="btn btn-sm btn-outline-secondary">Lọc</button>
+            <button type="submit" class="btn btn-sm btn-primary">Lọc</button>
             <a th:href="@{/admin/stock/movements}" class="btn btn-sm btn-outline-secondary">Bỏ lọc</a>
         </form>
 
@@ -97,14 +97,14 @@
                 <span th:if="${movement.order == null}" class="text-sub">—</span>
             </td>
 
-            <td class="small">
+            <td>
                 <span th:text="${movement.note}">Ghi chú</span>
                 <!-- Dong dao thi noi ro no dao dong nao, de doc so khong phai tu suy -->
                 <span th:if="${movement.reversalOf != null}" class="text-sub"
                       th:text="'(đảo dòng #' + ${movement.reversalOf.id} + ')'">(đảo dòng #3)</span>
             </td>
 
-            <td class="small" th:text="${movement.createdBy == null}
+            <td th:text="${movement.createdBy == null}
                                        ? 'Hệ thống' : ${movement.createdBy.fullName}">Hệ thống</td>
 
             <td sec:authorize="hasRole('ADMIN')">
@@ -116,7 +116,7 @@
                         type="button" class="btn btn-sm btn-outline-secondary py-0"
                         data-bs-toggle="modal"
                         th:data-bs-target="'#reverseModal-' + ${movement.id}">Hoàn tác</button>
-                <span th:if="${movement.movementType.systemGenerated}" class="text-sub small">Theo đơn</span>
+                <span th:if="${movement.movementType.systemGenerated}" class="text-sub">Theo đơn</span>
             </td>
         </tr>
         </tbody>

@@ -60,7 +60,12 @@
          th:if="${canEditOrCancel}">
         <form th:action="@{/orders/{id}/cancel(id=${order.id})}" method="post"
               class="info-block d-flex gap-2 align-items-end"
-              onsubmit="return confirm('Hủy đơn này? Đơn vẫn được giữ lại để tra cứu.');">
+              data-confirm-title="Hủy đơn hàng"
+              data-confirm-message="Đơn {subject} sẽ chuyển sang “Đã hủy” và không được đưa vào phân tuyến nữa. Đơn vẫn được giữ lại để tra cứu. Bạn xác nhận?"
+              th:data-confirm-subject="${order.code}"
+              data-confirm-button="Hủy đơn"
+              data-confirm-variant="danger"
+              data-confirm-cancel="Không hủy">
             <div class="flex-grow-1">
                 <label for="cancelReason" class="form-label small mb-1">
                     Lý do hủy <span class="text-danger">*</span>
@@ -73,10 +78,11 @@
         </form>
     </div>
 
+    <!-- Duoi 1200px hai cot xep chong: bang hang 6 cot can du ngang de so tien khong ngat dong -->
     <div class="row g-3">
 
         <!-- ============ Thong tin don ============ -->
-        <div class="col-lg-7">
+        <div class="col-xl-7">
             <table class="table table-bordered table-sm align-middle">
                 <tbody>
                 <tr>
@@ -94,7 +100,7 @@
                 </tr>
                 <tr>
                     <th>Tọa độ</th>
-                    <td class="num small" th:text="${order.latitude} + ', ' + ${order.longitude}">21.0, 105.8</td>
+                    <td th:text="${order.latitude} + ', ' + ${order.longitude}">21.0, 105.8</td>
                 </tr>
                 <tr>
                     <th>Ngày giao</th>
@@ -136,7 +142,7 @@
                     <th style="width: 100px;">Khối lượng</th>
                     <th style="width: 100px;">Thể tích</th>
                     <th style="width: 120px;">Đơn giá</th>
-                    <th style="width: 130px;">Thành tiền</th>
+                    <th style="width: 170px;">Thành tiền</th>
                 </tr>
                 </thead>
                 <tbody>
@@ -160,7 +166,8 @@
                 </tr>
                 <tr>
                     <th colspan="5" class="text-end">Số tiền phải thu khi giao</th>
-                    <th class="num">
+                    <!-- Khong xuong dong: "0d · Chuyen khoan truoc" bi ngat doi doc nhu hai y rieng -->
+                    <th class="num text-nowrap">
                         <strong th:if="${order.amountToCollect.signum() > 0}"
                                 th:text="${#numbers.formatInteger(order.amountToCollect, 1, 'POINT')} + 'đ'">1.440.000đ</strong>
                         <span th:unless="${order.amountToCollect.signum() > 0}" class="text-sub"
@@ -172,7 +179,7 @@
         </div>
 
         <!-- ============ CN-02-06 Khoi tom tat de doc lai cho khach ============ -->
-        <div class="col-lg-5">
+        <div class="col-xl-5">
             <div class="info-block">
                 <div class="d-flex justify-content-between align-items-center mb-2">
                     <strong>Đọc lại cho khách</strong>
@@ -190,7 +197,7 @@
 
             <!-- ============ CBR-14 Hanh trinh trang thai ============ -->
             <div class="mt-3">
-                <strong class="small">Lịch sử trạng thái</strong>
+                <div class="panel-title">Lịch sử trạng thái</div>
                 <table class="table table-bordered table-sm align-middle mt-1">
                     <thead>
                     <tr>
@@ -201,13 +208,13 @@
                     </thead>
                     <tbody>
                     <tr th:each="history : ${statusHistory}">
-                        <td class="small" th:text="${#temporals.format(history.changedAt, 'HH:mm dd/MM')}">09:15 03/08</td>
-                        <td class="small">
+                        <td th:text="${#temporals.format(history.changedAt, 'HH:mm dd/MM')}">09:15 03/08</td>
+                        <td>
                             <!-- Khong tra duoc ten tieng Viet thi hien nguyen ma, khong de trong -->
                             <span th:text="${orderStatusLabels[history.newStatus]} ?: ${history.newStatus}">Chờ duyệt</span>
                             <span th:if="${history.note != null}" class="text-sub" th:text="'· ' + ${history.note}">· Tạo đơn hàng</span>
                         </td>
-                        <td class="small">
+                        <td>
                             <span th:if="${history.changedBy != null}" th:text="${history.changedBy.fullName}">Điều phối</span>
                             <span th:unless="${history.changedBy != null}" class="text-sub">Hệ thống</span>
                         </td>

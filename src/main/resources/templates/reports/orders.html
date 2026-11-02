@@ -79,7 +79,7 @@
                 </div>
                 <div>
                     <div class="metric-label">Tổng giá trị</div>
-                    <div class="metric-value" style="font-size: 17px;"
+                    <div class="metric-value metric-value-sm"
                          th:text="${#numbers.formatDecimal(totals.totalAmount, 1, 'POINT', 0, 'COMMA')} + ' đ'">1.284.000.000 đ</div>
                 </div>
             </div>
@@ -87,8 +87,8 @@
 
         <!-- ============ Bieu do cot ============ -->
         <div class="panel mb-3" th:with="chart=${report.chart}">
-            <div class="small mb-1">
-                <strong>Số đơn <span th:text="${#strings.toLowerCase(report.grouping.displayName)}">theo ngày</span></strong>
+            <div class="panel-title mb-1">
+                Số đơn <span th:text="${#strings.toLowerCase(report.grouping.displayName)}">theo ngày</span>
             </div>
 
             <svg class="bar-chart" viewBox="0 0 960 220" preserveAspectRatio="xMidYMid meet"

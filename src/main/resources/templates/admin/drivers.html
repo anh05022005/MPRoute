@@ -11,10 +11,10 @@
     <div class="toolbar d-flex justify-content-between align-items-end flex-wrap gap-2">
 
         <form th:action="@{/admin/drivers}" method="get" class="d-flex align-items-end gap-2">
-            <div>
+            <div class="me-3">
                 <label for="keyword" class="form-label mb-1 small">Tìm theo họ tên hoặc số điện thoại</label>
                 <input type="text" id="keyword" name="keyword" class="form-control form-control-sm"
-                       style="width: 260px;" th:value="${keyword}" placeholder="Ví dụ: Hùng hoặc 0987">
+                       style="width: 340px;" th:value="${keyword}" placeholder="Ví dụ: Hùng hoặc 0987">
             </div>
             <div>
                 <label for="status" class="form-label mb-1 small">Trạng thái</label>
@@ -26,7 +26,7 @@
                             th:selected="${statusOption == status}">Trạng thái</option>
                 </select>
             </div>
-            <button type="submit" class="btn btn-sm btn-outline-secondary">Tìm</button>
+            <button type="submit" class="btn btn-sm btn-primary">Tìm</button>
             <a th:href="@{/admin/drivers}" class="btn btn-sm btn-outline-secondary">Bỏ lọc</a>
         </form>
 
@@ -42,7 +42,7 @@
             <th style="width: 140px;">Tài khoản</th>
             <th style="width: 190px;">Xe mặc định</th>
             <th style="width: 130px;">Trạng thái</th>
-            <th style="width: 150px;">Thao tác</th>
+            <th style="width: 230px;">Thao tác</th>
         </tr>
         </thead>
         <tbody>
@@ -63,14 +63,14 @@
             -->
             <td>
                 <span th:if="${driver.user != null}" th:text="${driver.user.username}">taixe1</span>
-                <span th:unless="${driver.user != null}" class="text-sub small">Chưa có</span>
+                <span th:unless="${driver.user != null}" class="text-sub">Chưa có</span>
             </td>
 
             <td>
                 <span th:if="${driver.defaultVehicle != null}"
                       th:text="${driver.defaultVehicle.licensePlate} + ' — ' + ${driver.defaultVehicle.vehicleType}">
                     29H-123.45 — Xe tải 1.5 tấn</span>
-                <span th:unless="${driver.defaultVehicle != null}" class="text-sub small">Chưa gán</span>
+                <span th:unless="${driver.defaultVehicle != null}" class="text-sub">Chưa gán</span>
             </td>
 
             <td>
@@ -79,21 +79,30 @@
             </td>
 
             <td>
-                <span sec:authorize="!hasRole('ADMIN')" class="text-sub small">Chỉ xem</span>
-                <a class="btn btn-sm btn-outline-secondary py-0" sec:authorize="hasRole('ADMIN')"
-                   th:href="@{/admin/drivers/{id}/edit(id=${driver.id})}">Sửa</a>
+                <span sec:authorize="!hasRole('ADMIN')" class="text-sub">Chỉ xem</span>
+                <div class="row-actions" sec:authorize="hasRole('ADMIN')">
+                    <a class="btn btn-sm btn-outline-secondary"
+                       th:href="@{/admin/drivers/{id}/edit(id=${driver.id})}">Sửa</a>
 
-                <!--
-                    Khong co nut Xoa (CBR-17, BR01-09). Tai xe da chay tuyen cu ma xoa cung
-                    thi bao cao cu mat thong tin ai chay tuyen nao. Chi ngung su dung.
-                    Dung POST chu khong dung link GET de tranh CSRF.
-                -->
-                <form th:action="@{/admin/drivers/{id}/toggle-status(id=${driver.id})}" method="post" sec:authorize="hasRole('ADMIN')"
-                      class="d-inline"
-                      onsubmit="return confirm('Bạn có chắc chắn muốn thực hiện thao tác này?');">
-                    <button type="submit" class="btn btn-sm btn-outline-secondary py-0"
-                            th:text="${driver.status.name() == 'ACTIVE'} ? 'Ngừng dùng' : 'Dùng lại'">Ngừng dùng</button>
-                </form>
+                    <!--
+                        Khong co nut Xoa (CBR-17, BR01-09). Tai xe da chay tuyen cu ma xoa cung
+                        thi bao cao cu mat thong tin ai chay tuyen nao. Chi ngung su dung.
+                        Dung POST chu khong dung link GET de tranh CSRF.
+                    -->
+                    <form th:action="@{/admin/drivers/{id}/toggle-status(id=${driver.id})}" method="post"
+                          th:with="isActive=${driver.status.name() == 'ACTIVE'}"
+                          th:data-confirm-title="${isActive} ? 'Ngừng dùng tài xế' : 'Dùng lại tài xế'"
+                          th:data-confirm-message="${isActive}
+                              ? 'Tài xế {subject} sẽ chuyển sang “Ngừng sử dụng” và không được phân công chuyến mới. Các chuyến đã chạy vẫn giữ nguyên. Bạn xác nhận?'
+                              : 'Tài xế {subject} sẽ chuyển sang “Đang sử dụng” và được phân công chuyến mới. Bạn xác nhận?'"
+                          th:data-confirm-subject="${driver.fullName}"
+                          th:data-confirm-button="${isActive} ? 'Ngừng dùng' : 'Dùng lại'"
+                          th:data-confirm-variant="${isActive} ? 'warning' : 'success'">
+                        <button type="submit" class="btn btn-sm btn-toggle"
+                                th:classappend="${driver.status.name() == 'ACTIVE'} ? 'btn-turn-off' : 'btn-turn-on'"
+                                th:text="${driver.status.name() == 'ACTIVE'} ? 'Ngừng dùng' : 'Dùng lại'">Ngừng dùng</button>
+                    </form>
+                </div>
             </td>
         </tr>
         </tbody>

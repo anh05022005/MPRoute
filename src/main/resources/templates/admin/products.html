@@ -13,10 +13,10 @@
         <!-- Tim kiem va loc. Dung GET de dia chi giu lai dieu kien loc,
              sao chep gui cho nguoi khac van ra dung ket qua -->
         <form th:action="@{/admin/products}" method="get" class="d-flex align-items-end gap-2">
-            <div>
+            <div class="me-3">
                 <label for="keyword" class="form-label mb-1 small">Tìm theo mã hoặc tên</label>
                 <input type="text" id="keyword" name="keyword" class="form-control form-control-sm"
-                       style="width: 240px;" th:value="${keyword}" placeholder="Ví dụ: SP001 hoặc bông">
+                       style="width: 340px;" th:value="${keyword}" placeholder="Ví dụ: SP001 hoặc bông">
             </div>
             <div>
                 <label for="status" class="form-label mb-1 small">Trạng thái</label>
@@ -28,7 +28,7 @@
                             th:selected="${statusOption == status}">Trạng thái</option>
                 </select>
             </div>
-            <button type="submit" class="btn btn-sm btn-outline-secondary">Tìm</button>
+            <button type="submit" class="btn btn-sm btn-primary">Tìm</button>
             <a th:href="@{/admin/products}" class="btn btn-sm btn-outline-secondary">Bỏ lọc</a>
         </form>
 
@@ -46,7 +46,7 @@
             <th style="width: 110px;" class="num">m³/thùng</th>
             <th style="width: 120px;" class="num">Đơn giá</th>
             <th style="width: 130px;">Trạng thái</th>
-            <th style="width: 150px;">Thao tác</th>
+            <th style="width: 230px;">Thao tác</th>
         </tr>
         </thead>
         <tbody>
@@ -73,22 +73,31 @@
             </td>
 
             <td>
-                <span sec:authorize="!hasRole('ADMIN')" class="text-sub small">Chỉ xem</span>
-                <a class="btn btn-sm btn-outline-secondary py-0" sec:authorize="hasRole('ADMIN')"
-                   th:href="@{/admin/products/{id}/edit(id=${product.id})}">Sửa</a>
+                <span sec:authorize="!hasRole('ADMIN')" class="text-sub">Chỉ xem</span>
+                <div class="row-actions" sec:authorize="hasRole('ADMIN')">
+                    <a class="btn btn-sm btn-outline-secondary"
+                       th:href="@{/admin/products/{id}/edit(id=${product.id})}">Sửa</a>
 
-                <!--
-                    Khong co nut Xoa (CBR-17). San pham da nam trong don hang cu ma xoa cung
-                    thi don cu mat thong tin, bao cao cu sai theo. Chi ngung su dung.
-                    Dung POST chu khong dung link GET: link GET doi trang thai la ai gui
-                    duong dan cho minh bam vao cung doi duoc (CSRF).
-                -->
-                <form th:action="@{/admin/products/{id}/toggle-status(id=${product.id})}" method="post" sec:authorize="hasRole('ADMIN')"
-                      class="d-inline"
-                      onsubmit="return confirm('Bạn có chắc chắn muốn thực hiện thao tác này?');">
-                    <button type="submit" class="btn btn-sm btn-outline-secondary py-0"
-                            th:text="${product.status.name() == 'ACTIVE'} ? 'Ngừng dùng' : 'Dùng lại'">Ngừng dùng</button>
-                </form>
+                    <!--
+                        Khong co nut Xoa (CBR-17). San pham da nam trong don hang cu ma xoa cung
+                        thi don cu mat thong tin, bao cao cu sai theo. Chi ngung su dung.
+                        Dung POST chu khong dung link GET: link GET doi trang thai la ai gui
+                        duong dan cho minh bam vao cung doi duoc (CSRF).
+                    -->
+                    <form th:action="@{/admin/products/{id}/toggle-status(id=${product.id})}" method="post"
+                          th:with="isActive=${product.status.name() == 'ACTIVE'}"
+                          th:data-confirm-title="${isActive} ? 'Ngừng dùng sản phẩm' : 'Dùng lại sản phẩm'"
+                          th:data-confirm-message="${isActive}
+                              ? 'Sản phẩm {subject} sẽ chuyển sang “Ngừng sử dụng” và không chọn được khi tạo đơn mới. Các đơn đã có vẫn giữ nguyên. Bạn xác nhận?'
+                              : 'Sản phẩm {subject} sẽ chuyển sang “Đang sử dụng” và chọn được khi tạo đơn mới. Bạn xác nhận?'"
+                          th:data-confirm-subject="${product.name}"
+                          th:data-confirm-button="${isActive} ? 'Ngừng dùng' : 'Dùng lại'"
+                          th:data-confirm-variant="${isActive} ? 'warning' : 'success'">
+                        <button type="submit" class="btn btn-sm btn-toggle"
+                                th:classappend="${product.status.name() == 'ACTIVE'} ? 'btn-turn-off' : 'btn-turn-on'"
+                                th:text="${product.status.name() == 'ACTIVE'} ? 'Ngừng dùng' : 'Dùng lại'">Ngừng dùng</button>
+                    </form>
+                </div>
             </td>
         </tr>
         </tbody>

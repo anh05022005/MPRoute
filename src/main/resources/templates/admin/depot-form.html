@@ -7,10 +7,16 @@
 
 <div th:fragment="content">
 
-    <div class="page-title mb-3" th:text="${form.id == null} ? 'Thêm kho' : 'Sửa kho'">Thêm kho</div>
+    <div th:replace="~{fragments/form-header :: form-header(
+             rootLabel    = 'Danh mục',
+             sectionLabel = 'Kho',
+             listPath     = '/admin/depot',
+             isNew        = ${form.id == null},
+             newTitle     = 'Thêm kho',
+             editTitle    = 'Sửa kho')}"></div>
 
     <!-- Bo cuc hai cot giong man khach hang: o nhap ben trai, ban do ben phai -->
-    <form th:action="@{/admin/depot/save}" th:object="${form}" method="post">
+    <form th:action="@{/admin/depot/save}" th:object="${form}" method="post" class="entry-form">
 
         <input type="hidden" th:field="*{id}">
 
@@ -70,7 +76,7 @@
                 <div class="section-label" style="margin-top: 0;">Vị trí trên bản đồ</div>
                 <div th:replace="~{fragments/map-picker :: map-picker}"></div>
 
-                <div class="d-flex justify-content-end gap-2 mt-3">
+                <div class="map-form-actions">
                     <a th:href="@{/admin/depot}" class="btn btn-outline-secondary">Hủy</a>
                     <button type="submit" class="btn btn-primary">Lưu</button>
                 </div>

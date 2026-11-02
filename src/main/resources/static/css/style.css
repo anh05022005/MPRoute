@@ -44,11 +44,42 @@
   --route-5: #B7791F;
 }
 
+/* Thang co chu dung chung: CHI 5 bac nay, khong ghi so px rieng o cho nao khac.
+   Truoc day moi man tu chon co chu (bang 14px, nut 16px, o loc 14px, tieu de h4 24px)
+   nen chuyen man la thay chu to nho khac nhau. Chu trong hinh ve SVG va so tren ghim
+   ban do la ngoai le — chung co dinh theo kich thuoc hinh, khong theo chu xung quanh */
+:root {
+  --fs-meta: 13px;      /* chu phu: duong dan, goi y, nhan trang thai, chu thich */
+  --fs-label: 14px;     /* nhan o nhap, nhan muc, nhan truong chi doc */
+  --fs-base: 15px;      /* noi dung: than trang, bang, o nhap, nut, menu */
+  --fs-heading: 17px;   /* tieu de khoi, tieu de hop thoai, so lieu trong the nho */
+  --fs-title: 22px;     /* tieu de trang, so lieu chinh */
+}
+
+/* 15px: 14px cu doc met tren man hinh laptop */
 body {
   color: var(--text-primary);
   background-color: #FFFFFF;
-  font-size: 14px;
+  font-size: var(--fs-base);
 }
+
+/* Bootstrap tu dat co chu rieng cho tung thanh phan theo rem (1rem = 16px), khong theo
+   body: nut 16px, nut nho 14px, menu tha 16px, phan trang 16px, toast 14px, .small
+   bang 0.875 lan chu cha. Keo het ve thang tren de man nao cung mot co chu */
+.btn, .btn-sm { --bs-btn-font-size: var(--fs-base); }
+/* Nut lon chi co o man tai xe: bam bang ngon tay tren dien thoai */
+.btn-lg { --bs-btn-font-size: var(--fs-heading); }
+.form-control-lg, .form-select-lg { font-size: var(--fs-heading); }
+.input-group-text { font-size: var(--fs-base); }
+.dropdown-menu { --bs-dropdown-font-size: var(--fs-base); }
+.pagination, .pagination-sm { --bs-pagination-font-size: var(--fs-base); }
+.toast { --bs-toast-font-size: var(--fs-base); }
+.small, small, .form-text, .invalid-feedback, .valid-feedback { font-size: var(--fs-meta); }
+h1, .h1, h2, .h2, h3, .h3, h4, .h4 { font-size: var(--fs-title); font-weight: 600; }
+h5, .h5 { font-size: var(--fs-heading); font-weight: 600; }
+h6, .h6 { font-size: var(--fs-base); font-weight: 600; }
+/* Dat sau .h6: vai hop thoai viet <h2 class="h6 modal-title">, can tieu de hop thoai cung mot co */
+.modal-title { font-size: var(--fs-heading); font-weight: 600; }
 
 /* ============ Bootstrap overrides ============ */
 
@@ -84,7 +115,7 @@ fieldset:disabled .btn {
    Bootstrap .table class means every existing screen picks the look up
    without touching a single template. */
 .table {
-  font-size: 13px;
+  font-size: var(--fs-base);
   border-color: var(--border);
 }
 .table > :not(caption) > * > * {
@@ -102,15 +133,19 @@ fieldset:disabled .btn {
 }
 
 .form-control, .form-select {
-  font-size: 13px;
+  font-size: var(--fs-base);
   border-color: var(--border);
+}
+/* O nho o thanh loc tren danh sach chi thap hon, chu van bang o nhap thuong */
+.form-control-sm, .form-select-sm {
+  font-size: var(--fs-base);
 }
 .form-control:focus, .form-select:focus {
   border-color: var(--blue-500);
   box-shadow: none;
 }
 .form-label {
-  font-size: 12.5px;
+  font-size: var(--fs-label);
   color: var(--text-secondary);
   margin-bottom: 4px;
 }
@@ -120,15 +155,56 @@ fieldset:disabled .btn {
 .app-header {
   background-color: var(--blue-900);
   color: #FFFFFF;
-  padding: 0.5rem 1rem;
+  padding: 0.6rem 1.25rem;
 }
 .app-header a {
   color: #FFFFFF;
   text-decoration: none;
 }
+.app-header a:hover { text-decoration: underline; }
+.app-brand {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+/* O vuong bo goc thay cho logo cong ty: chua co file logo that, chu viet tat la du nhan dien */
+.app-logo {
+  width: 34px;
+  height: 34px;
+  border-radius: 8px;
+  background-color: var(--blue-500);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: var(--fs-label);
+  font-weight: 700;
+  letter-spacing: 0.5px;
+  flex: none;
+}
 .app-header .app-name {
-  font-weight: 600;
-  font-size: 1.05rem;
+  font-weight: 700;
+  font-size: var(--fs-heading);
+}
+.app-user {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+.app-user-name { font-weight: 600; }
+.app-user-role {
+  color: rgba(255, 255, 255, 0.6);
+  font-size: var(--fs-meta);
+  margin-left: 2px;
+}
+.app-user-divider {
+  width: 1px;
+  height: 20px;
+  background-color: rgba(255, 255, 255, 0.25);
+}
+.btn-logout {
+  --bs-btn-border-radius: 999px;
+  --bs-btn-padding-x: 1rem;
+  --bs-btn-border-color: rgba(255, 255, 255, 0.55);
 }
 
 /* ============ Menu bar ============ */
@@ -139,17 +215,26 @@ fieldset:disabled .btn {
 }
 .app-nav .nav-link {
   color: #C6DCEE;
-  padding: 0.5rem 0.9rem;
+  padding: 0.65rem 1rem;
   border-radius: 0;
-  font-size: 13.5px;
+  font-size: var(--fs-base);
 }
 .app-nav .nav-link:hover {
-  background-color: var(--blue-500);
+  background-color: rgba(255, 255, 255, 0.08);
   color: #FFFFFF;
 }
+/* Muc dang mo: chu dam, nen sang hon mot chut, gach chan trang. Gach chan ve bang
+   box-shadow chu khong dung border de chieu cao thanh menu khong nhay khi doi trang */
 .app-nav .nav-link.is-active {
-  background-color: var(--blue-500);
+  background-color: rgba(255, 255, 255, 0.14);
   color: #FFFFFF;
+  font-weight: 600;
+  box-shadow: inset 0 -3px 0 #FFFFFF;
+}
+.app-nav .dropdown-item.active,
+.app-nav .dropdown-item:active {
+  background-color: var(--blue-100);
+  color: var(--blue-700);
   font-weight: 600;
 }
 
@@ -174,7 +259,7 @@ fieldset:disabled .btn {
 /* ============ Page head ============ */
 
 .breadcrumb-trail {                       /* breadcrumb */
-  font-size: 12px;
+  font-size: var(--fs-meta);
   color: var(--text-muted);
   margin-bottom: 10px;
 }
@@ -183,7 +268,7 @@ fieldset:disabled .btn {
   font-weight: 400;
 }
 .page-title {
-  font-size: 20px;
+  font-size: var(--fs-title);
   font-weight: 600;
   display: flex;
   align-items: center;
@@ -197,13 +282,13 @@ fieldset:disabled .btn {
   flex: none;
 }
 .page-subtitle {
-  font-size: 12.5px;
+  font-size: var(--fs-label);
   color: var(--text-secondary);
   margin-top: 4px;
 }
 /* Section label: plain grey text, no underline, no wrapper box */
 .section-label {
-  font-size: 13px;
+  font-size: var(--fs-label);
   color: var(--text-secondary);
   margin: 22px 0 11px;
 }
@@ -212,8 +297,8 @@ fieldset:disabled .btn {
 
 .status-tag {
   display: inline-block;
-  font-size: 11.5px;
-  padding: 2px 8px;
+  font-size: var(--fs-meta);
+  padding: 3px 9px;
   border-radius: 4px;
   white-space: nowrap;
 }
@@ -237,11 +322,160 @@ fieldset:disabled .btn {
   margin-bottom: 0.75rem;
 }
 .toolbar label {
-  font-size: 12.5px;
+  font-size: var(--fs-label);
   color: var(--text-secondary);
   margin-bottom: 0;
 }
 .push-right { margin-left: auto; }
+
+/* ============ Nut thao tac tren tung dong danh muc ============ */
+
+/* Nut co chieu rong toi thieu co dinh de cung mot thao tac thang cot tu dong nay
+   xuong dong kia, du nhan dai ngan khac nhau - mat chi can do mot cot */
+.row-actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.row-actions > form { margin: 0; }
+.row-actions .btn { min-width: 66px; }
+.row-actions .btn-toggle { min-width: 122px; }
+
+/* Mau theo trang thai ma nut DAN TOI, trung mau voi nhan trang thai o cot ben canh:
+   cam la tat di (bao tri, ngung dung, khoa), xanh la bat lai. Dat qua bien CSS cua
+   Bootstrap 5.3 chu khong ghi de thang mau, de hover va luc bam van dung mau */
+.btn-turn-off {
+  --bs-btn-color: var(--warning);
+  --bs-btn-border-color: #E8C98F;
+  --bs-btn-hover-color: var(--warning);
+  --bs-btn-hover-bg: var(--warning-bg);
+  --bs-btn-hover-border-color: var(--warning);
+  --bs-btn-active-color: var(--warning);
+  --bs-btn-active-bg: var(--warning-bg);
+  --bs-btn-active-border-color: var(--warning);
+}
+.btn-turn-on {
+  --bs-btn-color: var(--success);
+  --bs-btn-border-color: #A6D9C0;
+  --bs-btn-hover-color: var(--success);
+  --bs-btn-hover-bg: var(--success-bg);
+  --bs-btn-hover-border-color: var(--success);
+  --bs-btn-active-color: var(--success);
+  --bs-btn-active-bg: var(--success-bg);
+  --bs-btn-active-border-color: var(--success);
+}
+
+/* ============ Form them / sua ============ */
+
+/* Dau trang form: duong dan, tieu de, nut quay lai danh sach o ben phai */
+.form-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  gap: 12px;
+  border-bottom: 1px solid var(--border);
+  padding-bottom: 12px;
+  margin-bottom: 18px;
+}
+.form-header .breadcrumb-trail { margin-bottom: 4px; }
+.form-header .breadcrumb-trail a { color: var(--blue-500); text-decoration: none; }
+
+/* Man nhap lieu: nhan dam hon, o nhap cao hon o thanh loc tren danh sach — o day nguoi
+   dung nhin tung o de go chu khong liec qua. Chi tang padding tren duoi: ghi de ca
+   padding thi o chon (form-select) mat cho danh cho mui ten ben phai */
+.entry-form .form-label,
+.entry-form .section-label {
+  font-size: var(--fs-label);
+  font-weight: 600;
+  color: var(--text-primary);
+  margin-bottom: 6px;
+}
+.entry-form .form-control,
+.entry-form .form-select {
+  padding-top: 0.55rem;
+  padding-bottom: 0.55rem;
+}
+/* Don vi (kg, m3, d) dinh lien sau o so: nhin la biet nhap theo don vi nao */
+.entry-form .input-group-text {
+  font-size: var(--fs-label);
+  color: var(--text-secondary);
+  background-color: var(--surface-header);
+  border-color: var(--border);
+  min-width: 48px;
+  justify-content: center;
+}
+.entry-form .form-text {
+  font-size: var(--fs-meta);
+  color: var(--text-muted);
+}
+.entry-form .subsection-title {
+  font-size: var(--fs-base);
+  font-weight: 600;
+  margin: 26px 0 12px;
+}
+.form-actions {
+  display: flex;
+  gap: 8px;
+  border-top: 1px solid var(--border);
+  padding-top: 16px;
+  margin-top: 24px;
+}
+.form-actions .btn,
+.map-form-actions .btn { min-width: 88px; }
+.map-form-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 16px;
+}
+
+/* ============ O go de tim va chon (combobox) ============ */
+
+/* O khach hang tren form don: go de loc, danh sach tha ngay duoi o. O go mang lop
+   .form-select de giu mui ten va dang y het o chon cu */
+.combo { position: relative; }
+.combo-menu {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  right: 0;
+  z-index: 1000;
+  margin-top: 2px;
+  max-height: 300px;
+  overflow-y: auto;
+  background: #FFFFFF;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  box-shadow: 0 6px 16px rgba(11, 44, 74, .12);
+}
+.combo-option {
+  padding: 7px 12px;
+  cursor: pointer;
+}
+.combo-option + .combo-option { border-top: 1px solid var(--surface-header); }
+.combo-option:hover,
+.combo-option.is-active { background: var(--blue-100); }
+.combo-option-sub {
+  font-size: var(--fs-meta);
+  color: var(--text-secondary);
+}
+.combo-empty {
+  padding: 9px 12px;
+  color: var(--text-muted);
+}
+
+/* ============ Hop xac nhan dung chung (thay cho confirm() cua trinh duyet) ============ */
+
+.confirm-dialog .modal-body { line-height: 1.6; }
+.confirm-dialog .modal-footer .btn { min-width: 88px; }
+/* Con tro dat san o nut Huy (confirm-dialog.js). Bootstrap to dac nut dang co con tro,
+   lam nut Huy xam dam trong nhu nut chinh — chi giu vien sang de biet con tro o day */
+.confirm-dialog .modal-footer .btn-outline-secondary:focus-visible {
+  color: var(--text-secondary);
+  background-color: #FFFFFF;
+  border-color: var(--text-muted);
+  box-shadow: 0 0 0 0.2rem rgba(30, 119, 191, 0.25);
+}
 
 /* Right-align numeric columns so they can be compared down the column */
 .num {
@@ -258,6 +492,8 @@ fieldset:disabled .btn {
   border-radius: 6px;
   padding: 13px 15px;
 }
+/* Tieu de khung bieu do / bang ben trong .panel: cung co chu noi dung, chi dam hon */
+.panel-title { font-size: var(--fs-base); font-weight: 600; }
 .panel-info { background: var(--blue-50);       border-color: var(--blue-100); }
 .panel-warning { background: var(--warning-bg);  border-color: var(--warning); }
 .panel-danger   { background: var(--danger-bg);       border-color: var(--danger); }
@@ -283,9 +519,9 @@ fieldset:disabled .btn {
   gap: 11px;
 }
 .field > .field-label {
-  font-size: 12.5px;
+  font-size: var(--fs-label);
   color: var(--text-secondary);
-  width: 110px;
+  width: 120px;
   flex: none;
 }
 .field > .field-value {
@@ -293,7 +529,7 @@ fieldset:disabled .btn {
   background: var(--surface-header);
   border-radius: 5px;
   padding: 7px 10px;
-  font-size: 13px;
+  font-size: var(--fs-base);
 }
 
 /* Metric row - the comparison figures on the routing screen live here */
@@ -303,14 +539,17 @@ fieldset:disabled .btn {
 }
 .metric-row.five-up { grid-template-columns: repeat(5, 1fr); }
 .metric-row > div { padding-right: 18px; }
-.metric-row .metric-label { font-size: 12px; color: var(--text-secondary); }
-.metric-row .metric-value { font-size: 20px; font-weight: 600; margin-top: 2px; }
+.metric-row .metric-label { font-size: var(--fs-meta); color: var(--text-secondary); }
+.metric-row .metric-value { font-size: var(--fs-title); font-weight: 600; margin-top: 2px; }
+/* So lieu phu hoac chuoi dai (ten kho, so tien den hang ty) — dung bac tieu de khoi
+   thay cho style="font-size" viet tay o tung trang */
+.metric-row .metric-value.metric-value-sm { font-size: var(--fs-heading); }
 
 .system-note {
   background: var(--surface-header);
   border-radius: 6px;
   padding: 11px 14px;
-  font-size: 12.5px;
+  font-size: var(--fs-meta);
   color: var(--text-secondary);
   margin-top: 18px;
 }
@@ -354,7 +593,7 @@ fieldset:disabled .btn {
   display: flex;
   gap: 16px;
   flex-wrap: wrap;
-  font-size: 12px;
+  font-size: var(--fs-meta);
   color: var(--text-secondary);
   padding: 9px 11px;
   border-top: 1px solid var(--border);
@@ -367,29 +606,160 @@ fieldset:disabled .btn {
   margin-right: 5px;
 }
 
-/* ============ Routing screen ============ */
+/* ============ The co tieu de (section card) ============ */
 
+/* Khung dung chung cua man phan tuyen: dai tieu de xam, than la bang dinh sat vien. Moi
+   khoi con sau khoi dau tien tu ke mot duong phan cach phia tren — khoi bi thu gon
+   (display: none) thi khong ke, nen khong bao gio ra hai duong chong nhau */
+.section-card {
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: #FFFFFF;
+  overflow: hidden;
+  margin-bottom: 20px;
+}
+.section-card > * + * { border-top: 1px solid var(--border); }
+.section-card-head {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  padding: 10px 18px;
+  background: var(--surface-header);
+  text-align: left;
+}
+.section-card-title { font-weight: 600; }
+.section-card-meta { color: var(--text-secondary); font-size: var(--fs-label); }
+.section-card-body { padding: 12px 18px; }
+
+/* Ca dai tieu de la mot nut bam de thu gon / mo ra (collapse cua Bootstrap). Bootstrap gan
+   lop .collapsed len nut khi khoi dang dong: mui ten quay xuong, va hien dong tom tat */
+.collapse-toggle {
+  border: 0;
+  color: inherit;
+  cursor: pointer;
+}
+.collapse-toggle:focus-visible {
+  outline: 2px solid var(--blue-500);
+  outline-offset: -2px;
+}
+.collapse-toggle .chevron {
+  width: 16px;
+  height: 16px;
+  flex: none;
+  margin-left: auto;
+  fill: none;
+  stroke: var(--text-secondary);
+  stroke-width: 1.8;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  transition: transform .15s;
+}
+.collapse-toggle.collapsed .chevron { transform: rotate(180deg); }
+.show-when-collapsed { display: none; }
+.collapse-toggle.collapsed .show-when-collapsed { display: inline; }
+
+/* Bang nam sat trong the: bo vien ngoai cung de khong chong len vien cua the */
+.table-flush { margin-bottom: 0; }
+.table-flush > :not(caption) > * > *:first-child { border-left: 0; }
+.table-flush > :not(caption) > * > *:last-child { border-right: 0; }
+.table-flush > :first-child > tr:first-child > * { border-top: 0; }
+.table-flush > :last-child > tr:last-child > * { border-bottom: 0; }
+
+/* Bang hai cot nhan / so lieu: ket qua toi uu, so sanh chinh tay */
+.result-table > tbody > tr > td:last-child { width: 34%; }
+.result-table > tbody > tr.is-key > td {
+  background: var(--surface-header);
+  font-weight: 600;
+}
+
+/* ============ Routing screen (SCR-09) ============ */
+
+.routing-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-bottom: 18px;
+}
+.routing-toolbar label {
+  color: var(--text-secondary);
+  margin-bottom: 0;
+}
+.routing-toolbar input[type="date"] { width: 190px; }
+
+/* Bang ben trai rong gap doi ban do; ban do dinh lai khi cuon de doi chieu ghim so voi
+   bang cua tuyen dang xem ma khong phai cuon nguoc len */
+.routing-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 2fr) minmax(0, 1fr);
+  gap: 24px;
+  align-items: start;
+}
+.routing-side {
+  position: sticky;
+  top: 12px;
+}
+.routing-side .map-canvas { height: 360px; }
+@media (max-width: 991px) {
+  .routing-layout { grid-template-columns: 1fr; }
+  .routing-side { position: static; }
+}
+
+.routing-confirm {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+/* Phan dau the cua tung tuyen: nen trang, tieu de - muc chat hang - tai xe lien mot khoi */
+.route-card-top { padding: 12px 18px 14px; }
 .route-heading {
   display: flex;
   align-items: center;
-  gap: 8px;
-  font-size: 13.5px;
+  gap: 10px;
+  width: 100%;
+  padding: 0;
+  background: transparent;
+  text-align: left;
+  font-size: var(--fs-heading);
   font-weight: 600;
-  margin: 16px 0 7px;
 }
 .route-heading .route-swatch {
-  width: 9px;
-  height: 9px;
+  width: 12px;
+  height: 12px;
   border-radius: 2px;
+  flex: none;
 }
-.route-heading .route-meta {
-  font-weight: 400;
+/* Muc chat hang nam cung hang tieu de, canh nhan trang thai: chu nho, khong dam */
+.route-load {
   color: var(--text-secondary);
-  font-size: 12.5px;
+  font-size: var(--fs-meta);
+  font-weight: 400;
 }
-/* The final leg back to the depot gets its own always-visible row: this is the
-   on-screen proof that total distance includes the return trip (CBR-01). */
-.return-leg-row > td { color: var(--text-secondary); }
+.route-card-top .route-capacity-warning { margin: 10px 0 0; }
+.route-actions {
+  margin-top: 12px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+.route-driver-select { width: 220px; }
+.stop-customer {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+.fleet-shortage {
+  color: var(--danger);
+  font-weight: 400;
+  font-size: var(--fs-meta);
+  margin-left: 6px;
+}
+/* Dong tong cong cuoi bang trong the: dam chu nhu dong tieu de */
+.section-card .total-row > * { font-weight: 600; }
 
 /* Manual drag-and-drop editing of a route (CN-04-01, CN-04-02) */
 
@@ -409,16 +779,17 @@ fieldset:disabled .btn {
   color: var(--danger);
   border-radius: 4px;
   padding: 7px 10px;
-  font-size: 12.5px;
+  font-size: var(--fs-meta);
   margin-bottom: 8px;
 }
 
 /* Numbered stop pin on the map. The number is the delivery order, so the dispatcher
    can match a row of the route table to a pin without counting (CN-03-09). */
 .route-pin {
-  width: 24px;
+  min-width: 24px;
   height: 24px;
-  border-radius: 50%;
+  padding: 0 4px;
+  border-radius: 12px;
   border: 2px solid #FFFFFF;
   box-shadow: 0 0 3px rgba(0, 0, 0, .55);
   color: #FFFFFF;
@@ -426,6 +797,34 @@ fieldset:disabled .btn {
   font-weight: 600;
   line-height: 20px;
   text-align: center;
+  white-space: nowrap;
+}
+
+/* Kho tren ban do: o vuong dam co hinh ngoi nha, ten kho luon hien ben duoi (docs/05) */
+.depot-pin {
+  position: relative;
+  width: 26px;
+  height: 26px;
+  border-radius: 5px;
+  border: 2px solid #FFFFFF;
+  background: var(--blue-900);
+  box-shadow: 0 0 3px rgba(0, 0, 0, .6);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.depot-pin svg { width: 14px; height: 14px; fill: #FFFFFF; }
+.depot-pin-label {
+  position: absolute;
+  top: 27px;
+  left: 50%;
+  transform: translateX(-50%);
+  white-space: nowrap;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--blue-900);
+  /* Vien trang quanh chu de doc duoc tren nen ban do nhieu duong */
+  text-shadow: 0 0 2px #FFFFFF, 0 0 2px #FFFFFF, 0 0 3px #FFFFFF;
 }
 
 /* ============ SCR-12 driver screen (phone, 360px and up) ============ */
@@ -439,7 +838,7 @@ fieldset:disabled .btn {
   display: flex;
   align-items: center;
   gap: 8px;
-  font-size: 16px;
+  font-size: var(--fs-heading);
   font-weight: 600;
 }
 .driver-progress {
@@ -487,7 +886,7 @@ fieldset:disabled .btn {
   border-radius: 4px;
   padding: 7px 10px;
   margin: 9px 0;
-  font-size: 13px;
+  font-size: var(--fs-label);
 }
 .stop-items > div { display: flex; }
 .stop-note {
@@ -495,11 +894,11 @@ fieldset:disabled .btn {
   color: var(--warning);
   border-radius: 4px;
   padding: 6px 9px;
-  font-size: 12.5px;
+  font-size: var(--fs-label);
   margin-bottom: 8px;
 }
 .stop-amount { margin: 8px 0 10px; }
-.stop-amount strong { font-size: 17px; }
+.stop-amount strong { font-size: var(--fs-heading); }
 
 .stop-actions {
   display: grid;
@@ -521,6 +920,8 @@ fieldset:disabled .btn {
     align-items: flex-start !important;
     gap: 7px;
   }
+  .app-user { gap: 10px; flex-wrap: wrap; }
+  .app-user-divider { display: none; }
 }
 
 /* ============ Order progress stepper ============ */
@@ -537,7 +938,7 @@ fieldset:disabled .btn {
   width: 24px;
   height: 24px;
   border-radius: 50%;
-  font-size: 11.5px;
+  font-size: var(--fs-meta);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -548,7 +949,7 @@ fieldset:disabled .btn {
 }
 .stepper .stepper-dot.is-done { background: var(--success-bg); border-color: var(--success-bg); color: var(--success); }
 .stepper .stepper-dot.is-current  { background: var(--blue-500); border-color: var(--blue-500); color: #FFFFFF; }
-.stepper .stepper-label { font-size: 11.5px; color: var(--text-muted); margin-top: 6px; }
+.stepper .stepper-label { font-size: var(--fs-meta); color: var(--text-muted); margin-top: 6px; }
 .stepper .stepper-label.is-done { color: var(--text-secondary); }
 .stepper .stepper-label.is-strong  { color: var(--blue-500); }
 
@@ -633,7 +1034,7 @@ fieldset:disabled .btn {
 .report-tabs a {
   display: block;
   padding: 8px 15px;
-  font-size: 13.5px;
+  font-size: var(--fs-base);
   color: var(--text-secondary);
   text-decoration: none;
   border: 1px solid transparent;
@@ -698,7 +1099,7 @@ fieldset:disabled .btn {
 .slice-postponed { stroke: var(--warning); }
 .slice-in-progress { stroke: var(--blue-500); }
 
-.donut-legend { list-style: none; margin: 0; padding: 0; font-size: 13px; }
+.donut-legend { list-style: none; margin: 0; padding: 0; font-size: var(--fs-label); }
 .donut-legend li { padding: 3px 0; }
 .donut-legend i,
 .legend-dot {
@@ -752,16 +1153,16 @@ fieldset:disabled .btn {
   color: #FFFFFF;
   padding: 10px 13px;
 }
-.route-card > .route-card-head .stepper-label { font-size: 14px; font-weight: 600; }
-.route-card > .route-card-head .phu { font-size: 11.5px; color: #A9C4DC; margin-top: 2px; }
+.route-card > .route-card-head .stepper-label { font-size: var(--fs-base); font-weight: 600; }
+.route-card > .route-card-head .phu { font-size: var(--fs-meta); color: #A9C4DC; margin-top: 2px; }
 .route-card > .route-card-summary {
   display: flex;
   border-bottom: 1px solid var(--border);
 }
 .route-card > .route-card-summary > div { flex: 1; padding: 9px 13px; }
 .route-card > .route-card-summary > div + div { border-left: 1px solid var(--border); }
-.route-card > .route-card-summary .metric-label { font-size: 11px; color: var(--text-secondary); }
-.route-card > .route-card-summary .metric-value { font-size: 16px; font-weight: 600; }
+.route-card > .route-card-summary .metric-label { font-size: var(--fs-meta); color: var(--text-secondary); }
+.route-card > .route-card-summary .metric-value { font-size: var(--fs-heading); font-weight: 600; }
 
 .stop {
   padding: 11px 13px;
@@ -777,11 +1178,11 @@ fieldset:disabled .btn {
   justify-content: space-between;
   align-items: center;
   gap: 8px;
-  font-size: 13.5px;
+  font-size: var(--fs-base);
   font-weight: 600;
 }
 .stop .stop-meta {
-  font-size: 12px;
+  font-size: var(--fs-meta);
   color: var(--text-secondary);
   margin-top: 3px;
   line-height: 1.6;
@@ -790,12 +1191,12 @@ fieldset:disabled .btn {
   border: 1px solid var(--border);
   border-radius: 5px;
   padding: 7px 9px;
-  font-size: 12px;
+  font-size: var(--fs-meta);
   margin: 8px 0;
   background: #FFFFFF;
 }
 .stop .stop-amount {
-  font-size: 13px;
+  font-size: var(--fs-base);
   color: var(--danger);
   font-weight: 600;
 }

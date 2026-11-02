@@ -95,7 +95,7 @@
         <!-- ============ Bieu do duong (CN-08-03) ============ -->
         <div class="panel mb-3" th:with="chart=${report.chart}" th:unless="${report.rows.isEmpty()}">
             <div class="d-flex justify-content-between align-items-start mb-1">
-                <div class="small"><strong>Mức giảm quãng đường theo ngày</strong></div>
+                <div class="panel-title">Mức giảm quãng đường theo ngày</div>
                 <div class="chart-legend small">
                     <span><i class="legend-line legend-a"></i> So với mốc A</span>
                     <span><i class="legend-line legend-b"></i> So với mốc B</span>
@@ -190,7 +190,7 @@
                     <strong th:text="${#numbers.formatDecimal(totals.reductionBPercent, 1, 'POINT', 1, 'COMMA')} + '%'">12,9%</strong>
                 </td>
                 <td class="num" th:text="${totals.tripsSaved}">98</td>
-                <td class="text-sub small"
+                <td class="text-sub"
                     th:text="'Lấp đầy TB ' + ${#numbers.formatDecimal(totals.weightUtilization * 100, 1, 'POINT', 1, 'COMMA')} + '% kg · '
                              + ${#numbers.formatDecimal(totals.volumeUtilization * 100, 1, 'POINT', 1, 'COMMA')} + '% m³'">
                     Lấp đầy TB 93,3% kg · 55,0% m³

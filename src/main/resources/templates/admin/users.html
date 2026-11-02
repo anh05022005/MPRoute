@@ -10,10 +10,10 @@
     <div class="toolbar d-flex justify-content-between align-items-end flex-wrap gap-2">
 
         <form th:action="@{/admin/users}" method="get" class="d-flex align-items-end gap-2 flex-wrap">
-            <div>
+            <div class="me-3">
                 <label for="keyword" class="form-label mb-1 small">Tìm theo tên đăng nhập hoặc họ tên</label>
                 <input type="text" id="keyword" name="keyword" class="form-control form-control-sm"
-                       style="width: 240px;" th:value="${keyword}" placeholder="Ví dụ: taixe hoặc Hùng">
+                       style="width: 340px;" th:value="${keyword}" placeholder="Ví dụ: taixe hoặc Hùng">
             </div>
             <div>
                 <label for="role" class="form-label mb-1 small">Vai trò</label>
@@ -35,7 +35,7 @@
                             th:selected="${statusOption == status}">Trạng thái</option>
                 </select>
             </div>
-            <button type="submit" class="btn btn-sm btn-outline-secondary">Tìm</button>
+            <button type="submit" class="btn btn-sm btn-primary">Tìm</button>
             <a th:href="@{/admin/users}" class="btn btn-sm btn-outline-secondary">Bỏ lọc</a>
         </form>
 
@@ -50,7 +50,7 @@
             <th style="width: 200px;">Email</th>
             <th style="width: 130px;">Vai trò</th>
             <th style="width: 180px;">Trạng thái</th>
-            <th style="width: 200px;">Thao tác</th>
+            <th style="width: 330px;">Thao tác</th>
         </tr>
         </thead>
         <tbody>
@@ -66,7 +66,7 @@
             <!-- Email duoc phep NULL nen phai kiem truoc khi doc -->
             <td>
                 <span th:if="${account.email != null}" th:text="${account.email}">a@b.com</span>
-                <span th:unless="${account.email != null}" class="text-sub small">—</span>
+                <span th:unless="${account.email != null}" class="text-sub">—</span>
             </td>
 
             <td th:text="${account.role.displayName}">Quản trị viên</td>
@@ -88,27 +88,35 @@
             </td>
 
             <td>
-                <a class="btn btn-sm btn-outline-secondary py-0"
-                   th:href="@{/admin/users/{id}/edit(id=${account.id})}">Sửa</a>
+                <div class="row-actions">
+                    <a class="btn btn-sm btn-outline-secondary"
+                       th:href="@{/admin/users/{id}/edit(id=${account.id})}">Sửa</a>
 
-                <!--
-                    Khong co nut Xoa (CBR-17). Tai khoan da tao don, da chay tuyen ma xoa cung
-                    thi lich su trang thai mat thong tin ai lam viec gi. Nghi viec thi khoa.
-                    Dung POST chu khong dung link GET de con token CSRF.
-                -->
-                <form th:action="@{/admin/users/{id}/toggle-status(id=${account.id})}" method="post"
-                      class="d-inline"
-                      onsubmit="return confirm('Bạn có chắc chắn muốn thực hiện thao tác này?');">
-                    <button type="submit" class="btn btn-sm btn-outline-secondary py-0"
-                            th:text="${account.status.name() == 'ACTIVE'} ? 'Khóa' : 'Mở khóa'">Khóa</button>
-                </form>
+                    <!--
+                        Khong co nut Xoa (CBR-17). Tai khoan da tao don, da chay tuyen ma xoa cung
+                        thi lich su trang thai mat thong tin ai lam viec gi. Nghi viec thi khoa.
+                        Dung POST chu khong dung link GET de con token CSRF.
+                    -->
+                    <form th:action="@{/admin/users/{id}/toggle-status(id=${account.id})}" method="post"
+                          th:with="isActive=${account.status.name() == 'ACTIVE'}"
+                          th:data-confirm-title="${isActive} ? 'Khóa tài khoản' : 'Mở khóa tài khoản'"
+                          th:data-confirm-message="${isActive}
+                              ? 'Tài khoản {subject} sẽ bị khóa và không đăng nhập được cho đến khi được mở khóa. Bạn xác nhận?'
+                              : 'Tài khoản {subject} sẽ đăng nhập lại được. Bạn xác nhận?'"
+                          th:data-confirm-subject="${account.username}"
+                          th:data-confirm-button="${isActive} ? 'Khóa' : 'Mở khóa'"
+                          th:data-confirm-variant="${isActive} ? 'warning' : 'success'">
+                        <button type="submit" class="btn btn-sm btn-toggle"
+                                th:classappend="${account.status.name() == 'ACTIVE'} ? 'btn-turn-off' : 'btn-turn-on'"
+                                th:text="${account.status.name() == 'ACTIVE'} ? 'Khóa' : 'Mở khóa'">Khóa</button>
+                    </form>
 
-                <!-- Chi hien khi dang thuc su vuong khoa tam, khong bay ra o moi dong cho roi mat -->
-                <form th:if="${account.temporarilyLocked}"
-                      th:action="@{/admin/users/{id}/clear-lock(id=${account.id})}" method="post"
-                      class="d-inline">
-                    <button type="submit" class="btn btn-sm btn-outline-secondary py-0">Gỡ khóa tạm</button>
-                </form>
+                    <!-- Chi hien khi dang thuc su vuong khoa tam, khong bay ra o moi dong cho roi mat -->
+                    <form th:if="${account.temporarilyLocked}"
+                          th:action="@{/admin/users/{id}/clear-lock(id=${account.id})}" method="post">
+                        <button type="submit" class="btn btn-sm btn-turn-on">Gỡ khóa tạm</button>
+                    </form>
+                </div>
             </td>
         </tr>
         </tbody>

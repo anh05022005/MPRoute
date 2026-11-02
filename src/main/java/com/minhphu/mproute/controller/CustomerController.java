@@ -62,13 +62,13 @@ public class CustomerController {
      * Bao layout.html nap Leaflet cho man hinh nay (CN-01-05). Dat o ca ba cho tra ve
      * form: quen mot cho thi luc do ban do khong hien, ma o nhap toa do van trong.
      */
-    private static final String CO_BAN_DO = "needsMap";
+    private static final String NEEDS_MAP = "needsMap";
 
     @PreAuthorize("hasRole('ADMIN')")
     @GetMapping("/create")
     public String createForm(Model model) {
         model.addAttribute("form", new CustomerForm());
-        model.addAttribute(CO_BAN_DO, true);
+        model.addAttribute(NEEDS_MAP, true);
         return "admin/customer-form";
     }
 
@@ -76,7 +76,7 @@ public class CustomerController {
     @GetMapping("/{id}/edit")
     public String editForm(@PathVariable Long id, Model model) {
         model.addAttribute("form", CustomerForm.from(customerService.getById(id)));
-        model.addAttribute(CO_BAN_DO, true);
+        model.addAttribute(NEEDS_MAP, true);
         return "admin/customer-form";
     }
 
@@ -88,7 +88,7 @@ public class CustomerController {
                        RedirectAttributes redirectAttributes) {
 
         if (binding.hasErrors()) {
-            model.addAttribute(CO_BAN_DO, true);
+            model.addAttribute(NEEDS_MAP, true);
             return "admin/customer-form";
         }
 

@@ -121,7 +121,7 @@ Spring Security cần tiền tố `ROLE_` khi tạo `GrantedAuthority`, nên `AD
 |---|---|
 | BR01-01 | Sản phẩm bắt buộc có `weight_per_box` và `volume_per_box`, cả hai > 0. **Đây là đầu vào của thuật toán, thiếu là không chạy được.** |
 | BR01-02 | `products.code` duy nhất |
-| BR01-03 | Xe bắt buộc có `max_weight` và `max_volume`, cả hai > 0. `license_plate` duy nhất |
+| BR01-03 | Xe bắt buộc có `max_weight` từ **300 đến 5.000 kg** và `max_volume` từ **1 đến 25 m³** — khoảng của xe tải nhẹ giao hàng nội thành, từ xe van 500 kg đến xe tải 5 tấn. `license_plate` duy nhất, đúng định dạng biển số ô tô Việt Nam: `29H-123.45` hoặc `29C-1234` (mã tỉnh 11–99, 1–2 chữ seri) |
 | BR01-04 | Trạng thái `IN_USE` do hệ thống tự đặt, quản trị viên không chọn tay được |
 | BR01-05 | Khách hàng bắt buộc có tọa độ. Nhập địa chỉ rồi bấm "Tìm tọa độ" (Nominatim), hoặc ghim tay trên bản đồ |
 | BR01-06 | Nominatim trả nhiều kết quả thì hiện danh sách để chọn. Không có kết quả thì bắt ghim tay |

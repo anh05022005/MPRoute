@@ -50,7 +50,7 @@
             <div class="metric-row">
                 <div>
                     <div class="metric-label">Tỷ lệ giao thành công</div>
-                    <div class="metric-value" style="font-size: 26px;"
+                    <div class="metric-value"
                          th:text="${#numbers.formatDecimal(report.successPercent, 1, 'POINT', 1, 'COMMA')} + '%'">96,4%</div>
                 </div>
                 <div>
@@ -74,7 +74,7 @@
             <!-- ============ Bieu do tron ============ -->
             <div class="col-lg-5">
                 <div class="panel h-100">
-                    <div class="small mb-2"><strong>Kết quả giao hàng</strong></div>
+                    <div class="panel-title mb-2">Kết quả giao hàng</div>
 
                     <div class="d-flex align-items-center gap-3 flex-wrap">
                         <!--
@@ -111,7 +111,7 @@
             <!-- ============ Bang trang thai ============ -->
             <div class="col-lg-7">
                 <div class="panel h-100">
-                    <div class="small mb-2"><strong>Chi tiết theo trạng thái</strong></div>
+                    <div class="panel-title mb-2">Chi tiết theo trạng thái</div>
                     <table class="table align-middle mb-0">
                         <thead>
                         <tr>
