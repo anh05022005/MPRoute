@@ -195,6 +195,7 @@ Index: `idx_customers_phone` trên `phone` (phục vụ tra cứu).
 | `amount_to_collect` | DECIMAL(15,2) | NOT NULL DEFAULT 0 | Theo BR02-14 |
 | `payment_status` | VARCHAR(30) | NOT NULL | `UNPAID`, `PAID`, `DEBT` |
 | `status` | VARCHAR(30) | NOT NULL | Xem `01-nghiep-vu.md` |
+| `postpone_count` | INT | NOT NULL DEFAULT 0 | Số lần bị hoãn vì hết chỗ hoặc giao không được. Càng lớn càng được xếp trước (BR03-14) |
 | `cancel_reason` | VARCHAR(500) | | |
 | `note` | VARCHAR(500) | | |
 | `created_by_id` | BIGINT | FK → `users.id` | |
@@ -230,7 +231,7 @@ Chép `unit_price`, `line_weight`, `line_volume` thay vì tham chiếu là chủ
 | `total_distance` | DOUBLE | NOT NULL | Mét, **gồm cả chặng về kho** |
 | `total_weight` | DECIMAL(10,2) | NOT NULL | |
 | `total_volume` | DECIMAL(10,3) | NOT NULL | |
-| `algorithm` | VARCHAR(30) | NOT NULL | `NN`, `NN_2OPT`, `MANUAL` |
+| `algorithm` | VARCHAR(30) | NOT NULL | `OR_TOOLS`, `MANUAL`. `NN`, `NN_2OPT` chỉ còn ở dòng cũ (`09` mục A7) |
 | `execution_time_ms` | BIGINT | | Thời gian chạy thuật toán |
 | `approximate_distance` | BOOLEAN | NOT NULL DEFAULT FALSE | TRUE khi dùng Haversine |
 | `status` | VARCHAR(30) | NOT NULL | |
@@ -379,7 +380,6 @@ Giá trị khởi tạo:
 | `LOADING_TIME` | `15` | phút mỗi điểm |
 | `DEPARTURE_TIME` | `08:00` | |
 | `HAVERSINE_FACTOR` | `1.3` | |
-| `DEFAULT_ALGORITHM` | `OR_TOOLS` | Bộ giải chính. Đổi sang `NN_2OPT` để chạy bản tự cài đặt |
 | `OSRM_URL` | `http://localhost:5000` | |
 | `OSRM_TIMEOUT` | `10` | giây |
 | `PAGE_SIZE` | `20` | Số dòng mỗi trang |
@@ -460,7 +460,7 @@ IncidentStatus        : PENDING, RESOLVED                 <- bang incidents
 SolutionType          : A_RESCUE_VEHICLE, B_INSERT_OTHER_ROUTE, C_POSTPONE, MANUAL
 EntityType            : ORDER, ROUTE                      <- bang status_history
 NotificationSendStatus: NOT_SENT, SENT, ERROR             <- bang notifications
-AlgorithmType         : OR_TOOLS, NN, NN_2OPT, MANUAL
+AlgorithmType         : OR_TOOLS, MANUAL (NN, NN_2OPT chi la nhan cho dong cu)
 DistanceSource        : OSRM, HAVERSINE
 StockMovementType     : IN, OUT, RETURN, ADJUST_UP, ADJUST_DOWN   <- bang stock_movements
 ```

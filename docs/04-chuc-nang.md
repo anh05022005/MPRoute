@@ -90,6 +90,7 @@ Chọn khách → tự điền địa chỉ, tọa độ, SĐT, hình thức tha
 
 ### ★ CN-02-03 Tự tính khối lượng, thể tích, tiền hàng
 Nhập xong một dòng → tổng kg, m³, tiền hàng cập nhật **ngay không cần tải lại trang** (dùng JavaScript). Ba ô này ở chế độ chỉ đọc.
+Gõ số thùng quá số còn rảnh → ô tự về đúng số còn rảnh, hiện *"Chỉ còn N thùng trong kho. Vui lòng nhập tối đa N."* (BR02-18).
 
 ### ★ CN-02-04 Sinh mã đơn tự động
 Đúng định dạng `MP` + yyMMdd + 4 số. Tạo 3 đơn cùng ngày → 3 mã liên tiếp, không trùng.
@@ -154,6 +155,8 @@ Tổng sức chứa **đủ** nhưng thuật toán vẫn không xếp hết đơ
 
 Các tuyến đã sinh **vẫn hiển thị bình thường**, không được xóa đi. Nút "Chốt kế hoạch" bị vô hiệu hóa khi còn đơn chưa gán.
 
+Không thêm được xe thì điều phối viên bấm **"Hoãn sang ngày mai"** cạnh từng đơn chưa gán: đơn đổi ngày giao, giữ nguyên mã và trạng thái `APPROVED`, tăng `postpone_count`, ghi `status_history`. Đơn đã hoãn hiện nhãn "Đã hoãn N lần" và được xếp trước trong lần phân tuyến sau (BR03-14).
+
 Phân biệt rõ với CN-03-10: CN-03-10 là *tổng sức chứa thiếu* → không sinh tuyến nào. CN-03-14 là *tổng đủ nhưng chia không được* → có tuyến nhưng còn đơn sót.
 
 ### ★ CN-03-11 Dự phòng khi OSRM lỗi
@@ -195,6 +198,7 @@ Sau khi chốt, khách có email nhận được thư gồm mã đơn, ETA, link
 
 ### ★ CN-04-09 Hủy tuyến
 Tuyến `CONFIRMED` hủy được, đơn về `APPROVED`, xe được nhả lịch ngày đó. Tuyến `IN_PROGRESS` → MSG-10.
+Bấm "Hủy tuyến" → hộp thoại xác nhận có ô **lý do bắt buộc**, hai nút "Không, giữ tuyến" / "Có, hủy tuyến". Máy chủ cũng từ chối lý do rỗng.
 
 ### ○ CN-04-10 Xuất kết quả phân tuyến ra Excel
 
@@ -228,14 +232,16 @@ Bấm nút → tuyến `IN_PROGRESS`, ghi `departed_at`. Trước khi bấm thì
 ### ★ CN-05-04 Chi tiết điểm giao
 Địa chỉ, người liên hệ, SĐT, danh sách sản phẩm và số thùng, ghi chú giao hàng, ETA, **số tiền phải thu**.
 
+Điểm **đã xong** (đã giao, thất bại, hoãn) vẫn bấm vào tên khách được để mở lại: địa chỉ, người liên hệ, SĐT, mã đơn, hàng đã giao, số đã thu hoặc lý do thất bại, nút gọi khách. Chỉ xem, không sửa được kết quả.
+
 ### ★ CN-05-05 Nút gọi và chỉ đường
 `tel:` mở ứng dụng gọi. Chỉ đường mở Google Maps với tọa độ điểm giao.
 
 ### ★ CN-05-06 Cập nhật đã giao
 Bấm → xác nhận → điểm sang `DELIVERED`, ghi thời điểm và tọa độ GPS. Điểm tiếp theo tự nổi bật.
 
-### ★ CN-05-07 Nhập tiền thu
-Đơn có `amount_to_collect > 0` → hộp thoại hiện sẵn số tiền, tài xế xác nhận hoặc sửa. Sửa khác → bắt nhập lý do, gửi thông báo cho điều phối.
+### ★ CN-05-07 Ghi nhận tiền thu
+Bấm "Đã giao xong" là đã thu đủ số "Phải thu" in đậm trên thẻ, hệ thống tự ghi `collected_amount`. Không còn ô nhập số thực thu (`09` mục A11).
 
 ### ★ CN-05-08 Giao thất bại
 Chọn lý do từ danh sách. Chọn `KHAC` → bắt nhập mô tả. Điều phối nhận thông báo.
@@ -288,6 +294,8 @@ Sắp theo km phát sinh tăng dần (trừ C luôn cuối). Mỗi phương án 
 
 ### ★ CN-06-11 Áp dụng phương án
 Chọn → xác nhận → cập nhật tuyến liên quan, tính lại ETA, ghi lịch sử.
+
+Phương án A có thêm ô **chọn tài xế lái xe cứu hộ** (bắt buộc). Tuyến đổi sang xe và tài xế đó, cả tài xế mới lẫn tài xế cũ nhận thông báo NTF-04. Khung "Đã xử lý" hiện biển số xe cứu hộ và tên tài xế. Km phát sinh lưu đúng con số đã hiện ở phương án.
 
 ### ★ CN-06-12 Thông báo khách bị ảnh hưởng
 Gửi email ETA mới cho từng khách.

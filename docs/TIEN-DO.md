@@ -3,7 +3,7 @@
 > Trạng thái hiện tại và việc tiếp theo. **Giữ ngắn** — file này được nạp vào mọi phiên làm việc.
 > Nhật ký chi tiết từng tuần nằm ở `NHAT-KY.md`, không đưa vào đây.
 
-**Cập nhật lần cuối:** 11/10/2026 · Kho: `github.com/anh05022005/MPRoute` (riêng tư), nhánh `main`
+**Cập nhật lần cuối:** 30/10/2026 · Kho: `github.com/anh05022005/MPRoute` (riêng tư), nhánh `main`
 
 ---
 
@@ -12,7 +12,7 @@
 | | |
 |---|---|
 | Theo kế hoạch | Tuần 10 — báo cáo, thực nghiệm benchmark |
-| Thực tế | **XONG TOÀN BỘ 88 CHỨC NĂNG BẮT BUỘC.** Ba báo cáo chạy trên dữ liệu thật và xuất Excel được, benchmark Augerat có số. Vừa bổ sung **tồn kho thành phẩm** (CN-01-10, CN-01-11) — lỗ hổng bỏ sót trong đặc tả gốc, xem `09` mục A5. Còn lại là viết chương 4, chạy thử, quay video và luận văn |
+| Thực tế | **XONG TOÀN BỘ 88 CHỨC NĂNG BẮT BUỘC.** Ba báo cáo chạy trên dữ liệu thật và xuất Excel được, benchmark Augerat có số. Đã bổ sung **tồn kho thành phẩm** (`09` mục A5). 30/10: **bỏ NN và 2-opt, OR-Tools là bộ giải duy nhất** (`09` mục A7), chỉnh giao diện theo phản hồi (`NHAT-KY` tuần 12), hết chỗ thì bỏ đơn ưu tiên thấp trước (`09` mục A10). Còn lại là viết chương 4, chạy thử, quay video và luận văn |
 
 ```
 [x] T1  Chot de tai, hoi Minh Phu 3 cau
@@ -29,7 +29,7 @@
 [ ] T12 Bao cao hoan chinh, slide, luyen van dap
 ```
 
-**7/7 test bắt buộc xanh** (đã bỏ NN và 2-opt, xem `09` mục A7) (`mvnw.cmd test` → **18 test**: 7 bắt buộc + 1 test ETA cùng chỗ dừng + 2 test cho
+**7/7 test bắt buộc xanh** (đã bỏ NN và 2-opt, xem `09` mục A7) (`mvnw.cmd test` → **19 test**: 7 bắt buộc + 1 test ưu tiên bỏ điểm + 1 test ETA cùng chỗ dừng + 2 test cho
 `VrpFileReader` + 7 test cho `StockSettlementPlanner` + 1 lần nạp Spring context).
 
 **Tồn kho thành phẩm vừa xong.** `products.stock_boxes` = số thùng *còn rảnh*; bảng thứ 17
@@ -48,8 +48,10 @@ phải sát nhất có thể.
 
 **Hết việc code.** Còn lại là làm báo cáo và chuẩn bị bảo vệ:
 
-1. **Viết chương 4 báo cáo** — số liệu đã có đủ ở `docs/07`: bảng gap 10 bài Augerat, bảng
-   riêng đóng góp 2-opt, và RPT-03 trên **14 ngày / 139 đơn** dữ liệu thật
+1. **Viết chương 4 báo cáo** — số liệu đã có đủ ở `docs/07`: bảng gap OR-Tools trên 10 bài
+   Augerat, hai mốc A/B, và RPT-03 trên **14 ngày / 139 đơn** dữ liệu thật
+1b. **Chạy thử lại bước demo 5a** (`docs/08`): kịch bản "tổng đủ mà vẫn sót đơn" dựng cho NN,
+   với OR-Tools có thể không còn tái hiện. Đủ đơn thì bỏ bước đó khỏi kịch bản
 2. **Chạy thử kịch bản demo 3 lần** theo `docs/08`, rồi quay video. Thêm hai bước vào kịch
    bản: mở RPT-01/RPT-02 và bấm **Xuất Excel** một lần
 3. Luyện vấn đáp, đánh tag bản chắc chắn chạy được trước ngày bảo vệ
@@ -125,7 +127,7 @@ JavaScript chỉ chạy trong trình duyệt:
 
 | Việc | Tình hình |
 |---|---|
-| **Mật khẩu lệch tài liệu** | `dieuphoi` và `taixe01` đã bị đổi khỏi giá trị của `DataSeeder`. `seedUser()` chỉ tạo khi thiếu chứ không ghi đè nên khởi động lại không tự về mặc định. **Trước ngày bảo vệ phải đưa về đúng `docs/08`, hoặc sửa `docs/08`** — kịch bản demo đọc mật khẩu từ đó, lệch là hỏng ngay bước đăng nhập đầu tiên. `admin`, `taixe02`, `taixe03` vẫn đúng mặc định |
+| **Mật khẩu lệch tài liệu** | `dieuphoi`, `taixe01`, `taixe02` đã bị đổi khỏi giá trị của `DataSeeder`. `seedUser()` chỉ tạo khi thiếu chứ không ghi đè nên khởi động lại không tự về mặc định. **Trước ngày bảo vệ phải đưa về đúng `docs/08`, hoặc sửa `docs/08`** — kịch bản demo đọc mật khẩu từ đó, lệch là hỏng ngay bước đăng nhập đầu tiên. `admin`, `taixe03` vẫn đúng mặc định |
 
 ---
 
@@ -133,10 +135,10 @@ JavaScript chỉ chạy trong trình duyệt:
 
 | Vấn đề | Vì sao chưa sửa |
 |---|---|
-| NN để sót đơn dù tổng sức chứa đủ | **Cố ý giữ.** Là điểm nhấn demo bước 5a và câu trả lời vấn đáp mạnh nhất. Kịch bản ở `docs/08` |
-| Trạng thái xe là cờ toàn cục, không theo ngày | Sửa đúng phải đổi CBR-05 và tầng service. Đã ghi vào hạn chế `docs/07` 4.7 |
+| Tổng sức chứa đủ mà vẫn sót đơn | NN đã bỏ, OR-Tools có thể không tái hiện bước demo 5a nữa. **Phải chạy thử lại** (`docs/08`). Sót đơn thì giờ hoãn được ngay trên màn Phân tuyến, đơn hoãn được ưu tiên hôm sau (`09` mục A10) |
+| Trạng thái xe là cờ toàn cục, không theo ngày | Sửa đúng phải đổi CBR-05 và tầng service. Đã ghi vào hạn chế `docs/07` 4.6 |
 | Thuật toán không ràng buộc khung giờ, dù có khách ghi "chỉ nhận buổi sáng trước 11h" | Giữ vì phản ánh khảo sát thật. **Đã có số trả lời:** tuyến 3 điểm tới điểm cuối lúc **09:09**, còn sớm hơn mốc 11h khá nhiều — với quy mô hiện tại của Minh Phú thì ràng buộc này chưa bị vi phạm |
-| **Thu thiếu tiền mà đơn vẫn sang `PAID`** | `docs/01` chỉ có BR05-14 cho đơn công nợ, **không có luật nào cho việc thu thiếu**. Tự nghĩ ra luật là thêm phạm vi ngoài `docs/04`. Số thực thu vẫn ở `route_stops.collected_amount`, lý do ở `collection_note`, điều phối đã nhận NTF-09 — không mất dữ liệu, chỉ là cột `payment_status` chưa phản ánh. **Muốn sửa thì thêm một luật vào `docs/01` trước** |
+| ~~Thu thiếu tiền mà đơn vẫn sang `PAID`~~ | **Hết còn**: tài xế không nhập số thực thu nữa, bấm "Đã giao" là đã thu đủ (`09` mục A11) |
 
 ---
 
@@ -185,11 +187,12 @@ mỗi thứ đang phục vụ một phép thử:
 - **131 đơn lịch sử của 10 ngày 13/08–25/08** do `HistorySeeder` sinh, đã giao xong. Đây là
   nguồn dữ liệu của RPT-03, **giữ lại đến ngày bảo vệ**
 - 15 đơn thử rải từ 16/08 đến 28/08, đủ mọi trạng thái kể cả `FAILED` và `POSTPONED`
-- Ngày 27/08: tuyến `TT26082702` **đang chạy**, có đơn `DELIVERING` để thử `/track`; tuyến
-  `TT26082701` đã đóng sau khi xử lý sự cố
+- Ngày 27/08: tuyến `TT26082702` đã đóng bằng SQL ngày 01/11 vì bỏ dở làm xe kẹt "Đang chạy"
+  (`NHAT-KY`). Muốn thử `/track` với đơn `DELIVERING` thì phải chạy một tuyến mới
 - 2 sự cố đã xử lý: một mức nhẹ (tự lùi ETA 30 phút), một xe hỏng (áp dụng phương án chèn tuyến)
 - Ba khách thử của CN-02-10 (`#22`, `#23`, `#24`) đã chuyển `INACTIVE`
-- Xe 29H-123.45 và 29C-678.90 đang `MAINTENANCE`, 29F-555.66 đang `IN_USE`
+- 7 xe, tất cả `AVAILABLE` (thêm 29H-456.78, 29C-345.67, 29D-789.01 ngày 01/11, chỉ có trong CSDL,
+  không có trong seeder). Bước demo cần một xe `MAINTENANCE` thì phải bật lại tay
 
 ---
 

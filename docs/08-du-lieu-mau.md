@@ -170,33 +170,24 @@ Tạo đơn cho **ba ngày**: hôm qua (đã hoàn thành), hôm nay (đang giao
 
 **Tổng: 2640.0 kg và 15.075 m³**
 
-### Bộ dữ liệu này cho ba giai đoạn demo — đã chạy thử và kiểm chứng
+### Bộ dữ liệu này cho ba giai đoạn demo
 
-| Chọn xe | Sức chứa | Kết quả thật khi chạy Nearest Neighbor |
+| Chọn xe | Sức chứa | Kết quả |
 |---|---|---|
 | 29H + 29C | 2000 kg / 18 m³ | **Thiếu tổng** → MSG-08, không sinh tuyến nào |
-| 29H + 29C + 29F | 3000 kg / 26 m³ | **Tổng đủ nhưng vẫn sót 1 đơn** — 2 tuyến, đơn Hồng Hà (727.5 kg) không gán được |
-| Thêm 29B (bỏ bảo trì) | 3800 kg / 33 m³ | Gán đủ 8/8 đơn, 3 tuyến |
+| 29H + 29C + 29F | 3000 kg / 26 m³ | **Chưa chạy lại với OR-Tools** — xem cảnh báo dưới |
+| Thêm 29B (bỏ bảo trì) | 3800 kg / 33 m³ | Gán đủ 8/8 đơn |
 
-**Giai đoạn 2 không phải lỗi — đây là điểm nhấn mạnh nhất của buổi bảo vệ.**
-
-Kết quả thật khi chạy NN với 3 xe:
-
-```
-29H-123.45   4 diem: Binh Minh -> An Phat -> Bao Chau -> Minh Anh   1455.0/1500 kg
-29F-555.66   3 diem: Duc Loi -> Kim Ngan -> Thanh Tam                457.5/1000 kg
-KHONG GAN DUOC: Hong Ha (727.5 kg)
-```
-
-Vì sao: tổng sức chứa 3000 kg > tổng nhu cầu 2640 kg nên qua được kiểm tra BR03-04. Nhưng **phân đơn cho xe là bài toán xếp thùng**, tổng đủ không có nghĩa là chia được. Nearest Neighbor tham lam theo khoảng cách, nhồi xe 29H tới 1455/1500 kg rồi chừa lại 45 kg vô dụng. Đơn Hồng Hà 727.5 kg còn lại không lọt vào xe 29C (500 kg).
-
-Vét cạn 6561 tổ hợp cho thấy **có 129 cách chia hợp lệ** — NN không tìm ra cách nào trong số đó.
-
-Câu để nói trước hội đồng:
-
-> Ở đây tổng sức chứa đã đủ nhưng thuật toán vẫn không gán hết được một đơn. Đó là hạn chế thật của Nearest Neighbor: nó chọn tốt nhất ở mỗi bước theo khoảng cách mà không nhìn xa, nên việc phân đơn cho xe — vốn là bài toán xếp thùng — không được giải tối ưu. Em kiểm chứng bằng cách vét cạn thì thấy có 129 cách chia hợp lệ, thuật toán không tìm ra cách nào. Vì vậy hệ thống không im lặng bỏ sót đơn mà báo rõ cho điều phối viên biết đơn nào chưa xếp được để chủ động bổ sung xe.
-
-Trả lời được như vậy chứng minh bạn hiểu thuật toán mình viết chứ không chỉ chạy được nó. **Đừng sửa dữ liệu để giấu tình huống này đi.**
+> **Cảnh báo — phải chạy thử lại trước ngày bảo vệ.** Giai đoạn 2 được dựng cho Nearest
+> Neighbor: tổng sức chứa đủ (3000 kg > 2640 kg) nhưng NN tham lam nhồi xe 29H tới
+> 1455/1500 kg nên đơn Hồng Hà 727.5 kg không lọt vào xe nào. Vét cạn 6561 tổ hợp thì có
+> **129 cách chia hợp lệ**, nên OR-Tools — chuyển được điểm giữa các xe — **rất có thể xếp đủ
+> 8 đơn** ở giai đoạn này. NN đã bỏ (`09` mục A7), nên tình huống "tổng đủ mà vẫn sót đơn" có
+> thể không còn tái hiện bằng bộ dữ liệu này.
+>
+> Chạy thử bước 5a của kịch bản demo. Nếu OR-Tools xếp đủ thì bỏ bước 5a, hoặc nói thẳng:
+> *"bộ giải tham lam từng sót đơn ở đây, OR-Tools thì không vì nó chuyển được đơn giữa các
+> xe"*. Nếu vẫn sót thì giữ bước 5a như cũ. **Đừng sửa dữ liệu để dựng lại tình huống.**
 
 ### Hôm nay — trạng thái `DELIVERING`, dùng để demo màn hình tài xế và sự cố
 
@@ -252,7 +243,7 @@ KHO -> A -> B -> KHO  =  d(K,A) + d(A,B) + d(B,K)
 KHO -> B -> A -> KHO  =  d(K,B) + d(B,A) + d(A,K)
 ```
 
-Hai vế bằng nhau vì `d(A,B) = d(B,A)`. Nghĩa là **tuyến 2 điểm cho mốc B đúng 0%, và 2-opt cũng đúng 0%** — không phải do code sai.
+Hai vế bằng nhau vì `d(A,B) = d(B,A)`. Nghĩa là **tuyến 2 điểm cho mốc B đúng 0%** — không phải do code sai.
 
 Với 5–8 đơn chia cho 3 xe, tuyến trung bình chỉ 2–3 điểm. Cột *"Giảm so với mốc B"* trong RPT-03 sẽ gần như toàn 0, trong khi `07-thuc-nghiem.md` lại dựa vào chính mốc B để chứng minh giá trị của thuật toán.
 
@@ -270,7 +261,6 @@ Với 12–15 đơn chia cho 3 xe, tuyến có 4–5 điểm, lúc đó thứ t�
 | LOADING_TIME | 15 |
 | DEPARTURE_TIME | 08:00 |
 | HAVERSINE_FACTOR | 1.3 |
-| DEFAULT_ALGORITHM | NN_2OPT |
 | OSRM_URL | http://localhost:5000 |
 | OSRM_TIMEOUT | 10 |
 | PAGE_SIZE | 20 |
@@ -288,13 +278,13 @@ Chuẩn bị theo đúng thứ tự này, tập ít nhất 3 lần. **In ra gi�
 | 2 | Mở danh mục xe | Chỉ xe đang bảo trì, nói sẽ bị loại khỏi phân tuyến |
 | 3 | Đăng nhập `dieuphoi`, mở danh sách đơn ngày mai | 8 đơn đã duyệt, tổng kg và m³ |
 | 4 | Mở màn hình phân tuyến, chọn 2 xe, bấm chạy | **Hiện MSG-08 báo thiếu sức chứa** |
-| 5a | Thêm xe 29F, chạy lại | **Tổng đủ nhưng vẫn sót đơn Hồng Hà — giải thích hạn chế của thuật toán tham lam.** Điểm nhấn, xem mục trên |
+| 5a | Thêm xe 29F, chạy lại | **Chạy thử lại trước** — xem cảnh báo ở mục trên. Sót đơn thì giải thích CN-03-14, đủ đơn thì bỏ bước này |
 | 5b | Bỏ xe 29B khỏi bảo trì, chọn thêm, chạy lại | Ra 3 tuyến đủ 8 đơn, bản đồ vẽ đường |
 | 6 | Chỉ vào bảng chỉ số | **Mốc A, mốc B, mức giảm — giải thích hai mốc** |
-| 7 | Đổi thuật toán sang chỉ NN, chạy lại | So sánh hai con số, chứng minh 2-opt có tác dụng |
-| 8 | Đổi lại NN+2-opt, kéo thả một đơn sang xe nhỏ | **Hiện cảnh báo đỏ vượt tải, nút chốt bị khóa** |
+| 7 | ~~Đổi thuật toán~~ | Đã bỏ cùng NN và 2-opt (`09` mục A7) |
+| 8 | Kéo thả một đơn sang xe nhỏ | **Hiện cảnh báo đỏ vượt tải, nút chốt bị khóa (nền xám)** |
 | 9 | Khôi phục kết quả tự động, gán tài xế, chốt | Email gửi đi |
-| 10 | Mở tab mới, đăng nhập `taixe01` trên chế độ giả lập điện thoại | Giao diện mobile, một điểm nổi bật |
+| 10 | Trên **điện thoại thật** (cùng Wi-Fi, vào `http://<IP laptop>:8080`), đăng nhập `taixe01` | Giao diện mobile, một điểm nổi bật. Dự phòng: F12 chế độ điện thoại, tách DevTools ra cửa sổ riêng |
 | 11 | Bấm "Đã giao" ở điểm có tiền mặt | Hộp thoại nhập tiền |
 | 11b | Quay lại tab điều phối, mở **Theo dõi** | Điểm vừa giao đã sang xanh, thanh tiến độ nhích lên — điều phối biết ngay mà không phải gọi điện hỏi tài xế |
 | 12 | Bấm "Báo sự cố", chọn xe hỏng, không thể tiếp tục | |
@@ -303,7 +293,7 @@ Chuẩn bị theo đúng thứ tự này, tập ít nhất 3 lần. **In ra gi�
 | 15 | Mở trang tra cứu, nhập mã đơn | Khách thấy hành trình và ETA mới |
 | 16 | Đăng nhập `admin`, mở báo cáo RPT-03 | **Bảng 10 ngày, mức giảm trung bình** |
 
-Tổng thời gian: 8–10 phút. Bốn bước in đậm là phần quan trọng nhất — nếu bị giục thời gian thì giữ bằng được **bước 5a, 6, 13, 16**.
+Tổng thời gian: 8–10 phút. Bốn bước in đậm là phần quan trọng nhất — nếu bị giục thời gian thì giữ bằng được **bước 6, 8, 13, 16**.
 
 ---
 

@@ -2,6 +2,10 @@
 
 **Bối cảnh:** một người làm, 12 tuần, vừa code vừa viết báo cáo.
 
+> **Ghi chú sau tuần 10:** đây là kế hoạch gốc, giữ nguyên để đối chiếu tiến độ. Phần Nearest
+> Neighbor, 2-opt ở tuần 6–7 đã làm xong rồi **bỏ** (`09` mục A7) — hệ thống giờ chỉ chạy
+> OR-Tools, và các dòng `CN-09-03` bên dưới không còn áp dụng.
+
 ## Nguyên tắc bất di bất dịch
 
 1. **Tuần 6–7 dành cho thuật toán. Không được lùi.** Nếu tuần 5 mà CRUD chưa xong thì cắt bớt CRUD, tuyệt đối không lùi lịch thuật toán.
@@ -209,7 +213,7 @@ Nếu đuối, cắt toàn bộ nhóm sự cố (CN-06) và đưa vào Hướng 
 | Xuất Excel | CN-08-05 |
 | **Tải bộ Augerat, viết hàm đọc file .vrp** | CN-09-02 |
 | **Chạy benchmark, lập bảng gap** | CN-09-02 |
-| **Bảng so sánh NN và NN+2-opt** | CN-09-03 |
+| ~~Bảng so sánh NN và NN+2-opt~~ (đã bỏ) | ~~CN-09-03~~ |
 | **Viết chương 4 báo cáo** | — |
 
 Chi tiết cách chạy thực nghiệm ở `07-thuc-nghiem.md`.

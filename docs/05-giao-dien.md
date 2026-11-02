@@ -86,6 +86,16 @@ Khai báo một lần trong `src/main/resources/static/css/style.css`:
 
 Năm màu phân biệt tuyến đã chọn cùng độ đậm nhưng khác độ sáng, để người bị mù màu đỏ–xanh lá vẫn phân biệt được.
 
+### Thông báo và nút bị khóa
+
+| Quy tắc | Lý do |
+|---|---|
+| Thông báo sau khi lưu hiện bằng **toast** góc trên bên phải, không chen vào nội dung trang | Không đẩy bảng, form xuống |
+| Toast thành công (xanh lá) tự tắt sau **4 giây** | Đọc một câu ngắn là đủ |
+| Toast lỗi (đỏ) **không tự tắt**, phải bấm × | Lỗi cần người dùng đọc kỹ, tự tắt là bỏ lỡ |
+| Nút bị khóa (`disabled`) nền xám, chữ xám, con trỏ hình cấm | Nhìn là biết không bấm được, không phải chỉ mờ đi một chút |
+| Thao tác không hoàn tác được (hủy tuyến) hỏi lại bằng hộp thoại, nút xác nhận màu đỏ | Bấm nhầm một lần là mất kế hoạch đã chốt |
+
 ---
 
 ## Bố cục chung
@@ -139,7 +149,7 @@ Menu hiển thị theo vai trò:
 
 ```
 ┌────────────────────────────────────────────────────────────┐
-│ Ngay giao [04/08/2026]  Thuat toan [NN + 2-opt ▾]          │
+│ Ngay giao [04/08/2026]  Chon xe [x] 29H  [x] 29C           │
 │                                        [ Chay toi uu ]      │
 ├──────────────────────┬─────────────────────────────────────┤
 │                      │ ┌─ Chi so so sanh ────────────────┐ │
@@ -217,8 +227,8 @@ Chiều rộng tối thiểu hỗ trợ: 360px.
 │ Tien do    1 / 3 diem      │
 │ Con lai    24.3 km         │
 ├────────────────────────────┤
-│ 1. Tap hoa Minh Anh  Da giao│  <- mo di (opacity 0.55)
-│    50 thung | 08:32         │
+│ 1. Tap hoa Minh Anh  Da giao│  <- mo di (opacity 0.55),
+│    50 thung | 08:32 Xem lai │     bam vao de mo lai thong tin
 ├────────────────────────────┤
 │▌2. Sieu thi Hong Ha        │  <- vien trai dam, noi bat
 │    So 8 Thai Ha, Dong Da   │
@@ -241,7 +251,9 @@ Chiều rộng tối thiểu hỗ trợ: 360px.
 
 **Nguyên tắc:** tài xế đang ngồi trên xe, không có thời gian đọc cả danh sách. Luôn chỉ làm nổi bật **một** điểm đang xử lý.
 
-**Số tiền phải thu phải in đậm** khi lớn hơn 0.
+**Số tiền phải thu phải in đậm** khi lớn hơn 0. Không có ô nhập số thực thu: bấm "Đã giao xong" là đã thu đủ số đó.
+
+**Điểm đã xong bấm vào được để xem lại** (tên khách có chữ "Xem lại" bên phải). Thẻ mở ra thì hết mờ, hiện địa chỉ, liên hệ, hàng, số đã thu hoặc lý do thất bại, và nút gọi khách. Không có nút cập nhật kết quả.
 
 ---
 
@@ -250,12 +262,16 @@ Chiều rộng tối thiểu hỗ trợ: 360px.
 ### Khởi tạo
 
 ```javascript
-var banDo = L.map('banDo').setView([20.9584, 105.8342], 12);
-L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-    attribution: '© OpenStreetMap contributors',
+var map = L.map('routing-map').setView([20.9497, 105.8172], 12);
+L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    attribution: '&copy; OpenStreetMap',
     maxZoom: 19
-}).addTo(banDo);
+}).addTo(map);
 ```
+
+Nền OpenStreetMap chuẩn: miễn phí, không cần khóa API, cùng nguồn dữ liệu với OSRM nên đường
+vẽ khớp số km. Đã thử CARTO Voyager nhưng nền đó **đòi khóa API** — không có khóa thì mỗi ô bản
+đồ hiện chữ *"API KEY REQUIRED"* dù máy chủ vẫn trả HTTP 200.
 
 ### Ghim đánh số
 

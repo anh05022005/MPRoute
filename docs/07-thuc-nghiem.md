@@ -14,15 +14,17 @@ Mọi số liệu trong báo cáo phải do chính bạn chạy và ghi lại.
 
 ---
 
-## Ba loại số liệu
+## Hai loại số liệu
 
 | Loại | Độ thuyết phục | Cần Minh Phú hợp tác? | Chi phí |
 |---|---|---|---|
 | **1. Benchmark chuẩn** | Cao nhất | Không | ~1 ngày |
-| **2. So sánh thuật toán** | Cao | Không | ~0.5 ngày |
 | **3. So sánh với thực tế** | Trung bình | Có | Phụ thuộc |
 
-**Làm loại 1 và 2 trước.** Chúng độc lập với việc Minh Phú có cho dữ liệu hay không. Loại 3 là phần thêm nếu xin được dữ liệu.
+Loại 2 *"so sánh giữa các thuật toán"* **đã bỏ** cùng hai bộ giải tự viết NN và NN + 2-opt
+(`09` mục A7). Giữ số "Loại 3" để các chỗ khác trỏ tới không bị lệch.
+
+**Làm loại 1 trước.** Nó độc lập với việc Minh Phú có cho dữ liệu hay không. Loại 3 là phần thêm nếu xin được dữ liệu.
 
 ---
 
@@ -104,26 +106,27 @@ Chạy bằng `BenchmarkRunner`, mười bài đã tải về `src/main/resource
 Mỗi bài dùng **đúng số xe của đề bài**, khoảng cách EUC_2D làm tròn về số nguyên,
 OR-Tools giới hạn 5 giây/bài. Máy: JDK 23, Windows 11.
 
-| Bài toán | Số điểm | Số xe | Tối ưu đã biết | NN | Gap NN | NN+2-opt | Gap NN+2-opt | OR-Tools | Gap OR-Tools |
-|---|---|---|---|---|---|---|---|---|---|
-| A-n32-k5 | 31 | 5 | 784 | 1 145 | +46,0% | 1 116 | +42,3% | **784** | **+0,0%** |
-| A-n39-k5 | 38 | 5 | 822 | 1 070 | +30,2% | 1 028 | +25,1% | 825 | +0,4% |
-| A-n45-k6 | 44 | 6 | 944 | 1 345\* | sót 1 điểm | 1 275\* | sót 1 điểm | 1 002 | +6,1% |
-| A-n60-k9 | 59 | 9 | 1 354 | 1 837 | +35,7% | 1 774 | +31,0% | 1 359 | +0,4% |
-| A-n80-k10 | 79 | 10 | 1 763 | 2 348 | +33,2% | 2 290 | +29,9% | 1 817 | +3,1% |
-| B-n35-k5 | 34 | 5 | 955 | 1 304 | +36,5% | 1 277 | +33,7% | **955** | **+0,0%** |
-| B-n50-k7 | 49 | 7 | 741 | 1 036 | +39,8% | 1 018 | +37,4% | **741** | **+0,0%** |
-| P-n40-k5 | 39 | 5 | 458 | 682 | +48,9% | 657 | +43,4% | **458** | **+0,0%** |
-| P-n55-k7 | 54 | 7 | 568 | 754 | +32,7% | 723 | +27,3% | 575 | +1,2% |
-| P-n76-k5 | 75 | 5 | 627 | 962 | +53,4% | 820 | +30,8% | 668 | +6,5% |
-| **Trung bình** | | | | | **+39,6%** | | **+33,4%** | | **+1,8%** |
+| Bài toán | Số điểm | Số xe | Tối ưu đã biết | OR-Tools | Gap |
+|---|---|---|---|---|---|
+| A-n32-k5 | 31 | 5 | 784 | **784** | **+0,0%** |
+| A-n39-k5 | 38 | 5 | 822 | 825 | +0,4% |
+| A-n45-k6 | 44 | 6 | 944 | 1 002 | +6,1% |
+| A-n60-k9 | 59 | 9 | 1 354 | 1 359 | +0,4% |
+| A-n80-k10 | 79 | 10 | 1 763 | 1 817 | +3,1% |
+| B-n35-k5 | 34 | 5 | 955 | **955** | **+0,0%** |
+| B-n50-k7 | 49 | 7 | 741 | **741** | **+0,0%** |
+| P-n40-k5 | 39 | 5 | 458 | **458** | **+0,0%** |
+| P-n55-k7 | 54 | 7 | 568 | 575 | +1,2% |
+| P-n76-k5 | 75 | 5 | 627 | 668 | +6,5% |
+| **Trung bình** | | | | | **+1,8%** |
 
-\* **A-n45-k6:** Nearest Neighbor không xếp hết 44 điểm vào 6 xe nên hai ô đó không đặt
-cạnh lời giải tối ưu được, và **không tính vào trung bình**. Đây không phải lỗi: bài này
-đòi lấp đầy **98,8%** đội xe (nhu cầu 593 trên sức chứa 600), tức là phải xếp thùng gần
-như hoàn hảo — thuật toán tham lam về nguyên tắc không làm được. Chính là điểm yếu của NN
-mà kịch bản demo ở `docs/08` dùng đến. OR-Tools xếp hết vì có `addDisjunction` và tìm kiếm
-cục bộ chuyển được điểm giữa các xe.
+Lần chạy này còn có hai cột NN và NN + 2-opt (gap trung bình 39,6% và 33,4%, NN còn sót một
+điểm ở A-n45-k6). Hai bộ giải đó đã bỏ nên bảng chỉ giữ cột OR-Tools; số cũ còn trong
+lịch sử Git của file này nếu cần dẫn lại.
+
+**A-n45-k6 gap 6,1%** là bài khó nhất về sức chứa: nhu cầu 593 trên tổng sức chứa 600, tức
+phải lấp đầy **98,8%** đội xe. OR-Tools vẫn xếp hết điểm nhờ tìm kiếm cục bộ chuyển được
+điểm giữa các xe, nhưng phải trả bằng tuyến dài hơn tối ưu một chút.
 
 **Bằng chứng mạnh nhất rằng cách đo là đúng:** OR-Tools ra **đúng bằng lời giải tối ưu đã
 công bố** ở 4 trong 10 bài (784, 955, 741, 458 — không lệch một đơn vị nào). Con số chỉ
@@ -131,74 +134,18 @@ khớp chính xác khi cả ba thứ cùng đúng: quy ước làm tròn EUC_2D,
 **tổng quãng đường có tính chặng cuối về kho** (CBR-01). Thiếu chặng về kho thì mọi dòng
 đều nhỏ hơn tối ưu — không bao giờ khớp được.
 
-**Con số dự kiến ban đầu:** Nearest Neighbor thuần thường có gap 20–35%, thêm 2-opt thường kéo xuống khoảng 10–25%.
+**Gap 1,8% và trùng khít tối ưu ở 4 bài là mức bình thường của OR-Tools** với giới hạn 5 giây
+ở quy mô 30–80 điểm. Hai bài lệch nhiều nhất (A-n45-k6, P-n76-k5) là bài sát sức chứa và bài
+nhiều điểm nhất trên mỗi tuyến — tăng thời gian giới hạn sẽ kéo gap xuống thêm.
 
-**Đo thật thì cao hơn dự kiến:** NN ra 39,6% và NN+2-opt ra 33,4%. Cần nói thẳng chỗ này
-khi vấn đáp thay vì lờ đi. Lý do nằm ở chỗ 2-opt chỉ gỡ được **thứ tự bên trong một tuyến**,
-mà ở các bài này mỗi tuyến chỉ có 6–9 điểm nên gần như không còn gì để gỡ — đo riêng thì
-2-opt chỉ cải thiện **4,3%** so với NN thuần. Phần sai số lớn còn lại nằm ở **khâu chia
-điểm cho xe**, đúng thứ mà 2-opt theo định nghĩa không đụng tới. Bằng chứng đó là bản chất
-chứ không phải lỗi: cùng bộ đọc file, cùng ma trận, cùng hàm tính tổng quãng đường,
-OR-Tools ra gap 1,8% và trùng khít lời giải tối ưu ở 4 bài.
-
-Đừng hoảng nếu gap sau 2-opt vẫn nằm ở mức 20% — **đó không phải dấu hiệu code sai**. Lý do: 2-opt chỉ sắp lại thứ tự **bên trong** từng tuyến, nó không đụng được vào cách phân đơn cho xe. Mà với CVRP, phần sai số lớn nhất so với lời giải tối ưu lại nằm chính ở khâu phân đơn. Muốn kéo gap xuống nữa thì phải thêm bước hoán đổi đơn **giữa các tuyến** (ví dụ Or-opt hoặc relocate) — đó là hướng phát triển, không phải phạm vi đồ án.
-
-**Dấu hiệu code SAI là gap quá thấp:** dưới 5% thì gần như chắc chắn đang tính thiếu, hay gặp nhất là **quên chặng về kho**. Gap trên 50% thì thuật toán có lỗi logic, hoặc đọc file `.vrp` sai (kiểm lại quy ước làm tròn EUC_2D).
+**Dấu hiệu code SAI là gap âm:** ra thấp hơn lời giải tối ưu đã công bố thì chắc chắn đang tính thiếu, hay gặp nhất là **quên chặng về kho**. Gap trên 50% thì thuật toán có lỗi logic, hoặc đọc file `.vrp` sai (kiểm lại quy ước làm tròn EUC_2D).
 
 ---
 
-## Loại 2 — So sánh giữa các thuật toán
+## ~~Loại 2 — So sánh giữa các thuật toán~~ — đã bỏ
 
-Dùng chính dữ liệu benchmark ở trên. Bảng trên đo *cách lời giải tốt nhất bao nhiêu*,
-bảng này đo **riêng đóng góp của bước 2-opt** — tức phần cải thiện do chính mình viết ra.
-Hai bảng trả lời hai câu hỏi khác nhau nên phải có cả hai (CN-09-03).
-
-Cấu hình *"thứ tự ngẫu nhiên"* trong bản thiết kế ban đầu **đã bỏ**: `CN-09-03` chỉ yêu cầu
-chạy `NN` và `NN_2OPT`, và trong phần mềm thì **mốc B** (cùng cách chia xe, giao theo thứ tự
-nhận đơn) đã giữ đúng vai trò "mốc dưới" đó bằng một cách đáng tin hơn — thứ tự nhận đơn là
-cách người điều phối thật sự làm, còn thứ tự ngẫu nhiên thì không ai làm bao giờ.
-
-### Kết quả đã chạy thật — 27/08/2026
-
-| Bài toán | Số điểm | NN | NN + 2-opt | Cải thiện | t(NN) | t(2-opt) |
-|---|---|---|---|---|---|---|
-| A-n32-k5 | 31 | 1 145 | 1 116 | 2,5% | 13 ms | 1 ms |
-| A-n39-k5 | 38 | 1 070 | 1 028 | 3,9% | 0 ms | 0 ms |
-| A-n45-k6 | 44 | 1 345\* | 1 275\* | — | 0 ms | 0 ms |
-| A-n60-k9 | 59 | 1 837 | 1 774 | 3,4% | 0 ms | 0 ms |
-| A-n80-k10 | 79 | 2 348 | 2 290 | 2,5% | 1 ms | 0 ms |
-| B-n35-k5 | 34 | 1 304 | 1 277 | 2,1% | 0 ms | 0 ms |
-| B-n50-k7 | 49 | 1 036 | 1 018 | 1,7% | 0 ms | 0 ms |
-| P-n40-k5 | 39 | 682 | 657 | 3,7% | 0 ms | 1 ms |
-| P-n55-k7 | 54 | 754 | 723 | 4,1% | 0 ms | 0 ms |
-| P-n76-k5 | 75 | 962 | 820 | **14,8%** | 0 ms | 0 ms |
-| **Trung bình** | | | | **4,3%** | | |
-
-`Cải thiện = (NN − NN2opt) / NN × 100`. Dòng A-n45-k6 để trống vì cả hai bên đều bỏ sót một
-điểm, hai con số không đo cùng một thứ.
-
-**Đọc bảng này thế nào:**
-
-- **2-opt luôn dương, không bao giờ âm.** Đó là tính chất của chính thuật toán — nó chỉ nhận
-  một phép đảo khi độ lệch bốn cạnh âm — và là thứ test `twoOptNeverIncreasesTotalDistance`
-  kiểm. Chạy ra một dòng âm nghĩa là ma trận không đối xứng, không phải 2-opt sai.
-- **P-n76-k5 cải thiện 14,8%, gấp ba lần trung bình.** Đây là bài có nhiều điểm nhất trên mỗi
-  tuyến (75 điểm chia 5 xe, tức 15 điểm/tuyến), nên có nhiều thứ tự để gỡ nhất. Các bài còn
-  lại chỉ 6–9 điểm mỗi tuyến, gần như không còn "nút" nào để tháo. **Đây chính là câu trả lời
-  cho "2-opt có đáng làm không": càng nhiều điểm trên một tuyến thì càng đáng.**
-- **Thời gian chạy gần như bằng 0** ở mọi bài. 2-opt không phải thứ phải cân nhắc về hiệu
-  năng ở quy mô này — điều kiện là ma trận đã nạp sẵn trong bộ nhớ, không tra CSDL hay gọi
-  OSRM trong vòng lặp.
-
-### Biểu đồ hội tụ của 2-opt
-
-Ghi lại tổng quãng đường sau mỗi vòng lặp của 2-opt, vẽ biểu đồ đường. Hình này rất được đánh giá cao vì cho thấy bạn hiểu thuật toán đang làm gì bên trong, không phải hộp đen.
-
-```
-Vong lap:  0     1     2     3     4     5     6
-Quang duong: 1024  902   861   843   838   836   836
-                                              ^ hoi tu
-```
+Bỏ cùng hai bộ giải NN và NN + 2-opt (`09` mục A7). Câu hỏi "riêng việc sắp thứ tự đóng góp
+bao nhiêu" giờ do **mốc B** ở loại 3 trả lời.
 
 ---
 
@@ -280,25 +227,21 @@ Viết rõ ý nghĩa của từng mốc, đừng chỉ đưa hai con số. Ví d
      4.3.2  Cach do (gap)
      4.3.3  Ket qua (bang)
      4.3.4  Nhan xet
-4.4  Thuc nghiem 2: So sanh cac thuat toan
-     4.4.1  Ba cau hinh so sanh
-     4.4.2  Ket qua (bang + bieu do hoi tu)
-     4.4.3  Nhan xet
-4.5  Thuc nghiem 3: Ap dung vao du lieu Minh Phu
-     4.5.1  Mo ta du lieu
-     4.5.2  Hai moc so sanh
-     4.5.3  Ket qua (bang + bieu do)
-     4.5.4  Nhan xet
-4.6  Danh gia hieu nang
+4.4  Thuc nghiem 2: Ap dung vao du lieu Minh Phu
+     4.4.1  Mo ta du lieu
+     4.4.2  Hai moc so sanh
+     4.4.3  Ket qua (bang + bieu do)
+     4.4.4  Nhan xet
+4.5  Danh gia hieu nang
      - Thoi gian chay theo so diem (10, 30, 50, 100)
-4.7  Han che cua thuat toan
+4.6  Han che
 ```
 
-**Mục 4.7 rất quan trọng.** Nêu thẳng hạn chế cho thấy bạn hiểu công việc mình làm:
+**Mục 4.6 rất quan trọng.** Nêu thẳng hạn chế cho thấy bạn hiểu công việc mình làm:
 
-- Nearest Neighbor là thuật toán tham lam, không đảm bảo tối ưu toàn cục. **Có trường hợp tổng sức chứa đủ nhưng thuật toán vẫn không xếp hết đơn** — chính bộ dữ liệu demo cho thấy điều này (xem `08-du-lieu-mau.md`)
-- 2-opt chỉ cải thiện **thứ tự trong từng tuyến**, không thay đổi được cách phân đơn cho xe. Sai số lớn nhất của lời giải nằm ở khâu phân đơn, mà 2-opt không chạm tới được
-- 2-opt chỉ tìm được cực trị địa phương, không thoát ra được bằng chính nó
+- OR-Tools với `GUIDED_LOCAL_SEARCH` là **heuristic có giới hạn thời gian**, không chứng minh được tối ưu. Trên Augerat nó trùng tối ưu ở 4/10 bài nhưng lệch tới 6,5% ở bài khác
+- **Tổng sức chứa đủ chưa chắc đã xếp hết đơn** — phân đơn cho xe là bài toán xếp thùng. Hệ thống không im lặng bỏ sót mà báo rõ đơn nào chưa xếp được (CN-03-14)
+- **Ưu tiên khi hết chỗ chỉ đúng từng cặp trong cùng nhóm.** Đơn đã hoãn luôn được giữ trước đơn chưa hoãn, nhưng giữa các đơn chưa hoãn, bộ giải có thể bỏ một đơn đặt sớm để xếp vừa hai đơn đặt muộn (`03` mục 5.3c). Ưu tiên tuyệt đối cho mọi tập đơn cần tiền phạt tăng theo lũy thừa, tràn số `long`
 - Giả định khoảng cách đối xứng — bảo đảm bằng cách lấy trung bình cộng hai chiều của ma trận OSRM, đổi lại làm mất một phần thông tin về đường một chiều
 - **Mỗi xe một tuyến mỗi ngày, và xe hỏng không tự dời lịch các ngày sau.** Hệ thống lập kế hoạch trước cho nhiều ngày được (xe giữ lịch theo từng ngày, `09` mục B6), nhưng xe hỏng hôm nay thì tuyến đã chốt cho ngày mai vẫn nằm đó: hệ thống chỉ chặn nhận hàng và cảnh báo, điều phối viên phải tự hủy và phân lại
 - **Chưa ràng buộc thời gian làm việc tối đa của tài xế** — tuyến dài bao nhiêu giờ cũng được chấp nhận
@@ -314,24 +257,22 @@ Mỗi hạn chế nêu ra chính là một ý cho mục "Hướng phát triển"
 
 ### 1. "Em tự viết thuật toán hay gọi thư viện?"
 
-> Em làm cả hai, và đó là chủ ý. Em tự cài đặt Nearest Neighbor và 2-opt bằng vòng lặp thuần, khoảng 200 dòng, không dùng thư viện nào — nằm ở package `optimization/heuristic`. Sau đó em cắm thêm OR-Tools của Google vào cùng một interface, nằm ở package `optimization/ortools`.
->
-> Bản tự cài đặt để em đo và hiểu: nó tốt hơn cách Minh Phú đang làm bao nhiêu, và nó còn cách lời giải tốt bao nhiêu. Bản OR-Tools là cận trên để so, và là cái hệ thống thực sự chạy khi giao cho doanh nghiệp — vì tuyến nó cho ngắn hơn khoảng [điền số] %.
->
-> Em đánh giá cả hai trên bộ dữ liệu chuẩn Augerat có lời giải tối ưu đã công bố. Kết quả là bản tự viết gap trung bình [X] %, OR-Tools gap [Y] %.
+*(Câu trả lời mẫu dưới đây đã cập nhật sau khi bỏ NN và 2-opt — `09` mục A7.)*
+
+> Em dùng OR-Tools của Google, nằm ở package `optimization/ortools`. Lúc đầu em có tự cài Nearest Neighbor và 2-opt để so sánh, nhưng đo trên bộ chuẩn Augerat thì bản tự viết cách lời giải tối ưu khoảng 33%, còn OR-Tools chỉ 1,8%. Sản phẩm giao cho doanh nghiệp thì phải chạy bằng cái tốt hơn, nên em bỏ bản tự viết để khỏi bảo trì hai bộ giải.
 
 **Nếu bị hỏi vặn "vậy phần của em là gì?":**
 
-> Là mô hình hóa và đo lường. Em phải tự dựng ma trận khoảng cách và đối xứng hóa nó, tự đặt hai ràng buộc sức chứa cùng lúc, tự tính ETA, tự dựng ba mốc so sánh và giải thích được vì sao mốc A dễ gây hiểu nhầm. Riêng phần thuật toán, em viết được bản của mình rồi đo ra nó thua ở đâu và vì sao thua — 2-opt chỉ sắp lại thứ tự bên trong một tuyến nên không sửa được cách chia đơn cho xe, còn OR-Tools chuyển điểm qua lại giữa các tuyến được. Em coi việc biết giới hạn giải pháp của mình là một kết quả chứ không phải một thiếu sót.
+> Là mô hình hóa và đo lường. OR-Tools chỉ giải bài toán thuần. Em phải tự dựng ma trận khoảng cách từ OSRM và có phương án dự phòng Haversine, tự khai hai ràng buộc khối lượng và thể tích thành hai Dimension, tự quy đổi số thực sang số nguyên và làm tròn đúng chiều, tự cho phép bỏ điểm bằng `addDisjunction` để báo được đơn chưa xếp, tự tính ETA, tự viết Cheapest Insertion cho màn xử lý sự cố, và tự dựng hai mốc so sánh cùng benchmark để đo kết quả.
 
-### 2. "Tại sao đảo đoạn trong 2-opt không làm xe chở quá tải?"
+### 2. "Tại sao không để OR-Tools tự chạy mãi cho ra tối ưu?"
 
-> Vì phép đảo chỉ thay đổi thứ tự đi qua các điểm, không thêm hay bớt điểm nào khỏi tuyến. Tập điểm không đổi thì tổng khối lượng và tổng thể tích cũng không đổi. Ràng buộc đã thỏa mãn ở giai đoạn Nearest Neighbor thì vẫn tiếp tục thỏa mãn sau 2-opt. Đó là lý do em tách được hai giai đoạn.
+> Vì `GUIDED_LOCAL_SEARCH` là siêu tìm kiếm, nó không tự dừng — không đặt giới hạn thời gian là màn hình phân tuyến treo. Em đặt 5 giây: trên Augerat 30–80 điểm thì gap trung bình đã còn 1,8%, mà quy mô một ngày của Minh Phú chỉ khoảng 15 đơn.
 
 ### 3. "Con số giảm phần trăm của em lấy ở đâu ra? Mốc so sánh có công bằng không?"
 
-> Em dùng ba mốc. Mốc A mô phỏng quy trình hiện tại của doanh nghiệp là mỗi đơn một chuyến khứ hồi, cho mức giảm X%. Nhưng em nhận thấy phần lớn mức giảm đó đến từ việc gom đơn chứ không phải từ thuật toán, nên em dùng thêm mốc B: giữ nguyên cách chia xe, chỉ đổi thứ tự giao. Mốc B cho mức giảm Y%, đây mới là đóng góp riêng của phần sắp thứ tự. Mốc C là OR-Tools chạy trên đúng ma trận đó, cho cận trên của chất lượng. Ngoài ra em còn đánh giá trên bộ dữ liệu chuẩn Augerat với gap trung bình Z%.
+> Em dùng hai mốc. Mốc A mô phỏng quy trình hiện tại của doanh nghiệp là mỗi đơn một chuyến khứ hồi, cho mức giảm X%. Nhưng em nhận thấy phần lớn mức giảm đó đến từ việc gom đơn chứ không phải từ thuật toán, nên em dùng thêm mốc B: giữ nguyên cách chia xe, chỉ đổi thứ tự giao. Mốc B cho mức giảm Y%, đây mới là đóng góp riêng của phần sắp thứ tự. Ngoài ra em đánh giá trên bộ dữ liệu chuẩn Augerat có lời giải tối ưu đã công bố, gap trung bình Z%.
 >
-> Mốc C là mốc khó bẻ nhất, vì nó là mốc **bất lợi** cho em: nó cho thấy giải pháp của em còn kém bao nhiêu, chứ không phải hơn bao nhiêu.
+> Benchmark là mốc khó bẻ nhất, vì nó **bất lợi** cho em: nó cho thấy kết quả còn kém lời giải tốt nhất bao nhiêu, chứ không phải hơn bao nhiêu.
 
 Học thuộc ba câu này. Chúng chiếm phần lớn điểm vấn đáp.

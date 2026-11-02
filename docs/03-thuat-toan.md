@@ -2,27 +2,23 @@
 
 **Đây là phần lõi của đồ án.** Toàn bộ điểm số phụ thuộc vào phần này. Mọi thứ khác chỉ là hỗ trợ.
 
-## Hai bộ giải, không phải một
+## Một bộ giải: OR-Tools
 
-Hệ thống cài **hai** bộ giải cho cùng một bài toán, và đó là chủ ý:
+Hệ thống giải bài toán phân tuyến bằng **OR-Tools** (Google), nằm ở `optimization/ortools/`.
 
-| Bộ giải | Vai trò | Nằm ở |
-|---|---|---|
-| **OR-Tools** (Google) | Bộ giải **chính** — kết quả nó trả về là tuyến mà hệ thống thực sự dùng | `optimization/ortools/` |
-| **Nearest Neighbor + 2-opt** tự cài đặt | **Mốc so sánh** ở chương thực nghiệm | `optimization/heuristic/` |
+Ban đầu đồ án cài thêm hai bộ giải tự viết là **Nearest Neighbor** và **Nearest Neighbor + 2-opt**
+để làm mốc so sánh. Cả hai **đã bỏ** (`09` mục A7): OR-Tools cho tuyến ngắn hơn rõ rệt, còn giữ
+bản tự viết chỉ để so sánh thì phải bảo trì gấp đôi mà sản phẩm không dùng tới. Chất lượng của
+OR-Tools giờ được đo bằng hai mốc A, B (mục 11) và bằng benchmark Augerat có lời giải tối ưu
+đã công bố (`07-thuc-nghiem.md`).
 
-Lý do làm cả hai thay vì chỉ một:
-
-- Chỉ tự cài đặt thì tuyến dài hơn mức cần thiết. Theo `07-thuc-nghiem.md`, NN+2-opt cách lời giải tốt nhất khoảng **10–25%**, còn OR-Tools khoảng **0–5%**. Sản phẩm giao cho Minh Phú nên chạy bằng cái tốt hơn.
-- Chỉ dùng thư viện thì chương 4 của báo cáo không còn gì để phân tích — gọi một hàm rồi in kết quả không phải là thực nghiệm.
-- Có cả hai thì **con số so sánh trở thành nội dung chính của báo cáo**: tự cài đặt hơn cách làm thủ công bao nhiêu, và còn cách lời giải tốt bao nhiêu. Đây là cách một kỹ sư thật đánh giá giải pháp của mình.
+`optimization/heuristic/` chỉ còn `CheapestInsertion` cho màn xử lý sự cố (mục 10).
 
 Nguyên tắc bắt buộc khi viết code phần này:
 
-- **Package `heuristic/` không được import OR-Tools.** Lẫn thư viện vào đó là mất ý nghĩa so sánh. Có hook kiểm tra tự động chặn việc này.
-- **Không gọi OSRM hay truy vấn DB bên trong vòng lặp thuật toán.** Ma trận nạp sẵn vào bộ nhớ trước. Áp dụng cho **cả hai** bộ giải — hàm chi phí của OR-Tools cũng bị gọi hàng nghìn lần.
+- **Không gọi OSRM hay truy vấn DB bên trong vòng lặp thuật toán.** Ma trận nạp sẵn vào bộ nhớ trước. Hàm chi phí của OR-Tools bị gọi hàng chục nghìn lần mỗi lần giải.
 - Cách viết code thì bình thường — Stream API, lambda, Lombok đều dùng được.
-- **Phải giảng lại được từng bước bằng tiếng Việt.** Đây là chỗ hội đồng hỏi sâu nhất: họ chỉ vào một dòng và hỏi "dòng này làm gì". Với phần OR-Tools, câu hỏi sẽ là "em cấu hình cái gì và vì sao" — xem mục 5.
+- **Phải giảng lại được từng bước bằng tiếng Việt.** Đây là chỗ hội đồng hỏi sâu nhất: họ chỉ vào một dòng và hỏi "dòng này làm gì". Với OR-Tools, câu hỏi sẽ là "em cấu hình cái gì và vì sao" — xem mục 5.
 
 ---
 
@@ -66,7 +62,8 @@ Xe chở toàn bông tẩy trang sẽ **đầy chỗ trước khi đầy tải**
 
 ## 2. Kiến trúc code
 
-Dùng **Strategy pattern** cho cả tính khoảng cách lẫn thuật toán phân tuyến. Đây là chi tiết ghi điểm khi vấn đáp, và cũng là điều kiện để chạy so sánh thực nghiệm — hai bộ giải phải cắm vào cùng một chỗ thì mới so được.
+Dùng **Strategy pattern** cho tính khoảng cách (OSRM hoặc Haversine) và cho bộ giải
+(`RoutingAlgorithm`). Đổi nguồn khoảng cách không phải sửa một dòng nào của bộ giải.
 
 ```
 service/optimization/
@@ -80,29 +77,24 @@ service/optimization/
 ├── HaversineDistanceCalculator.java    Cai dat cong thuc Haversine
 ├── DistanceMatrixService.java          Nap ma tran, co cache DB
 │
-├── RoutingAlgorithm.java               INTERFACE — ca hai bo giai deu cai dat
+├── RouteDistanceCalculator.java        Tong quang duong, CO chang ve kho (muc 8)
+├── EtaCalculator.java                  Gio den du kien (muc 9)
+├── MetricsService.java                 Moc A, moc B, gap (muc 11)
 │
-├── ortools/                            BO GIAI CHINH
-│   └── OrToolsSolver.java              Goi OR-Tools, dich ket qua ve RoutingResult
-│
-├── heuristic/                          MOC SO SANH — TU CAI DAT, cam import OR-Tools
-│   ├── NearestNeighborSolver.java      Giai doan 1
-│   ├── TwoOptImprover.java             Giai doan 2
-│   ├── NN2OptSolver.java               Ket hop ca hai
+├── RoutingAlgorithm.java               INTERFACE cua bo giai
+├── ortools/
+│   └── OrToolsSolver.java              Bo giai duy nhat, dich ket qua ve RoutingResult
+├── heuristic/
 │   └── CheapestInsertion.java          Dung cho xu ly su co
 │
-└── MetricsService.java                 Tinh moc so sanh va cac chi so
+├── AlgorithmRunner.java                Chay console, khong can web/MySQL/OSRM
+├── BenchmarkRunner.java                Chay bo Augerat
+├── VrpFileReader.java / VrpInstance    Doc file .vrp cua CVRPLIB
 ```
 
-Cả `OrToolsSolver` và `NN2OptSolver` đều cài `RoutingAlgorithm`, nhận cùng đầu vào
-(`points`, `vehicles`, `matrix`) và trả cùng kiểu `RoutingResult`. Nhờ vậy `MetricsService`
-chạy lần lượt cả hai trên **cùng một ma trận** rồi đặt hai con số cạnh nhau — không cần
-sửa gì để đổi bộ giải.
-
-**Cheapest Insertion vẫn dùng bản tự cài đặt** kể cả khi OR-Tools là bộ giải chính. Lý do:
-xử lý sự cố (UC06) cần chèn một điểm vào tuyến **đang chạy dở**, biết xe đang ở đâu và không
-được chèn vào quá khứ. Dựng lại ràng buộc đó trong OR-Tools tốn công hơn là viết thẳng
-vòng lặp 15 dòng.
+**Cheapest Insertion vẫn là code tự viết** dù OR-Tools là bộ giải chính. Lý do: xử lý sự cố
+(UC06) cần chèn một điểm vào tuyến **đang chạy dở**, biết xe đang ở đâu và không được chèn
+vào quá khứ. Dựng lại ràng buộc đó trong OR-Tools tốn công hơn là viết thẳng vòng lặp 15 dòng.
 
 ---
 
@@ -240,26 +232,26 @@ HAM loadMatrix(points):
     B4. TRA VE matrix
 ```
 
-### Bước B3 — vì sao bắt buộc phải đối xứng hóa
+### Bước B3 — vì sao đối xứng hóa
 
 OSRM trả về ma trận **bất đối xứng**: `D[i][j] ≠ D[j][i]` vì đường một chiều, cấm rẽ trái, dải phân cách.
 
-Nhưng công thức độ lệch của 2-opt ở mục 7 **chỉ đúng khi ma trận đối xứng**. Nếu để nguyên ma trận OSRM thô, 2-opt sẽ tính sai — và sai theo kiểu tệ nhất: nó *tưởng* là cải thiện rồi nhận phép đảo, trong khi tuyến thật dài ra.
-
-Ví dụ kiểm chứng bằng số (ma trận bất đối xứng, đảo đoạn hai điểm đầu):
+Bước này sinh ra để phục vụ 2-opt: công thức độ lệch bốn cạnh của 2-opt chỉ đúng khi ma trận
+đối xứng. Ví dụ kiểm chứng bằng số (ma trận bất đối xứng, đảo đoạn hai điểm đầu):
 
 ```
 Cong thuc delta = -9  ->  thuat toan ket luan "cai thien, nhan dao doan"
 Tuyen truoc: 30  ->  tuyen sau: 49   =>  thuc te DAI THEM 19
 ```
 
-Sai số đúng bằng tổng độ bất đối xứng của các cạnh bên trong đoạn bị đảo.
+2-opt đã bỏ và OR-Tools nhận được ma trận bất đối xứng, nhưng **vẫn giữ bước đối xứng hóa**
+để các số km đã đo ở `07-thuc-nghiem.md` và các tuyến đã lưu so sánh được với lần chạy mới.
+Bỏ bước này là đổi thước đo giữa chừng, phải đo lại toàn bộ chương 4.
 
-Hậu quả nếu bỏ qua bước B3: test `twoOptNeverIncreasesTotalDistance` **xanh khi chạy với Haversine** (vốn đối xứng sẵn) nhưng **đỏ khi chạy với OSRM thật**. Đây là loại lỗi lúc được lúc không, rất khó truy.
+Ghi vào báo cáo: *hệ thống lấy trung bình cộng hai chiều của ma trận OSRM. Hạn chế: cách này
+làm mất một phần thông tin về đường một chiều.*
 
-Đối xứng hóa bằng trung bình cộng biến giả định "khoảng cách đối xứng" thành **đúng theo cấu tạo**, và 2-opt chứng minh được là không bao giờ làm tăng quãng đường. **Ghi rõ một câu về bước này trong báo cáo** — nó cho thấy bạn hiểu điều kiện áp dụng của công thức chứ không chép công thức về dùng.
-
-**Quy tắc tuyệt đối: không được gọi OSRM hay truy vấn DB bên trong vòng lặp của thuật toán.** 2-opt gọi hàm khoảng cách hàng nghìn lần — mỗi lần một HTTP request thì chương trình sẽ treo. Thuật toán chỉ được tra mảng `matrix[i][j]` trong bộ nhớ.
+**Quy tắc tuyệt đối: không được gọi OSRM hay truy vấn DB bên trong vòng lặp của thuật toán.** Hàm chi phí của OR-Tools bị gọi hàng chục nghìn lần — mỗi lần một HTTP request thì chương trình sẽ treo. Bộ giải chỉ được tra mảng `matrix[i][j]` trong bộ nhớ.
 
 ---
 
@@ -354,6 +346,37 @@ hiển thị MSG-08.
 Tiền phạt phải **lớn hơn quãng đường xa nhất có thể** của một điểm, nếu không bộ giải sẽ
 thấy bỏ điểm rẻ hơn là đi giao. Đặt `TIEN_PHAT_BO_DIEM = 10 × (giá trị lớn nhất trong ma trận)`.
 
+**Tiền phạt riêng từng đơn (BR03-14, `09` mục A10).** Tiền phạt bằng nhau thì khi hết chỗ,
+bộ giải bỏ đơn **tốn đường nhất**, thường là khách ở xa, kể cả khách đặt từ sáng sớm hoặc đã
+bị hoãn hôm qua. Vì vậy mỗi đơn có một `dropPriority` và tiền phạt riêng:
+
+```
+tien phat = phan co so + bac uu tien x dropPriority
+phan co so = 10 x o lon nhat                       (nhu cu, dropPriority = 0 la y het)
+bac uu tien > moi chenh lech so km giua hai phuong an bat ky
+           = (so diem + so xe + 1) x (o lon nhat + 1) + so diem x phan co so
+```
+
+Bậc ưu tiên lớn hơn mọi chênh lệch số km, nên giữ đơn ưu tiên cao **luôn** thắng, dù phải
+chạy vòng xa bao nhiêu. `RoutingService.dropPriorities` gán `dropPriority`:
+
+| Bước | Cách tính |
+|---|---|
+| Xếp hạng | Hoãn nhiều lần hơn đứng trước, cùng số lần hoãn thì đặt sớm hơn đứng trước. Đơn đầu nhận hạng n, đơn cuối nhận hạng 1 |
+| Nhóm đã hoãn | Cộng thêm `postponeCount × (n(n+1)/2 + 1)`, lớn hơn tổng hạng của mọi đơn |
+
+Bảo đảm thu được, phải nói đúng khi vấn đáp:
+
+- **Đơn đã hoãn không bao giờ bị bỏ để nhường chỗ cho đơn chưa hoãn**, dù bỏ nó thì xếp vừa
+  được bao nhiêu đơn chưa hoãn đi nữa.
+- **Trong cùng nhóm, đơn đặt sớm không bao giờ bị bỏ để nhường chỗ cho *một* đơn đặt muộn.**
+  Nhưng nếu bỏ một đơn đặt sớm mà xếp vừa *hai* đơn đặt muộn có tổng hạng lớn hơn thì bộ giải
+  chọn cách đó. Muốn thứ tự tuyệt đối với mọi tập đơn thì tiền phạt phải tăng theo lũy thừa 2
+  của hạng, tràn `long` khi một ngày có quá khoảng 40 đơn.
+
+Test: `OrToolsSolverTest.orToolsDropsLowerPriorityPointsFirstWhenCapacityRunsOut`, ba lần
+chạy trên cùng một hình, tính tay được.
+
 **d) Vì sao cần đặt giới hạn thời gian.** `GUIDED_LOCAL_SEARCH` là siêu tìm kiếm — nó
 **không tự dừng**, cứ cải thiện mãi cho tới khi hết thời gian cho phép. Không đặt
 `setTimeLimit` là màn hình phân tuyến treo vĩnh viễn. 5 giây là dư cho quy mô Minh Phú.
@@ -362,148 +385,27 @@ thấy bỏ điểm rẻ hơn là đi giao. Đặt `TIEN_PHAT_BO_DIEM = 10 × (g
 
 OR-Tools chỉ giải bài toán thuần. Những thứ sau nằm ngoài nó và vẫn là code của đồ án:
 
-- Nạp và **đối xứng hóa** ma trận khoảng cách (mục 4) — OR-Tools nhận ma trận bất đối xứng
-  cũng được, nhưng ta đối xứng hóa để so sánh công bằng với 2-opt tự cài đặt
+- Nạp và **đối xứng hóa** ma trận khoảng cách (mục 4)
 - Tính **ETA** cho từng điểm (mục 9) — OR-Tools trả thứ tự, không trả giờ đến
 - **Cheapest Insertion** cho xử lý sự cố (mục 10)
 - Ghi `status_history`, sinh mã tuyến, vẽ lên bản đồ, toàn bộ nghiệp vụ
 
 ---
 
-## 6. Mốc so sánh tự cài đặt (1) — Nearest Neighbor
+## 6. ~~Nearest Neighbor tự cài đặt~~ — đã bỏ
 
-### Ý tưởng
+## 7. ~~2-opt tự cài đặt~~ — đã bỏ
 
-Xe đứng ở kho, chọn điểm giao gần nhất mà mình còn đủ sức chứa. Đến nơi lại chọn điểm gần nhất tiếp theo. Khi không thêm được điểm nào nữa thì đóng tuyến, quay về kho, chuyển sang xe kế tiếp.
+Hai bộ giải tự viết đã bỏ cùng các test của chúng (`09` mục A7). Giữ lại số mục 6, 7 để các
+chỗ khác trỏ tới mục 8–13 không bị lệch. Mã giả và phân tích cũ còn trong lịch sử Git
+(trước commit `bcd645a`) nếu cần tra.
 
-### Mã giả
+Khi vấn đáp vẫn nên nói được ý tưởng, vì OR-Tools dùng đúng hai ý đó ở hai giai đoạn:
 
-```
-HAM solveNearestNeighbor(points, vehicles, matrix):
-
-B1.  unassignedPoints = ban sao cua points
-B2.  routes   = danh sach rong
-
-B3.  VOI moi xe trong vehicles:
-B4.      NEU unassignedPoints rong THI thoat vong lap
-
-B5.      tuyen        = tuyen moi voi xe nay
-B6.      klHienTai    = 0
-B7.      ttHienTai    = 0
-B8.      currentPoint  = kho
-
-B9.      LAP:
-B10.         nearestPoint     = null
-B11.         minDistance = VO_CUC
-
-B12.         VOI moi diem trong unassignedPoints:
-B13.             // Kiem tra DONG THOI ca hai rang buoc
-B14.             NEU klHienTai + diem.weight > xe.maxWeight THI bo qua diem nay
-B15.             NEU ttHienTai + diem.volume   > xe.maxVolume  THI bo qua diem nay
-B16.
-B17.             kc = matrix[currentPoint][diem]
-B18.             NEU kc < minDistance THI
-B19.                 minDistance = kc
-B20.                 nearestPoint = diem
-
-B21.         NEU nearestPoint = null THI thoat LAP   // xe day roi
-
-B22.         them nearestPoint vao cuoi tuyen
-B23.         klHienTai = klHienTai + nearestPoint.weight
-B24.         ttHienTai = ttHienTai + nearestPoint.volume
-B25.         xoa nearestPoint khoi unassignedPoints
-B26.         currentPoint = nearestPoint
-
-B27.     NEU tuyen co it nhat 1 diem THI them tuyen vao routes
-
-B28. TRA VE routes va unassignedPoints (cac diem con sot lai)
-```
-
-### Điểm cần lưu ý khi cài đặt
-
-1. **B14 và B15 phải kiểm cả hai**, không được chỉ kiểm khối lượng.
-2. **B21** — nếu không tìm được điểm nào thỏa mãn thì đóng tuyến, đừng lặp vô hạn.
-3. **B28** — nếu vẫn còn điểm chưa gán sau khi hết xe, đó là trường hợp thiếu sức chứa. Phải trả về danh sách này để hiển thị lỗi MSG-08, không được im lặng bỏ qua.
-4. Duyệt xe theo thứ tự **tải trọng giảm dần** sẽ cho kết quả tốt hơn — xe to nhận nhiều điểm trước.
-
-### Độ phức tạp
-
-`O(m × n²)` với n là số điểm giao, m là số xe. Với n = 100, m = 5 thì khoảng 50.000 phép so sánh — chạy trong vài mili giây.
-
-### Nhược điểm (phải nói được khi vấn đáp)
-
-Nearest Neighbor là thuật toán **tham lam**: chọn tốt nhất ở mỗi bước mà không nhìn xa. Hậu quả là các điểm ở xa nhau bị dồn về cuối tuyến, tạo ra chặng dài bất hợp lý. Đó chính là lý do cần Giai đoạn 2.
-
----
-
-## 7. Mốc so sánh tự cài đặt (2) — 2-opt
-
-### Ý tưởng
-
-Cho một tuyến đã có, thử **đảo ngược một đoạn con** xem tổng quãng đường có giảm không. Nếu giảm thì giữ lại. Lặp đến khi không cải thiện được nữa.
-
-Ví dụ tuyến `KHO → A → B → C → D → KHO`. Đảo đoạn từ B đến C được `KHO → A → C → B → D → KHO`.
-
-### Mã giả
-
-```
-HAM improveWith2Opt(tuyen, matrix):
-
-B1.  improved = dung
-
-B2.  LAP KHI improved = dung:
-B3.      improved = sai
-
-B4.      VOI i tu 0 den soDiem - 2:
-B5.          VOI j tu i + 1 den soDiem - 1:
-
-B6.              a = diemTruoc(i)      // i = 0 thi a la KHO
-B7.              b = tuyen.diem[i]
-B8.              c = tuyen.diem[j]
-B9.              d = diemSau(j)        // j = cuoi thi d la KHO
-
-B10.             delta = matrix[a][c] + matrix[b][d]
-B11.                    - matrix[a][b] - matrix[c][d]
-
-B12.             NEU delta < -0.001 THI     // dung nguong nho de tranh sai so double
-B13.                 dao nguoc doan tu i den j trong tuyen
-B14.                 improved = dung
-
-B15. TRA VE tuyen
-```
-
-### Hàm tính độ lệch — giải thích kỹ
-
-Đây là chỗ hay bị hỏi nhất. Khi đảo đoạn từ `b` đến `c`:
-
-- **Mất đi** hai cạnh: `a→b` và `c→d`
-- **Thêm vào** hai cạnh: `a→c` và `b→d`
-- Các cạnh **bên trong** đoạn bị đảo vẫn giữ nguyên độ dài (chỉ đổi chiều đi)
-
-Nên chỉ cần so sánh bốn cạnh, không phải tính lại toàn bộ tuyến:
-
-```
-delta = (canh moi) - (canh cu)
-       = D[a][c] + D[b][d] - D[a][b] - D[c][d]
-```
-
-`delta < 0` nghĩa là tuyến mới ngắn hơn.
-
-**Vì sao các cạnh bên trong không đổi?** Vì khoảng cách là đối xứng: `D[x][y] = D[y][x]`. Đi từ B tới C hay từ C tới B đều cùng độ dài.
-
-**Điều kiện này không tự nhiên mà có.** Ma trận OSRM thô là bất đối xứng (đường một chiều, cấm rẽ trái). Vì vậy `DistanceMatrixService` **bắt buộc đối xứng hóa ma trận ở bước B3** trước khi giao cho thuật toán — xem mục 4. Bỏ bước đó thì công thức bốn cạnh sai, và 2-opt có thể làm tuyến dài ra trong khi vẫn báo là cải thiện.
-
-Ghi vào báo cáo: *luận văn giả định khoảng cách đối xứng, và bảo đảm giả định này bằng cách lấy trung bình cộng hai chiều của ma trận OSRM. Hạn chế: cách này làm mất một phần thông tin về đường một chiều.*
-
-### Điểm ăn điểm quan trọng nhất
-
-**2-opt không làm thay đổi tập điểm trong tuyến, nên tổng khối lượng và tổng thể tích không đổi. Ràng buộc sức chứa đã thỏa mãn ở Giai đoạn 1 thì vẫn tiếp tục thỏa mãn sau Giai đoạn 2.**
-
-Đây là lý do hai giai đoạn tách rời được, và là câu trả lời cho câu hỏi "làm sao em chắc đảo đoạn không làm xe quá tải". Học thuộc câu này.
-
-### Độ phức tạp
-
-Mỗi vòng lặp `O(n²)`. Số vòng phụ thuộc dữ liệu, thực nghiệm thường hội tụ sau dưới 10 vòng ở quy mô đồ án.
+| Giai đoạn trong OR-Tools | Ý tưởng |
+|---|---|
+| `PATH_CHEAPEST_ARC` — lời giải ban đầu | Giống Nearest Neighbor: từ điểm đang đứng nối tiếp cung rẻ nhất |
+| `GUIDED_LOCAL_SEARCH` — cải thiện | Gồm cả phép đảo đoạn kiểu 2-opt **và** chuyển điểm giữa các xe. Phép thứ hai là thứ 2-opt không làm được, và là lý do chính OR-Tools cho tuyến ngắn hơn |
 
 ---
 
@@ -632,95 +534,62 @@ Cho con số khiêm tốn hơn nhiều (8–15%) **nhưng đáng tin hơn hẳn*
 
 **Báo cáo cả hai mốc.** Trình bày hai con số kèm giải thích ý nghĩa từng cái sẽ được đánh giá cao hơn nhiều so với một con số 45% không có bối cảnh.
 
-### Mốc C — OR-Tools, cận trên của chất lượng
+### Đặt cạnh kết quả OR-Tools
 
-Đây là mốc mới có từ khi hệ thống dùng hai bộ giải. Chạy `OrToolsSolver` trên **đúng ma trận
-đó, đúng đội xe đó**, rồi đặt cạnh kết quả của `NN2OptSolver`.
-
-```
-HAM chayCaHaiBoGiai(points, vehicles, matrix):
-    ketQuaTuViet   = NN2OptSolver.solve(points, vehicles, matrix)
-    ketQuaThuVien  = OrToolsSolver.solve(points, vehicles, matrix)
-    khoangCach     = (ketQuaTuViet.tong - ketQuaThuVien.tong) / ketQuaThuVien.tong * 100
-    TRA VE ca ba con so
-```
-
-Bốn con số đặt cạnh nhau thành bảng của chương 4:
+Ba con số đặt cạnh nhau thành bảng của chương 4:
 
 | Cách phân tuyến | Ý nghĩa |
 |---|---|
 | Mốc A — mỗi đơn một chuyến | Cách Minh Phú đang làm |
 | Mốc B — đúng cách chia xe, sai thứ tự | Cô lập đóng góp của việc sắp thứ tự |
-| NN + 2-opt tự cài đặt | Phần tự làm được bao nhiêu |
-| **OR-Tools** | Cận trên thực tế — hệ thống chạy bằng cái này |
+| **OR-Tools** | Tuyến hệ thống thực sự chạy |
 
-**Đây là phần trả lời mạnh nhất khi hội đồng hỏi "sao em không tự viết hết".** Câu trả lời:
-em tự viết, đo được nó tốt hơn cách làm thủ công bao nhiêu, **và** đo được nó còn kém lời
-giải tốt bao nhiêu — rồi cho sản phẩm chạy bằng cái tốt hơn. Biết giới hạn của giải pháp
-mình viết ra là một kết quả, không phải một thiếu sót.
-
-Phần giải thích **vì sao** NN+2-opt thua nằm ở `07-thuc-nghiem.md`: 2-opt chỉ sắp lại thứ tự
-*bên trong* từng tuyến, nó không đụng được vào cách phân đơn cho xe. OR-Tools thì chuyển
-điểm qua lại giữa các tuyến được.
+Còn câu hỏi "OR-Tools cách lời giải tốt nhất bao nhiêu" thì trả lời bằng benchmark Augerat:
+các bộ dữ liệu đó có lời giải tối ưu đã công bố, nên đo được `gap` (`07-thuc-nghiem.md`).
 
 ---
 
 ## 12. Chương trình chạy thử độc lập
 
-**Tuần 6–7 phải viết thuật toán chạy console trước, chưa gắn web.** Điều này giúp:
+`AlgorithmRunner` chạy bằng `main()`, **không cần web, không cần MySQL, không cần OSRM**:
 
 - Tách bạch lỗi thuật toán với lỗi Spring/JPA/giao diện
 - Chạy thử nhanh, không cần khởi động server
-- Dùng chính lớp này để chạy benchmark ở tuần 10
+- `BenchmarkRunner` dùng cùng cách đó để chạy bộ Augerat
 
 ```java
-// File: src/test/java/com/minhphu/mproute/AlgorithmRunner.java
+// File: src/main/java/com/minhphu/mproute/service/optimization/AlgorithmRunner.java
 public class AlgorithmRunner {
     public static void main(String[] args) {
-        // 1. Tao du lieu cung: 1 kho, 10 diem giao, 3 vehicle
+        // 1. Tao du lieu cung: 1 kho, cac diem giao, doi xe du rong
         // 2. Tinh ma tran bang Haversine (khong can OSRM)
-        // 3. Chay NearestNeighborSolver, in ket qua
-        // 4. Chay TwoOptImprover, in ket qua
-        // 5. Chay OrToolsSolver tren CUNG ma tran do
-        // 6. In bang bon dong: moc A, moc B, NN+2opt, OR-Tools
+        // 3. Chay OrToolsSolver, in tung tuyen
+        // 4. In bang: moc A, moc B, OR-Tools
     }
 }
 ```
-
-Chạy được file này rồi mới gắn vào web ở tuần 8.
-
-**Thứ tự làm vẫn là tự cài đặt trước.** Viết NN rồi 2-opt rồi mới cắm OR-Tools vào, chứ không
-làm ngược. Lý do thực tế: `AlgorithmRunner` in ra tuyến của cả hai bộ giải trên cùng dữ liệu,
-nên nếu bản tự viết sai thì OR-Tools là cái chỉ ra ngay — sai lệch bất thường giữa hai cột
-là dấu hiệu có lỗi, chứ không phải chuyện thuật toán yếu.
 
 ---
 
 ## 13. Danh sách unit test bắt buộc
 
+Bốn test cho phần tính toán dùng chung:
+
 | Test | Kiểm tra gì |
 |---|---|
 | `totalDistanceIncludesReturnLegToDepot` | Tuyến 3 điểm, kiểm tổng có gồm chặng cuối |
 | `haversineMatchesHandCalculatedDistances` | So với giá trị tính tay của hai tọa độ đã biết |
-| `nearestNeighborNeverExceedsWeightCapacity` | Sinh dữ liệu nặng, kiểm mọi tuyến ≤ tải trọng |
-| `nearestNeighborNeverExceedsVolumeCapacity` | Sinh dữ liệu cồng kềnh, kiểm mọi tuyến ≤ thể tích |
-| `nearestNeighborAssignsEveryPointWhenCapacityAllows` | Không sót điểm nào |
-| `nearestNeighborReportsUnassignedPointsWhenCapacityRunsOut` | Trả về danh sách chưa gán, không im lặng |
-| `twoOptNeverIncreasesTotalDistance` | Sau 2-opt luôn ≤ trước 2-opt |
-| `twoOptPreservesPointSet` | Số điểm và tổng kg/m³ không đổi |
 | `etaOfFirstStopMatchesHandCalculation` | Khớp với tính tay |
 | `cheapestInsertionPicksCorrectPosition` | Ví dụ nhỏ tính tay được |
 
-Bốn test nữa cho bộ giải chính:
+Ba test cho bộ giải:
 
 | Test | Kiểm tra gì |
 |---|---|
-| `orToolsSolvesSmallCvrpToHandCalculatedOptimum` | Bài 4 điểm 2 xe, ra đúng 8000 m tính tay. **Đã viết, đã xanh** |
+| `orToolsSolvesSmallCvrpToHandCalculatedOptimum` | Bài 4 điểm 2 xe, ra đúng 8000 m tính tay |
 | `orToolsRespectsBothCapacityDimensions` | Dữ liệu vừa nặng vừa cồng kềnh, kiểm cả hai Dimension |
 | `orToolsDropsPointsWhenCapacityIsInsufficient` | `addDisjunction` hoạt động, trả `unassignedPoints` chứ không `null` |
-| `bothSolversCoverTheSamePointSet` | Hai bộ giải trên cùng dữ liệu phải phủ đúng tập điểm như nhau |
 
-Test cuối là test có giá trị nhất trong cả bộ: nó bắt lỗi ở **cả hai** bên. Nếu bản tự cài đặt
-sót điểm mà OR-Tools không sót, test đỏ và chỉ thẳng vào chỗ sai.
+Các test của Nearest Neighbor và 2-opt đã bỏ cùng hai bộ giải đó (`09` mục A7).
 
 Các test này vừa đảm bảo đúng, vừa là thứ để trưng ra khi hội đồng hỏi "em kiểm thử thế nào".

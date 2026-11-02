@@ -850,3 +850,88 @@ báo lỗi đỏ**: điều phối viên qua được cửa phân quyền rồi 
 Đến đây mới kết luận được là `@PreAuthorize` phân biệt đúng hai nhóm thao tác chứ không phải
 chặn cả cụm. Số dòng sổ kho trước và sau cả loạt đều là 13 — không phép thử nào ghi thêm dữ
 liệu.
+
+## Tuần 12 — Gọn bộ giải và chỉnh giao diện theo phản hồi · 30/10/2026
+
+### Bỏ hai bộ giải tự cài đặt (`09` mục A7)
+
+Xóa `NearestNeighborSolver`, `TwoOptImprover`, `NN2OptSolver` cùng 3 lớp test. Màn Phân tuyến
+bỏ ô chọn thuật toán, tham số `DEFAULT_ALGORITHM` bỏ, `BenchmarkRunner` chỉ còn in bảng gap
+OR-Tools. Enum `AlgorithmType` vẫn giữ `NN`, `NN_2OPT` vì CSDL còn 3 tuyến và 5 lần chạy cũ
+mang nhãn đó — xóa enum là Hibernate không đọc được các dòng ấy nữa.
+
+`DistanceMatrixService` **vẫn đối xứng hóa ma trận** dù lý do gốc (công thức 2-opt) đã mất: bỏ
+bước này là đổi thước đo, mọi số km trong `07` phải đo lại. Ghi rõ trong comment và `03` mục 4.
+
+Đi kèm: viết lại `03`, `07`, sửa `01`, `02`, `05`, `08` và toàn bộ `.claude/` (skill, agent,
+lệnh, hook) cho khớp. Hook kiểm quy tắc đổi luật: trước cấm OR-Tools trong `heuristic/`, giờ cấm
+OR-Tools ra ngoài `ortools/` và cấm thư viện VRP thứ hai ở mọi nơi. Chạy hook mới qua 157 file
+Java hiện có: không báo nhầm cái nào; thử một file cố ý import OR-Tools sai chỗ thì bị chặn.
+
+### Chỉnh giao diện
+
+- Thông báo flash đổi sang toast: thành công tự tắt sau 4 giây, lỗi đứng yên tới khi bấm ×
+- Nút bị khóa nền xám, con trỏ hình cấm — trước chỉ mờ đi nên người dùng không nhận ra
+- Hủy tuyến hỏi lại bằng hộp thoại, lý do bắt buộc; máy chủ vẫn tự kiểm lý do
+- Bỏ ghi đè địa chỉ cho từng đơn (`09` mục A6), bỏ nút chuẩn bị ma trận (`09` mục A8)
+- Ô số thùng tự kéo về số còn rảnh (`09` mục A9)
+- Bỏ mã quy tắc (BR.., CBR..) và các dòng giới thiệu khỏi chữ hiển thị
+
+### Hai chỗ vấp
+
+**Nền bản đồ CARTO Voyager đòi khóa API.** Không có khóa thì máy chủ vẫn trả HTTP 200 kèm ảnh
+PNG, nhưng ảnh là chữ *"API KEY REQUIRED"*. Lúc đổi chỉ kiểm mã trả về nên tưởng chạy được.
+Quay về nền OpenStreetMap; lần này tải một ô về **mở ra xem** mới kết luận.
+
+**Đăng nhập lại khi đang mở F12 thì ra trang 404.** DevTools của Chrome tự gọi ngầm
+`/.well-known/appspecific/com.chrome.devtools.json`; lúc chưa đăng nhập, Spring Security nhớ địa
+chỉ đó để đăng nhập xong đưa người dùng quay về — và đưa về trang không tồn tại. Sửa bằng cách
+không nhớ các địa chỉ `/.well-known/**` (`SecurityConfig.requestCache`), không mở công khai đường
+dẫn nào.
+
+### Ưu tiên khi hết chỗ (`09` mục A10)
+
+Câu hỏi xuất phát: khách đặt từ sáng sớm mà ở xa thì có bị bỏ không, rồi dời sang hôm sau có
+bị bỏ tiếp không. Có, cả hai. Tiền phạt bỏ điểm bằng nhau nên OR-Tools bỏ đơn tốn đường nhất.
+
+Sửa: tiền phạt riêng từng đơn, bậc ưu tiên lớn hơn mọi chênh lệch số km. Thêm cột
+`postpone_count` và nút "Hoãn sang ngày mai" cho đơn chưa xếp được. Đơn đã hoãn đứng trên mọi
+đơn chưa hoãn, trong cùng nhóm thì đặt sớm đứng trước. Thứ tự giữa các đơn chưa hoãn **chỉ
+đúng từng cặp**: thứ tự tuyệt đối cần tiền phạt tăng theo lũy thừa 2, tràn `long` khi một ngày
+có quá khoảng 40 đơn, nên chấp nhận và ghi vào hạn chế 4.6.
+
+Mọi đơn ưu tiên 0 thì tiền phạt y như cũ, nên benchmark Augerat không phải chạy lại. Test mới
+chạy ba lần trên cùng một hình: ưu tiên bằng nhau thì bỏ đơn xa (2000 m), đơn xa đặt sớm thì
+giữ nó (8000 m), đơn xa đã hoãn thì giữ nó dù phải bỏ hai đơn gần. 19/19 test xanh.
+
+### Màn tài xế và xe cứu hộ
+
+- Bỏ ô nhập số thực thu, bấm "Đã giao xong" là đã thu đủ (`09` mục A11)
+- Điểm đã xong bấm vào được để xem lại địa chỉ, hàng, số đã thu, nút gọi khách
+- Phương án xe cứu hộ thêm ô chọn tài xế, lưu đúng km phát sinh (trước luôn ra 0), gửi NTF-04
+  (`09` mục A12)
+
+Kiểm bằng test tạm dựng trang thật qua MockMvc với tài khoản lấy từ CSDL, không cần mật khẩu.
+Bảng mật khẩu trong `08` là mật khẩu lúc seed. Trên máy phát triển một số tài khoản đã đổi mật
+khẩu, nên CSDL không còn khớp bảng đó. Một CSDL mới seed lại vẫn khớp.
+
+Sửa dữ liệu chạy thử: tuyến `TT26082702` (27/08) đã nhận hàng nhưng không bao giờ giao xong, nên
+xe 29F-555.66 kẹt "Đang chạy". Xe 29H-123.45 cũng kẹt vì HistorySeeder trả xe về đúng trạng
+thái lúc trước khi seed. Đã đóng tuyến bằng SQL (có ghi `status_history`) và trả hai xe về
+`AVAILABLE`. Hệ thống chưa có cơ chế tự đóng tuyến bỏ dở từ ngày trước, nên xe sẽ kẹt mãi nếu tài
+xế không bấm xong.
+
+### Còn phải kiểm
+
+Bước demo 5a trong `08` (tổng sức chứa đủ mà vẫn sót đơn) được dựng cho Nearest Neighbor. OR-Tools
+chuyển được đơn giữa các xe nên **rất có thể xếp đủ 8 đơn**. Phải chạy thử lại trước ngày bảo vệ.
+
+### Đăng nhập xong bị đưa tới trang 403
+
+Trang mở từ phiên cũ (khởi động lại app, phiên hết hạn, đăng xuất ở tab khác) mang token CSRF cũ.
+Bấm "Đăng xuất" thì CSRF từ chối và chuyển tiếp sang `/403` khi người dùng đã là khách. `/403` cần
+đăng nhập nên Spring nhớ địa chỉ đó, và đăng nhập tài khoản nào xong cũng bị đưa tới
+`/403?continue`. Sửa: `SecurityConfig` không nhớ `/403` và `/error`, giống cách đã làm với
+`/.well-known/`. Kiểm bằng một bản app tạm ở cổng 8081: đăng xuất bằng token cũ rồi đăng nhập
+`admin` về `/`; vào `/orders` khi chưa đăng nhập vẫn được đưa về `/orders`; tài xế vào
+`/admin/products` vẫn ra 403.

@@ -156,7 +156,7 @@ Spring Security cần tiền tố `ROLE_` khi tạo `GrantedAuthority`, nên `AD
 | BR02-15 | Hình thức thanh toán điền sẵn theo khách hàng, sửa được cho riêng đơn, không đổi danh mục |
 | BR02-16 | Đổi hình thức thanh toán thì tính lại `amount_to_collect` ngay |
 | BR02-17 | Sau khi lưu, hiện khối tóm tắt đơn để điều phối viên đọc lại cho khách qua điện thoại |
-| BR02-18 | Form đơn hàng hiện số thùng còn rảnh cạnh ô chọn sản phẩm. Vượt thì **chỉ cảnh báo**, vẫn lưu được — đơn `PENDING_APPROVAL` chưa giữ hàng |
+| BR02-18 | Form đơn hàng hiện số thùng còn rảnh dưới ô chọn sản phẩm. Gõ quá số đó thì ô số thùng **tự kéo về đúng số còn rảnh** và báo đỏ. Máy chủ không chặn lúc lưu — đơn `PENDING_APPROVAL` chưa giữ hàng, cửa chặn thật ở bước duyệt (MSG-17). Xem `09` mục A9 |
 | BR02-19 | **Duyệt đơn trừ kho và là chỗ chặn cứng:** không đủ hàng → báo MSG-17, không duyệt. Trừ lúc duyệt chứ không lúc tài xế lấy hàng, vì từ lúc duyệt số hàng đó đã thuộc về đơn |
 | BR02-20 | Thiếu **một** sản phẩm thì không trừ sản phẩm nào — trừ một phần rồi báo lỗi để lại dữ liệu bẩn trong sổ kho |
 | BR02-21 | Sửa đơn đã duyệt thì bù trừ đúng phần chênh lệch, và chỉ cần đủ hàng cho **phần tăng thêm** |
@@ -176,9 +176,10 @@ Spring Security cần tiền tố `ROLE_` khi tạo `GrantedAuthority`, nên `AD
 | BR03-08 | Mức giảm = (mốc − sau tối ưu) ÷ mốc × 100 |
 | BR03-09 | Chạy lại thì xóa kết quả `DRAFT` trước đó của cùng ngày |
 | BR03-10 | Ghi nhận thời gian thực thi thuật toán (ms) |
-| BR03-11 | Điều phối chọn thuật toán: `NN` hoặc `NN_2OPT` (mặc định) |
+| BR03-11 | ~~Điều phối chọn thuật toán~~ — **đã bỏ**, hệ thống chỉ chạy OR-Tools (`09` mục A7) |
 | BR03-12 | Xe thừa không gán tuyến, giữ `AVAILABLE` |
 | BR03-13 | Tổng sức chứa đủ nhưng thuật toán vẫn không xếp hết đơn → **vẫn hiển thị các tuyến đã sinh**, kèm danh sách đơn chưa gán (CN-03-14). Không được im lặng bỏ sót |
+| BR03-14 | **Hết chỗ thì bỏ đơn ưu tiên thấp trước**, không xét đơn gần hay xa. Thứ tự: đơn đã bị hoãn nhiều lần hơn đứng trước, cùng số lần hoãn thì đơn đặt sớm hơn đứng trước. Đơn chưa xếp được có thể hoãn sang ngày mai ngay trên màn Phân tuyến, mỗi lần hoãn tăng `postpone_count`. Xem `09` mục A10 |
 
 ### UC04 — Điều chỉnh tuyến và gán tài xế
 
@@ -211,8 +212,8 @@ Spring Security cần tiền tố `ROLE_` khi tạo `GrantedAuthority`, nên `AD
 | BR05-08 | Mọi cập nhật ghi kèm thời điểm và tọa độ GPS (nếu trình duyệt cho phép) |
 | BR05-09 | Điểm cuối xong → tuyến `COMPLETED`, xe về `AVAILABLE` |
 | BR05-10 | Nút gọi dạng `tel:`, nút chỉ đường mở bản đồ ngoài với tọa độ |
-| BR05-11 | Đơn có `amount_to_collect > 0` → khi bấm "Đã giao" bắt buộc nhập số tiền thực thu và hình thức |
-| BR05-12 | Thu khác số phải thu → bắt buộc ghi chú lý do, gửi thông báo cho điều phối |
+| BR05-11 | Bấm "Đã giao" nghĩa là **đã thu đủ số phải thu**: hệ thống tự ghi `collected_amount = amount_to_collect`, tài xế không gõ lại số tiền (`09` mục A11) |
+| BR05-12 | ~~Thu khác số phải thu → bắt buộc ghi chú lý do, gửi thông báo cho điều phối~~ — **đã bỏ** cùng ô nhập số thực thu. Khách trả thiếu thì tài xế báo điều phối ngoài hệ thống (`09` mục A11) |
 | BR05-13 | Đơn `FAILED` hoặc `POSTPONED` giữ trạng thái thanh toán `UNPAID` |
 | BR05-14 | Đơn công nợ giao thành công → trạng thái thanh toán `DEBT` |
 | BR05-15 | Giao thất bại → hàng theo xe về kho, hoàn lại số còn rảnh (`RETURN`). Không hoàn thì số tồn tụt dần sau mỗi lần giao hụt trong khi kho vẫn đầy |
@@ -227,7 +228,7 @@ Spring Security cần tiền tố `ROLE_` khi tạo `GrantedAuthority`, nên `AD
 | BR06-03 | Mức độ: `CAN_CONTINUE` hoặc `CANNOT_CONTINUE` |
 | BR06-04 | `CAN_CONTINUE`: nhập số phút chậm trễ, hệ thống chỉ cộng vào ETA các điểm còn lại, không sinh phương án |
 | BR06-05 | `CANNOT_CONTINUE`: sinh 3 nhóm phương án, xếp theo km phát sinh tăng dần |
-| BR06-06 | **Phương án A** (`A_RESCUE_VEHICLE`) — điều xe `AVAILABLE` đang ở kho và chưa có tuyến trong ngày sự cố ra sang hàng. Km phát sinh = kho → điểm sự cố + phần lộ trình còn lại |
+| BR06-06 | **Phương án A** (`A_RESCUE_VEHICLE`) — điều xe `AVAILABLE` đang ở kho và chưa có tuyến trong ngày sự cố ra sang hàng. Km phát sinh = kho → điểm sự cố + phần lộ trình còn lại. **Bắt buộc chọn tài xế lái xe cứu hộ**, lấy trong số tài xế rảnh của ngày đó hoặc chính tài xế cũ. Tài xế được chọn nhận tuyến chạy tiếp (`09` mục A12) |
 | BR06-07 | **Phương án B** (`B_INSERT_OTHER_ROUTE`) — chèn các điểm còn lại vào tuyến khác đang chạy, dùng Cheapest Insertion. Phải kiểm sức chứa còn lại |
 | BR06-08 | **Phương án C** (`C_POSTPONE`) — hoãn sang hôm sau. Km phát sinh = 0 nhưng luôn xếp cuối |
 | BR06-09 | Chỉ hiện phương án khả thi. Vi phạm sức chứa thì loại |
@@ -300,4 +301,4 @@ Nội dung hiển thị cho người dùng nên **giữ nguyên tiếng Việt c
 | NTF-06 | Đơn bị hoãn | Điều phối viên |
 | NTF-07 | ETA thay đổi | Khách hàng (email) |
 | NTF-08 | Tuyến được chốt | Khách hàng (email) — mã đơn, ETA, link tra cứu |
-| NTF-09 | Thu tiền lệch số phải thu | Điều phối viên |
+| NTF-09 | ~~Thu tiền lệch số phải thu~~ — không còn phát sinh (`09` mục A11) | Điều phối viên |

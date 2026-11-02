@@ -47,6 +47,8 @@ nghiệm thu là gõ URL `/quan-tri/san-pham`. Đã sửa thành `/admin/product
 
 ### A3. Dùng OR-Tools làm bộ giải chính, giữ bản tự cài đặt làm mốc so sánh
 
+> Phần "giữ bản tự cài đặt" đã bị thay bởi **A7**: hai bộ giải tự cài đặt đã xóa.
+
 **Đây là thay đổi lớn nhất về mặt định hướng của đồ án. Chuẩn bị kỹ câu trả lời cho mục này.**
 
 Đặc tả ban đầu cấm tuyệt đối mọi thư viện VRP, với lý do "tự cài đặt là phần đóng góp học thuật".
@@ -253,6 +255,71 @@ một nút kỹ thuật khó hiểu, mà bấm **Chạy tối ưu** đã tự l�
 
 Bộ nhớ đệm **không đổi gì**. Chứng minh trước hội đồng bằng log: chạy tối ưu hai lần liên tiếp
 cùng một ngày, lần hai không có dòng gọi OSRM nào và thời gian chạy ngắn hẳn.
+
+### A9. Form đơn hàng không cho gõ quá số thùng còn rảnh
+
+Bản trước (BR02-18) chỉ hiện chữ đỏ *"sẽ bị chặn khi duyệt đơn"* khi số thùng vượt số còn rảnh,
+vẫn để nguyên con số vượt. Giờ ô số thùng **tự kéo về đúng số còn rảnh** và báo *"Chỉ còn N
+thùng trong kho. Vui lòng nhập tối đa N."* Đổi sản phẩm sang loại ít hàng hơn cũng kéo về như vậy.
+
+Đây chỉ là chặn trên giao diện cho tiện, **không đổi quyết định 3 của A5**: máy chủ vẫn không
+chặn lúc lưu vì đơn chờ duyệt chưa giữ hàng. Hai người tạo hai đơn cùng lúc vẫn cộng lại vượt
+kho được, và cửa chặn thật vẫn là bước duyệt (MSG-17).
+
+### A12. Phương án xe cứu hộ phải chọn tài xế
+
+**Vấn đề.** Đặc tả gốc (BR06-06, CN-06-07) chỉ nói điều *xe*, không nói ai lái. Code cũ đổi xe
+của tuyến nhưng giữ nguyên tài xế, dù phương án tự ghi nguồn lực cần là *"xe … và một tài xế
+rảnh"*. Hệ thống không biết ai đang lái xe cứu hộ, và người đó không thấy tuyến trên điện
+thoại. Thêm một lỗi đi kèm: km phát sinh lưu bằng hiệu tổng quãng đường trước và sau khi đổi
+xe. Thứ tự điểm không đổi nên hiệu đó luôn bằng **0**, dù màn hình phương án hiện đúng số km
+từ kho ra điểm sự cố.
+
+**Đã đổi.**
+- Phương án A có ô chọn tài xế bắt buộc: tài xế rảnh trong ngày (cùng luật với gán tài xế ở
+  màn Phân tuyến), kể cả tài xế cũ nếu điều phối viên muốn người cũ chạy tiếp
+- Tuyến đổi sang tài xế được chọn. Người này thấy tuyến ngay trên màn tài xế
+- Gửi NTF-04 cho tài xế mới và tài xế cũ. NTF-04 có trong đặc tả từ đầu nhưng chưa code
+- Km phát sinh lấy từ chính phương án, tính lại lúc bấm nút
+
+Sự cố đã xử lý trước khi sửa vẫn giữ km phát sinh 0 trong CSDL.
+
+### A11. Màn tài xế bỏ ô nhập số tiền thực thu
+
+Bản trước (BR05-11, BR05-12) bắt tài xế xác nhận hoặc sửa số tiền thực thu trước khi bấm "Đã
+giao", thu lệch thì phải ghi lý do và hệ thống gửi NTF-09. Thực tế ô đó gần như lúc nào cũng
+bằng đúng số phải thu, và là thêm một bước cho người đang đứng trước cửa hàng, cầm điện thoại
+một tay.
+
+Giờ bấm **"Đã giao xong" nghĩa là đã thu đủ**. Máy chủ tự ghi `collected_amount =
+amount_to_collect`, nên tổng tiền cuối tuyến và báo cáo vẫn cộng từ cột này như cũ. Cột
+`collection_note` giữ lại cho dữ liệu cũ. Khách trả thiếu thì tài xế báo điều phối ngoài hệ
+thống, như khi chưa có phần mềm. Đây là đánh đổi có ý thức: mất khả năng ghi lệch tiền ngay
+trong hệ thống, đổi lại thao tác giao hàng còn đúng một nút.
+
+### A10. Hết chỗ thì bỏ đơn ưu tiên thấp trước, đơn đã hoãn được xếp trước
+
+**Vấn đề.** Đặc tả gốc chỉ đòi không im lặng bỏ sót đơn (BR03-13), không nói *bỏ đơn nào*.
+OR-Tools đặt tiền phạt bỏ điểm bằng nhau nên khi hết chỗ, nó bỏ đơn tốn đường nhất. Khách
+đặt từ sáng sớm nhưng ở xa bị bỏ, khách đặt cuối ngày ở gần được giữ. Dời đơn đó sang hôm sau
+thì hôm sau nó vẫn ở xa, rất có thể **lại bị bỏ**, khách bị hoãn mãi.
+
+**Đã đổi.**
+- Bảng `orders` thêm `postpone_count`. Tăng khi điều phối viên bấm "Hoãn sang ngày mai" ở
+  màn Phân tuyến (nút mới, CN-03-14) và khi đơn bị hoãn lúc giao (đơn tạo lại mang theo số
+  lần hoãn của đơn cũ cộng 1)
+- Tiền phạt bỏ điểm tính riêng cho từng đơn theo thứ tự: hoãn nhiều lần hơn đứng trước, đặt
+  sớm hơn đứng trước (BR03-14, cách tính ở `03` mục 5.3c)
+- Đơn chưa xếp được đã hoãn thì không chặn chốt kế hoạch nữa, vì nó đã sang ngày khác
+
+**Không đổi.** Bộ giải vẫn chỉ bỏ đơn khi thật sự hết chỗ: phần cơ sở của tiền phạt giữ
+nguyên, mọi đơn `dropPriority = 0` thì tiền phạt y như cũ, nên số liệu benchmark ở `07` không
+phải đo lại. Sửa ngày giao ở màn sửa đơn (CN-02-08) **không** tăng `postpone_count`, vì khách
+tự xin đổi ngày thì không phải lỗi hết chỗ của công ty.
+
+**Câu trả lời khi bị hỏi "bỏ đơn nào thì công bằng".** Ngày giao là lời hứa với khách. Ai đã
+bị lỡ một lần thì lần sau phải được giữ trước, bất kể ở gần hay xa. Muốn vậy, khoảng chênh
+tiền phạt phải lớn hơn mọi chênh lệch số km, nếu không bộ giải vẫn đổi khách xa lấy khách gần.
 
 ---
 

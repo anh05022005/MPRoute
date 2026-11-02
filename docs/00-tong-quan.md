@@ -86,7 +86,7 @@ Ba hình thức, gắn cố định với từng khách hàng trong danh mục, 
 | Hình thức | Số tiền phải thu | Tài xế làm gì |
 |---|---|---|
 | `CREDIT` | 0đ | Giao xong, không thu tiền. Đơn chuyển trạng thái "Ghi nợ" |
-| `CASH` | = tổng tiền hàng | Thu tiền, nhập số tiền thực thu khi bấm "Đã giao" |
+| `CASH` | = tổng tiền hàng | Thu đủ số phải thu rồi bấm "Đã giao" |
 | `PREPAID` | 0đ | Giao xong, không thu tiền |
 
 Việc nộp tiền về công ty, đòi công nợ, đối chiếu sổ sách diễn ra **ngoài hệ thống**, y như hiện tại.
