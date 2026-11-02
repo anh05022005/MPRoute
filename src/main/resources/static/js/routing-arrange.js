@@ -173,17 +173,28 @@
             }
         });
 
-        // Chang cuoi ve kho, hien rieng mot dong o tfoot (CBR-01)
-        var returnLeg = block.querySelector('.return-leg');
-        if (returnLeg) {
-            returnLeg.textContent = rows.length === 0
-                ? formatKm(0)
-                : formatKm(distance(indexes[indexes.length - 1], DEPOT_INDEX));
-        }
+        // Chang cuoi ve kho, hien rieng mot dong o tfoot ngay sau diem cuoi (CBR-01)
+        setText(block, '.return-leg-sequence', rows.length + 1);
+        setText(block, '.return-leg', rows.length === 0
+            ? formatKm(0)
+            : formatKm(distance(indexes[indexes.length - 1], DEPOT_INDEX)));
+
+        // Dong Tong cong: km da gom chang ve kho o tren, thung doi khi keo don sang xe khac
+        setText(block, '.route-distance-total', formatKm(meters));
+        setText(block, '.route-box-total', rows.reduce(function (sum, row) {
+            return sum + (parseInt(row.dataset.boxes, 10) || 0);
+        }, 0));
 
         var load = totalLoad(rows);
-        updateRouteHeading(block, meters, load);
+        updateRouteLoad(block, load);
         return { meters: meters, overCapacity: showCapacityWarning(block, load) };
+    }
+
+    function setText(block, selector, text) {
+        var element = block.querySelector(selector);
+        if (element) {
+            element.textContent = text;
+        }
     }
 
     /**
@@ -264,14 +275,25 @@
         return { weight: weight, volume: volume };
     }
 
-    function updateRouteHeading(block, meters, load) {
-        var meta = block.querySelector('.route-meta');
-        if (!meta) {
-            return;
+    /**
+     * Dong "Da chat: 99% tai trong · 85% the tich". Lam tron toi phan tram nguyen giong
+     * template; con so kg, m3 cu the nam o title de re chuot vao la thay.
+     */
+    function updateRouteLoad(block, load) {
+        var maxWeight = numberOf(block, 'maxWeight');
+        var maxVolume = numberOf(block, 'maxVolume');
+
+        var weightFigure = block.querySelector('.load-weight');
+        if (weightFigure && maxWeight > 0) {
+            weightFigure.textContent = Math.round(load.weight * 100 / maxWeight) + '% tải trọng';
+            weightFigure.title = format(load.weight, 1) + ' / ' + format(maxWeight, 0) + ' kg';
         }
-        meta.textContent = formatKm(meters)
-            + ' · ' + format(load.weight, 1) + '/' + format(numberOf(block, 'maxWeight'), 0) + ' kg'
-            + ' · ' + format(load.volume, 3) + '/' + format(numberOf(block, 'maxVolume'), 1) + ' m³';
+
+        var volumeFigure = block.querySelector('.load-volume');
+        if (volumeFigure && maxVolume > 0) {
+            volumeFigure.textContent = Math.round(load.volume * 100 / maxVolume) + '% thể tích';
+            volumeFigure.title = format(load.volume, 3) + ' / ' + format(maxVolume, 1) + ' m³';
+        }
     }
 
     /**
@@ -368,7 +390,7 @@
 
         var hint = document.getElementById('arrange-hint');
         if (hint && changed && !anyOverCapacity) {
-            hint.textContent = 'Đã đổi thứ tự nhưng chưa lưu. Bấm Lưu phương án chỉnh tay '
+            hint.textContent = 'Đã đổi thứ tự nhưng chưa lưu. Bấm Lưu phương án chỉnh thủ công '
                 + 'để máy chủ tính lại và ghi xuống.';
         }
     }

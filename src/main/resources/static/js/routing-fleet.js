@@ -11,11 +11,16 @@
 (function () {
     'use strict';
 
-    var checkboxes = document.querySelectorAll('.vehicle-checkbox');
-    var display = document.getElementById('fleet-capacity');
-    if (checkboxes.length === 0 || !display) {
-        return;   // trang nay khong phai man hinh phan tuyen
+    var checkboxes = Array.prototype.slice.call(document.querySelectorAll('.vehicle-checkbox'));
+    if (checkboxes.length === 0) {
+        return;   // trang nay khong phai man hinh phan tuyen, hoac khong co xe nao san sang
     }
+
+    var selectAll = document.getElementById('vehicle-select-all');
+    var weightCell = document.getElementById('fleet-weight');
+    var volumeCell = document.getElementById('fleet-volume');
+    var headSummary = document.getElementById('fleet-summary');
+    var shortage = document.getElementById('fleet-shortage');
 
     var demandWeight = readNumber('demand-weight');
     var demandVolume = readNumber('demand-volume');
@@ -23,6 +28,14 @@
     checkboxes.forEach(function (box) {
         box.addEventListener('change', updateSummary);
     });
+    if (selectAll) {
+        selectAll.addEventListener('change', function () {
+            checkboxes.forEach(function (box) {
+                box.checked = selectAll.checked;
+            });
+            updateSummary();
+        });
+    }
     updateSummary();
 
     function updateSummary() {
@@ -38,8 +51,18 @@
             }
         });
 
-        display.textContent = count + ' xe · '
-            + format(weight, 0) + ' kg · ' + format(volume, 1) + ' m³';
+        // O "chon tat ca" phan anh dung trang thai: tich het, bo het, hay tich mot phan
+        if (selectAll) {
+            selectAll.checked = count === checkboxes.length;
+            selectAll.indeterminate = count > 0 && count < checkboxes.length;
+        }
+
+        var weightText = format(weight, 0) + ' kg';
+        var volumeText = format(volume, 1) + ' m³';
+        setText(weightCell, weightText);
+        setText(volumeCell, volumeText);
+        // Dong tom tat tren tieu de the, chi hien khi bang xe dang thu gon
+        setText(headSummary, count + '/' + checkboxes.length + ' xe · ' + weightText + ' · ' + volumeText);
 
         /*
          * Thieu KHOI LUONG hay thieu THE TICH deu phai bao — kiem mot cai la sai (CBR-03, CBR-04).
@@ -47,14 +70,25 @@
          */
         var missingWeight = demandWeight - weight;
         var missingVolume = demandVolume - volume;
+        var isShort = missingWeight > 0 || missingVolume > 0;
 
-        if (missingWeight > 0 || missingVolume > 0) {
-            display.style.color = 'var(--danger)';
-            display.textContent += ' — còn thiếu '
-                + format(Math.max(missingWeight, 0), 1) + ' kg / '
-                + format(Math.max(missingVolume, 0), 3) + ' m³';
-        } else {
-            display.style.color = 'var(--success)';
+        [weightCell, volumeCell].forEach(function (cell) {
+            if (cell) {
+                cell.classList.toggle('text-danger', isShort);
+            }
+        });
+        if (shortage) {
+            shortage.hidden = !isShort;
+            shortage.textContent = isShort
+                ? '— còn thiếu ' + format(Math.max(missingWeight, 0), 1) + ' kg / '
+                    + format(Math.max(missingVolume, 0), 3) + ' m³'
+                : '';
+        }
+    }
+
+    function setText(element, text) {
+        if (element) {
+            element.textContent = text;
         }
     }
 

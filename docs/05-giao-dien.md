@@ -212,36 +212,47 @@ trọng tối đa từ 300 đến 5.000 kg"*, nên ô nào viết đúng nhãn l
 ## SCR-09 — Màn hình phân tuyến (quan trọng nhất)
 
 ```
-┌────────────────────────────────────────────────────────────┐
-│ Ngay giao [04/08/2026]  Chon xe [x] 29H  [x] 29C           │
-│                                        [ Chay toi uu ]      │
-├──────────────────────┬─────────────────────────────────────┤
-│                      │ ┌─ Chi so so sanh ────────────────┐ │
-│                      │ │ Moc A (moi don 1 chuyen) 108.0km│ │
-│    BAN DO LEAFLET    │ │ Moc B (cung xe, thu tu nhan)     │ │
-│                      │ │                          68.3 km │ │
-│    - Kho: o vuong    │ │ Sau toi uu               59.5 km │ │
-│    - Khach: ghim so  │ │ Giam so voi A     48.5 km (44.9%)│ │
-│    - Tuyen: polyline │ │ Giam so voi B      8.8 km (12.9%)│ │
-│      theo duong that │ │ Thoi gian chay           412 ms  │ │
-│                      │ └─────────────────────────────────┘ │
-│    Chu thich mau     │                                     │
-│                      │ ■ Tuyen 1 — 29H-123.45              │
-│                      │   32.5 km | 1399/1500 kg | 6.6/12 m3│
-│                      │   ┌───┬──────────┬─────┬────┬─────┐ │
-│                      │   │ # │ Khach    │Thung│ Km │ ETA │ │
-│                      │   ├───┼──────────┼─────┼────┼─────┤ │
-│                      │   │ 1 │ Minh Anh │  50 │8.2 │08:16│ │
-│                      │   └───┴──────────┴─────┴────┴─────┘ │
-│                      │                                     │
-│                      │ ■ Tuyen 2 — 29C-678.90              │
-│                      │   ...                               │
-│                      │                                     │
-│                      │ [Gan tai xe] [Chinh tay] [Xuat Excel]│
-└──────────────────────┴─────────────────────────────────────┘
+┌──────────────────────────────────────────────────────────────────────┐
+│ Ngay giao [30/10/2026] [Xem don]                                     │
+├────────────────────────────────────────────┬─────────────────────────┤
+│ ┌─ Don cho phan tuyen · 11 don ───────── ^┐│ ┌─ Vi tri cac diem giao ┐│
+│ │ # │ Ma don │ Khach │Thung│  kg   │  m3  ││ │                       ││
+│ │ Tong cong · 11 don │ 217 │3431,8 │14,468││ │    BAN DO LEAFLET     ││
+│ └─────────────────────────────────────────┘│ │  (dinh lai khi cuon)  ││
+│ ┌─ Chon xe · 6/6 xe · 5.800 kg · 55 m3 ─ v┐│ │ - Kho: o vuong + ten  ││
+│ │ [x] Bien so          │ Tai trong│The tich│ │ - Khach: ghim so,     ││
+│ │ Suc chua da chon     │ 5.800 kg │ 55,0 m3││ │   trung cho gop "2–4" ││
+│ │ [ Chay toi uu ]                         ││ │ - Chua xep: cham xam  ││
+│ └─────────────────────────────────────────┘│ │                       ││
+│ ┌─ Ket qua toi uu ────────────────────────┐│ │ Chu thich mau theo xe ││
+│ │ Da xep vao tuyen        10 / 11 don·4 xe││ └───────────────────────┘│
+│ │ Moi don di mot chuyen rieng   253,50 km ││                          │
+│ │ Giao theo thu tu nhan don      81,96 km ││                          │
+│ │ Sau toi uu                     72,91 km ││                          │
+│ │ Giam so voi ...      180,59 km (71,2%)  ││                          │
+│ │ Lap day xe trung binh · Thoi gian chay  ││                          │
+│ └─────────────────────────────────────────┘│                          │
+│ ┌─ ■ TT26103003 — 29H-123.45 [Nhap]       ││                          │
+│ │      Da chat: 99% tai trong · 85% m3  ^ ││                          │
+│ │ [Chon tai xe ▾] [Giao tuyen]  [Huy tuyen]│                          │
+│ │ # │ Khach hang     │Thung│ Chang │ ETA  ││                          │
+│ │ 7 │ Ve kho Minh Phu│  —  │7,92 km│  —   ││                          │
+│ │ Tong cong          │  92 │25,90km│      ││                          │
+│ └─────────────────────────────────────────┘│                          │
+│ [Chinh thu cong: so voi tu dong]  [Chot ke hoach]                     │
+└────────────────────────────────────────────┴─────────────────────────┘
 ```
 
-**Khối chỉ số so sánh là thứ hội đồng nhìn vào đầu tiên.** Đặt ở vị trí nổi bật nhất, nền `--xanh-50`.
+Bảng trái chiếm 2/3, bản đồ 1/3 và **dính trên màn hình khi cuộn** để đối chiếu ghim số với
+bảng của tuyến đang xem. Mỗi khối là một thẻ thu gọn được; đã có tuyến thì thẻ "Chọn xe" tự
+thu gọn, tóm tắt số xe và sức chứa ngay trên tiêu đề. Không dùng khối ghi chú nền vàng: đơn
+chưa xếp được nằm luôn trong thẻ "Đơn chờ phân tuyến" và một dòng của bảng kết quả.
+Sau khi chạy, mỗi đơn còn lại trong thẻ đó có nút **"Hoãn sang ngày mai"** (CN-03-14); bấm vào
+thì hộp xác nhận nói rõ đơn sẽ được xếp trước trong lần phân tuyến tới. Đơn đã từng hoãn mang
+nhãn "Đã hoãn N lần" cạnh tên khách (BR03-14).
+Nút "Chốt kế hoạch" vẫn bấm được khi chưa đủ điều kiện; bấm vào thì hiện toast đỏ nói rõ vì
+sao (còn đơn chưa xếp, hoặc còn tuyến nháp chưa giao tài xế). Chỉ khóa hẳn khi không còn
+tuyến nháp nào.
 
 ---
 

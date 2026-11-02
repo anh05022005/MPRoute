@@ -110,4 +110,16 @@ public class Route {
         stops.add(stop);
         stop.setRoute(this);
     }
+
+    /**
+     * Chang cuoi diem cuoi -> depot, don vi MET (CBR-01). Khong luu cot rieng ma suy ra tu
+     * tong tru cac chang toi tung diem, nen cong lai luon khop dung totalDistance da luu.
+     *
+     * Tinh bang double o day chu khong de template tu tru: #aggregates.sum tra ve BigDecimal,
+     * ma SpEL chia BigDecimal thi giu so chu so le cua so bi chia — 3132,6 m / 1000 ra 3,1 km,
+     * man hinh hien "3,10 km" trong khi chang that la 3,13 km.
+     */
+    public double getReturnLegDistance() {
+        return totalDistance - stops.stream().mapToDouble(RouteStop::getLegDistance).sum();
+    }
 }
