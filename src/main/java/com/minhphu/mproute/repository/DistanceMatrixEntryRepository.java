@@ -13,7 +13,7 @@ public interface DistanceMatrixEntryRepository extends JpaRepository<DistanceMat
             Double fromLatitude, Double fromLongitude, Double toLatitude, Double toLongitude);
 
     // Nap ca bo cache mot lan de thuat toan khong phai truy van DB trong vong lap.
-    // Day la diem mau chot ve hieu nang: 2-opt goi ham khoang cach hang nghin lan.
+    // Day la diem mau chot ve hieu nang: bo giai goi ham khoang cach hang chuc nghin lan.
     List<DistanceMatrixEntry> findByFromLatitudeInAndFromLongitudeIn(
             List<Double> latitudes, List<Double> longitudes);
 }

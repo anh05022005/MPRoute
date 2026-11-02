@@ -54,9 +54,9 @@ class VrpFileReaderTest {
         assertEquals(0.0, instance.getPoints().get(0).getWeight());
 
         /*
-         * Ma tran phai DOI XUNG. 2-opt dung cong thuc do lech bon canh, va cong thuc do
-         * chi dung khi D[i][j] = D[j][i]. Voi Euclid thi hien nhien doi xung, nhung kiem
-         * mot cap la chan duoc truong hop sau nay co ai do doi cach tinh.
+         * Ma tran phai DOI XUNG: loi giai toi uu cong bo cua Augerat tinh tren khoang
+         * cach Euclid hai chieu bang nhau. Kiem mot cap la chan duoc truong hop sau nay
+         * co ai do doi cach tinh.
          */
         assertEquals(instance.getMatrix()[3][7], instance.getMatrix()[7][3]);
     }

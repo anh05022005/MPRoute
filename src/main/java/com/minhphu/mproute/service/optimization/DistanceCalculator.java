@@ -12,7 +12,7 @@ import java.util.List;
  * va do chinh la thu cho phep he thong van chay khi OSRM chet (CBR-11).
  *
  * LUU Y VE HIEU NANG: khong duoc goi ham nay ben trong vong lap cua thuat toan.
- * 2-opt hoi khoang cach hang nghin lan, moi lan mot HTTP request la treo chuong trinh.
+ * Bo giai hoi khoang cach hang chuc nghin lan, moi lan mot HTTP request la treo chuong trinh.
  * Cach dung dung: DistanceMatrixService nap san toan bo ma tran vao bo nho mot lan,
  * thuat toan chi tra matrix[i][j].
  */

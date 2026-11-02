@@ -96,7 +96,7 @@ class RouteDistanceCalculatorTest {
         /*
          * DAO NGUOC THU TU phai ra cung tong, vi ma tran nay doi xung.
          * KHO -> C -> B -> A -> KHO = 3000 + 4000 + 3000 + 4000 = 14000.
-         * Day cung la tinh chat ma 2-opt dua vao o tuan 7.
+         * Nho vay tai xe di nguoc chieu tuyen cung khong lam lech so km bao cao.
          */
         OptimizationRoute reversedRoute = new OptimizationRoute(
                 new OptimizationVehicle(1L, "29H-123.45", 1500, 12));

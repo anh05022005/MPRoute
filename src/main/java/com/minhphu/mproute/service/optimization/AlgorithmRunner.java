@@ -321,11 +321,10 @@ public final class AlgorithmRunner {
     }
 
     /**
-     * Doi xe vua du cho bo du lieu sinh ra, du RONG 25% de ca ba bo giai deu xep het diem.
+     * Doi xe vua du cho bo du lieu sinh ra, du RONG 25% de bo giai xep het diem.
      *
-     * Vi sao phai du rong: thieu suc chua thi Nearest Neighbor bo lai vai diem con OR-Tools
-     * xep het, luc do hai cot km khong dat canh nhau duoc nua (xem canh bao o bang so sanh).
-     * Muon do RIENG chat luong thuat toan thi phai bo yeu to "ai bo diem" ra khoi phep do.
+     * Vi sao phai du rong: thieu suc chua thi bo giai bo lai vai diem, luc do so km khong
+     * con dat canh moc A/B duoc nua vi hai ben khong phu cung tap diem.
      */
     private static List<OptimizationVehicle> fleetFor(List<OptimizationPoint> allPoints) {
 

@@ -237,8 +237,8 @@ public final class VrpFileReader {
      * khi chay benchmark lan dau — gap ra am hoac thap bat thuong thi kiem lai dong nay
      * truoc tien.
      *
-     * Ma tran doi xung san (d(i,j) = d(j,i)) vi Euclid doi xung, nen 2-opt dung duoc ngay
-     * khong can buoc doi xung hoa nhu voi ma tran OSRM.
+     * Ma tran doi xung san (d(i,j) = d(j,i)) vi Euclid doi xung, khong can buoc doi
+     * xung hoa nhu voi ma tran OSRM.
      */
     private static double[][] buildEuclideanMatrix(List<OptimizationPoint> points) {
         int size = points.size();

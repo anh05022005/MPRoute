@@ -23,7 +23,7 @@ import java.util.Optional;
  * Nap ma tran khoang cach vao BO NHO mot lan truoc khi thuat toan chay (CN-03-05).
  *
  * DAY LA LOP QUAN TRONG NHAT VE HIEU NANG CUA CA DO AN. Ly do:
- * 2-opt hoi khoang cach hang nghin lan cho mot tuyen. Neu moi lan hoi la mot request
+ * Bo giai hoi khoang cach hang chuc nghin lan moi lan chay. Neu moi lan hoi la mot request
  * HTTP toi OSRM hoac mot cau SELECT xuong MySQL thi chuong trinh treo — day chinh la
  * dieu cam so 4 trong quy uoc ky thuat. Sau khi goi loadMatrix() xong, thuat toan chi
  * con tra matrix[i][j] tren mang hai chieu, khong dung toi mang lan CSDL nua.
@@ -32,7 +32,7 @@ import java.util.Optional;
  *   B1 — tra bo nho dem trong bang distance_matrix theo toa do (CBR-12)
  *   B2 — con o nao thieu thi goi OSRM Table API MOT lan cho toan bo diem,
  *        OSRM chet thi lui ve Haversine va bat co approximate (CBR-11, MSG-09)
- *   B3 — DOI XUNG HOA ma tran, bat buoc, neu khong 2-opt tinh sai
+ *   B3 — DOI XUNG HOA ma tran (ly do o ham symmetrize)
  *   B4 — tra ve
  */
 @Service
@@ -257,20 +257,16 @@ public class DistanceMatrixService {
     // ==================== B3 ====================
 
     /**
-     * DOI XUNG HOA — buoc bat buoc, bo la 2-opt tinh sai.
+     * DOI XUNG HOA ma tran: lay trung binh cong hai chieu.
      *
      * OSRM tra ve ma tran BAT DOI XUNG: D[i][j] khac D[j][i] vi duong mot chieu,
-     * cam re trai, dai phan cach. Nhung cong thuc bon canh cua 2-opt
+     * cam re trai, dai phan cach. Buoc nay ban dau BAT BUOC vi cong thuc bon canh cua
+     * 2-opt chi dung khi D[x][y] = D[y][x]. 2-opt da bo (docs/09 muc A7) va OR-Tools
+     * nhan duoc ma tran bat doi xung, nhung van giu buoc nay de cac so km da do o
+     * docs/07 va cac tuyen da luu van so sanh duoc voi lan chay moi.
      *
-     *     delta = D[a][c] + D[b][d] - D[a][b] - D[c][d]
-     *
-     * chi dung khi D[x][y] = D[y][x]. De nguyen ma tran tho thi 2-opt sai theo kieu
-     * te nhat: no TUONG la cai thien roi nhan phep dao, trong khi tuyen that dai ra.
-     * Da kiem chung bang so trong docs/03: delta = -9 nhung tuyen dai them 19.
-     *
-     * Lay trung binh cong lam gia dinh "khoang cach doi xung" thanh dung theo cau tao.
      * Cai gia phai tra la mat mot phan thong tin ve duong mot chieu — da ghi vao
-     * muc han che 4.7 cua bao cao.
+     * muc han che 4.6 cua bao cao (docs/07).
      */
     private void symmetrize(double[][] matrix) {
         int size = matrix.length;

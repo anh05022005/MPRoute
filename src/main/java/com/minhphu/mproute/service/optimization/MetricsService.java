@@ -11,7 +11,7 @@ import java.util.List;
  * so voi cach Minh Phu dang lam — do la cau tra loi cho cau hoi "de tai nay giai quyet
  * duoc gi", va no phai co so kem theo chu khong noi chung chung duoc.
  *
- * BON MOC, moi moc tra loi mot cau hoi khac nhau:
+ * HAI MOC, moi moc tra loi mot cau hoi khac nhau:
  *
  *   Moc A — moi don mot chuyen khu hoi rieng tu kho.
  *           Tra loi: "so voi cach hien tai thi giam bao nhieu".
@@ -24,12 +24,11 @@ import java.util.List;
  *           Con so khiem ton (8-15%) nhung DANG TIN HON HAN, vi hai ben chi khac nhau
  *           dung mot thu la thu tu di.
  *
- *   NN + 2-opt — ban tu cai dat. Tra loi: "em tu lam duoc den dau".
+ *   OR-Tools — ket qua bo giai, dat canh hai moc tren. Voi benchmark Augerat thi con
+ *   so them voi loi giai toi uu da cong bo (gap).
  *
- *   Moc C — OR-Tools, bo giai chinh. Tra loi: "phan tu lam con kem loi giai tot bao nhieu".
- *
- * BAO CAO CA BON. Mot con so 45% khong kem boi canh yeu hon han bon con so co giai thich.
- * Biet gioi han cua giai phap minh viet ra la mot ket qua, khong phai mot thieu sot.
+ * BAO CAO CA HAI MOC. Mot con so 45% khong kem boi canh yeu hon han hai con so co giai
+ * thich.
  *
  * Lop nay khong giu trang thai, khong dung CSDL, khong dung mang — de AlgorithmRunner
  * chay bang main() va test JUnit deu goi thang duoc.
@@ -61,7 +60,7 @@ public final class MetricsService {
      *
      * Muc dich la CO LAP dong gop cua viec sap thu tu: hai ben co cung so tuyen, cung
      * cach phan don cho xe, cung tap diem — khac nhau dung mot thu la thu tu di. Chenh
-     * lech do vay quy hoan toan ve phan sap thu tu (Nearest Neighbor + 2-opt).
+     * lech do vay quy hoan toan ve phan sap thu tu cua bo giai.
      *
      * Sap theo orderId tang dan chinh la thu tu don ve trong ngay, tuc thu tu ma nguoi
      * dieu phoi se giao neu khong co he thong nao ho tro.
@@ -109,9 +108,8 @@ public final class MetricsService {
     /**
      * Cac diem THUC SU da duoc xep vao tuyen cua mot ket qua.
      *
-     * Dung de doi chieu hai bo giai co phu cung tap diem khong: chi khi CUNG TAP DIEM
-     * thi hai con so km moi dat canh nhau duoc. Ben nao bo bot diem thi tuyen ngan hon
-     * la duong nhien, khong phai vi thuat toan tot hon.
+     * Moc A chi tinh tren cac diem nay: chi khi CUNG TAP DIEM thi hai con so km moi dat
+     * canh nhau duoc. Diem bi bo lai ma van tinh vao moc A thi muc giam bi thoi phong.
      */
     public static List<OptimizationPoint> assignedPoints(RoutingResult result) {
         List<OptimizationPoint> points = new ArrayList<>();
@@ -141,8 +139,8 @@ public final class MetricsService {
      *
      *     gap = (ket qua cua minh - ket qua tham chieu) / ket qua tham chieu x 100
      *
-     * Dung cho hai viec: do NN+2-opt cach OR-Tools bao nhieu, va do ca hai cach loi giai
-     * toi uu da biet cua bo benchmark Augerat bao nhieu (tuan 10).
+     * Dung de do OR-Tools cach loi giai toi uu da biet cua bo benchmark Augerat bao
+     * nhieu (tuan 10).
      */
     public static double gapPercent(double candidateDistance, double referenceDistance) {
         if (referenceDistance <= 0) {

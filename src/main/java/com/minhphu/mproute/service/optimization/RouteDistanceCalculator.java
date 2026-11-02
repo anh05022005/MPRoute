@@ -9,9 +9,8 @@ import java.util.List;
  * Moi chi so so sanh o chuong 4 — muc giam so voi moc A, moc B, gap benchmark — deu
  * quy ve ham nay. Sai o day thi toan bo bang so lieu sai theo ma van trong hop ly.
  *
- * Dat rieng mot lop, dung static, de CA HAI bo giai (OR-Tools va NN+2-opt tu cai dat)
- * cung goi mot cai. Hai ben tu tinh rieng thi chi can lech mot chang la bang so sanh
- * mat y nghia.
+ * Dat rieng mot lop, dung static, de bo giai, moc A/B va benchmark cung goi mot cai.
+ * Moi noi tu tinh rieng thi chi can lech mot chang la bang so sanh mat y nghia.
  *
  * Lop nay khong phai @Service: no khong giu trang thai gi, khong dung DB, khong dung
  * mang. Nho vay test JUnit goi thang, va AlgorithmRunner chay bang main() cung goi thang.

@@ -36,7 +36,7 @@ public final class EtaCalculator {
     /**
      * Dat estimatedArrival cho tung diem cua tuyen.
      *
-     * @param route                 tuyen da co thu tu diem cuoi cung (sau 2-opt hoac OR-Tools)
+     * @param route                 tuyen da co thu tu diem cuoi cung (ket qua OR-Tools)
      * @param matrix                ma tran khoang cach da nap san, met
      * @param departureTime         gio xe roi kho
      * @param speedKmh              toc do trung binh, km/h (tham so AVERAGE_SPEED)

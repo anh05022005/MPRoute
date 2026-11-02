@@ -42,7 +42,7 @@ public class OptimizationRoute {
      * Them mot diem vao CUOI tuyen va cong don nhu cau.
      *
      * Cong don ngay tai day chu khong tinh lai bang cach duyet ca danh sach moi lan:
-     * Nearest Neighbor goi ham nay trong vong lap, tinh lai moi lan la thua.
+     * OrToolsSolver goi ham nay cho tung diem khi doc ket qua, tinh lai moi lan la thua.
      */
     public void addPoint(OptimizationPoint point) {
         points.add(point);

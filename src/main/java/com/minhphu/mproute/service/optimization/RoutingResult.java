@@ -10,8 +10,8 @@ import java.util.List;
 /**
  * Toan bo ket qua mot lan chay thuat toan.
  *
- * Hai bo giai (OR-Tools va NN+2-opt tu cai dat) deu tra ve dung kieu nay, nho vay
- * man hinh phan tuyen va bang so sanh chuong 4 khong phai biet ben trong chay gi.
+ * OrToolsSolver tra ve kieu nay, nho vay man hinh phan tuyen va bang so sanh chuong 4
+ * khong phai biet ben trong bo giai chay gi.
  *
  * unassignedPoints la truong QUAN TRONG chu khong phai truong phu: thuat toan khong
  * xep het don thi PHAI noi ra (CN-03-14), khong duoc im lang bo qua. Danh sach rong
