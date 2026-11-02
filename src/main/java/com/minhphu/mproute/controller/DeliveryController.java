@@ -21,7 +21,6 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
-import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 import java.util.Optional;
@@ -75,18 +74,15 @@ public class DeliveryController {
         return "redirect:/driver/my-route";
     }
 
-    /** CN-05-06, CN-05-07 — cap nhat da giao, kem so tien thuc thu neu don phai thu. */
+    /** CN-05-06, CN-05-07 — cap nhat da giao, coi nhu da thu du so phai thu. */
     @PostMapping("/my-route/stops/{stopId}/delivered")
     public String markDelivered(@PathVariable Long stopId,
-                                @RequestParam(required = false) BigDecimal collectedAmount,
-                                @RequestParam(required = false) String collectionNote,
                                 @RequestParam(required = false) Double latitude,
                                 @RequestParam(required = false) Double longitude,
                                 @AuthenticationPrincipal CurrentUser currentUser,
                                 RedirectAttributes redirectAttributes) {
         try {
-            var stop = deliveryService.markDelivered(currentUser.getId(), stopId,
-                    collectedAmount, collectionNote, latitude, longitude);
+            var stop = deliveryService.markDelivered(currentUser.getId(), stopId, latitude, longitude);
             redirectAttributes.addFlashAttribute("successMessage",
                     "Đã ghi nhận giao thành công cho " + stop.getOrder().getCustomer().getName() + ".");
         } catch (IllegalArgumentException | IllegalStateException ex) {

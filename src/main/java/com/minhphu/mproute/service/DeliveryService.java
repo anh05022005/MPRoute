@@ -29,15 +29,12 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
-import java.text.DecimalFormat;
-import java.text.DecimalFormatSymbols;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
-import java.util.Locale;
 import java.util.Optional;
 
 /**
@@ -227,50 +224,22 @@ public class DeliveryService {
     /**
      * CN-05-06, CN-05-07 — tai xe bam "Da giao".
      *
-     * SO TIEN THU LA PHAN DE SAI NHAT o day, va sai thi sai vao tien mat cua doanh nghiep:
-     *   - don co amount_to_collect > 0 thi BAT BUOC nhap so thuc thu (BR05-11)
-     *   - thu khac so phai thu thi BAT BUOC ghi ly do va bao ngay cho dieu phoi (BR05-12)
-     * He thong chi GHI NHAN chu khong quan ly dong tien, nhung ghi nhan sai thi cuoi ngay
-     * doi soat khong ra.
+     * Bam "Da giao xong" nghia la da thu DU so phai thu (docs/09 muc A11). Truoc day tai xe
+     * phai go lai so tien thuc thu, nhung o do gan nhu luc nao cung bang so phai thu, chi
+     * them mot buoc cho nguoi dang dung truoc cua hang. Khach tra thieu thi tai xe bao dieu
+     * phoi ngoai he thong, nhu luc chua co phan mem.
      *
-     * @param collectedAmount so tien tai xe thuc thu, null khi don khong phai thu gi
+     * Van ghi collected_amount cho tung diem: tong ket cuoi tuyen va doi soat quy cong tu
+     * cot nay, khong cong tu don.
+     *
      * @param latitude, longitude toa do luc bam nut, null neu trinh duyet khong cho (BR05-08)
      */
     @Transactional
-    public RouteStop markDelivered(Long userId, Long stopId,
-                                   BigDecimal collectedAmount, String collectionNote,
-                                   Double latitude, Double longitude) {
+    public RouteStop markDelivered(Long userId, Long stopId, Double latitude, Double longitude) {
 
         RouteStop stop = requireCurrentStop(userId, stopId);
         Order order = stop.getOrder();
-        BigDecimal amountToCollect = order.getAmountToCollect();
-
-        if (amountToCollect.signum() > 0) {
-            // BR05-11
-            if (collectedAmount == null) {
-                throw new IllegalArgumentException(
-                        "Đơn này phải thu tiền nên bắt buộc nhập số tiền thực thu.");
-            }
-            if (collectedAmount.signum() < 0) {
-                throw new IllegalArgumentException("Số tiền thực thu không được âm.");
-            }
-
-            // BR05-12 — thu khac so phai thu thi phai giai trinh, khong duoc de troi
-            if (collectedAmount.compareTo(amountToCollect) != 0) {
-                if (collectionNote == null || collectionNote.isBlank()) {
-                    throw new IllegalArgumentException(
-                            "Số tiền thu khác số phải thu nên bắt buộc ghi lý do.");
-                }
-                notifyDispatchers("NTF-09", String.format(
-                        "Đơn %s (%s) thu %s trong khi phải thu %s. Lý do: %s",
-                        order.getCode(), order.getCustomer().getName(),
-                        formatMoney(collectedAmount), formatMoney(amountToCollect),
-                        collectionNote.trim()));
-            }
-
-            stop.setCollectedAmount(collectedAmount);
-            stop.setCollectionNote(blankToNull(collectionNote));
-        }
+        stop.setCollectedAmount(order.getAmountToCollect());
 
         stop.setStatus(StopStatus.DELIVERED);
         recordArrival(stop, latitude, longitude);
@@ -452,6 +421,8 @@ public class DeliveryService {
         copy.setTotalVolume(source.getTotalVolume());
         copy.setTotalAmount(source.getTotalAmount());
         copy.setAmountToCollect(source.getAmountToCollect());
+        // Don tao lai van la don cua khach da bi hoan, phai mang theo uu tien (BR03-14)
+        copy.setPostponeCount(source.getPostponeCount() + 1);
 
         for (OrderItem line : source.getItems()) {
             OrderItem lineCopy = new OrderItem();
@@ -659,19 +630,6 @@ public class DeliveryService {
 
     private String blankToNull(String value) {
         return (value == null || value.isBlank()) ? null : value.trim();
-    }
-
-    /**
-     * Tien theo quy uoc hien thi cua do an: dau cham ngan hang nghin, hau to "d" (docs/05).
-     *
-     * Dung DecimalFormatSymbols dat tay chu khong dua vao locale cua may: may cai dat tieng Anh
-     * se ra "5,000,000d", may cai tieng Viet ra "5.000.000d" — cung mot dong code ma hai may cho
-     * hai ket qua khac nhau la loai loi chi lo ra khi doi may, dung luc sap bao ve.
-     */
-    private static String formatMoney(BigDecimal amount) {
-        DecimalFormatSymbols symbols = new DecimalFormatSymbols(Locale.ROOT);
-        symbols.setGroupingSeparator('.');
-        return new DecimalFormat("#,##0", symbols).format(amount) + "đ";
     }
 
     /**

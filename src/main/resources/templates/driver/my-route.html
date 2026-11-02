@@ -89,26 +89,69 @@
 
         <!-- ============ CN-05-03 Danh sach diem giao theo thu tu ============ -->
         <div th:each="stop : ${route.stops}"
+             th:with="isCurrent=${currentStop != null and stop.id == currentStop.id},
+                      isDone=${stop.status.name() != 'PENDING' and stop.status.name() != 'DELIVERING'}"
              class="stop-card"
-             th:classappend="${currentStop != null and stop.id == currentStop.id} ? 'is-current'
-                             : (${stop.status.name() == 'PENDING' or stop.status.name() == 'DELIVERING'} ? '' : 'is-done')">
+             th:classappend="${isCurrent} ? 'is-current' : (${isDone} ? 'is-done' : '')">
 
-            <div class="stop-card-title">
+            <!--
+                Diem da xong bam vao tieu de de mo lai thong tin: tai xe hay can goi lai khach
+                vua giao, hoac bi khach hoi lai da giao nhung gi.
+            -->
+            <div class="stop-card-title"
+                 th:classappend="${isDone} ? 'stop-toggle'"
+                 th:attr="data-bs-toggle=${isDone} ? 'collapse' : null,
+                          data-bs-target=${isDone} ? '#done-' + ${stop.id} : null,
+                          role=${isDone} ? 'button' : null">
                 <span th:text="${stop.sequence} + '. ' + ${stop.order.customer.name}">2. Siêu thị Hồng Hà</span>
                 <span class="status-tag"
                       th:classappend="${stop.status.name() == 'DELIVERED'} ? 'status-tag-success'
                                       : (${stop.status.name() == 'FAILED'} ? 'status-tag-danger'
                                       : (${stop.status.name() == 'POSTPONED'} ? 'status-tag-warning' : 'status-tag-muted'))"
                       th:text="${stop.status.displayName}">Chờ giao</span>
+                <span th:if="${isDone}" class="push-right text-sub small fw-normal">Xem lại</span>
             </div>
 
             <!-- Diem chua toi luot: hien RUT GON, chi so thung va gio du kien -->
-            <div th:unless="${currentStop != null and stop.id == currentStop.id}" class="small text-sub">
+            <div th:unless="${isCurrent}" class="small text-sub">
                 <span th:text="${#aggregates.sum(stop.order.items.![boxCount])} + ' thùng'">45 thùng</span>
                 <span th:if="${stop.actualArrival != null}"
                       th:text="' · ' + ${#temporals.format(stop.actualArrival, 'HH:mm')}"> · 08:32</span>
                 <span th:if="${stop.actualArrival == null and stop.estimatedArrival != null}"
                       th:text="' · dự kiến ' + ${#temporals.format(stop.estimatedArrival, 'HH:mm')}"> · dự kiến 09:20</span>
+            </div>
+
+            <!-- Thong tin xem lai cua diem da xong: chi doc, khong con nut cap nhat ket qua -->
+            <div th:if="${isDone}" class="collapse" th:id="'done-' + ${stop.id}">
+                <div class="stop-address" th:text="${stop.order.deliveryAddress}">Số 8 Thái Hà, Đống Đa</div>
+                <div class="small">
+                    <span th:text="${stop.order.customer.contactPerson} ?: ${stop.order.customer.name}">Trần Thị Bình</span>
+                    <span th:text="' · ' + ${stop.order.customer.phone}"> · 0912345678</span>
+                </div>
+                <div class="small text-sub mt-1" th:text="${stop.order.code}">MP2608260001</div>
+
+                <div class="stop-items">
+                    <div th:each="item : ${stop.order.items}">
+                        <span th:text="${item.product.name}">Nước giặt 3.5L</span>
+                        <span class="push-right" th:text="'x ' + ${item.boxCount}">x 30</span>
+                    </div>
+                </div>
+
+                <div th:if="${stop.status.name() == 'DELIVERED'}" class="stop-amount">
+                    Đã thu:
+                    <strong th:if="${stop.order.amountToCollect.signum() > 0}"
+                            th:text="${#numbers.formatInteger(stop.order.amountToCollect, 0, 'POINT')} + 'đ'">2.200.000đ</strong>
+                    <span th:if="${stop.order.amountToCollect.signum() == 0}"
+                          th:text="'0đ (' + ${stop.order.paymentMethod.displayName} + ')'">0đ (Công nợ)</span>
+                </div>
+                <div th:if="${stop.status.name() == 'FAILED' and stop.failureReason != null}" class="stop-note"
+                     th:text="'Lý do: ' + ${stop.failureReason.displayName}
+                              + (${stop.failureNote != null} ? ' — ' + ${stop.failureNote} : '')">Lý do: Khách không có mặt</div>
+                <div th:if="${stop.status.name() == 'POSTPONED' and stop.failureNote != null}" class="stop-note"
+                     th:text="'Ghi chú: ' + ${stop.failureNote}">Ghi chú: Khách hẹn chiều mai</div>
+
+                <a class="btn btn-outline-secondary w-100"
+                   th:href="'tel:' + ${stop.order.customer.phone}">Gọi khách</a>
             </div>
 
             <!-- ============ CN-05-04 Chi tiet diem dang xu ly ============ -->
@@ -180,27 +223,8 @@
                     <input type="hidden" name="latitude" class="position-latitude">
                     <input type="hidden" name="longitude" class="position-longitude">
 
-                    <!-- Don phai thu tien thi hien san so tien, tai xe xac nhan hoac sua (BR05-11) -->
-                    <div th:if="${stop.order.amountToCollect.signum() > 0}" class="mb-2">
-                        <label class="form-label mb-1 small" th:for="'collected-' + ${stop.id}">
-                            Số tiền thực thu (đ)</label>
-                        <input type="number" step="1000" min="0" required
-                               class="form-control collected-amount"
-                               name="collectedAmount"
-                               th:id="'collected-' + ${stop.id}"
-                               th:value="${stop.order.amountToCollect}"
-                               th:data-expected="${stop.order.amountToCollect}">
-
-                        <!-- BR05-12: thu khac so phai thu thi bat buoc ghi ly do, may chu chan lai -->
-                        <div class="collection-note-box mt-2" hidden>
-                            <label class="form-label mb-1 small">Thu khác số phải thu — ghi rõ lý do</label>
-                            <input type="text" name="collectionNote" maxlength="500"
-                                   class="form-control collection-note"
-                                   placeholder="Ví dụ: khách trả thiếu, hẹn trả nốt ngày mai">
-                        </div>
-                    </div>
-
-                    <button type="submit" class="btn btn-primary w-100 btn-lg">Đã giao xong</button>
+                    <!-- Bam nut nay la da thu du so "Phai thu" o tren, khong go lai so tien (docs/09 A11) -->
+                    <button type="submit" class="btn btn-primary w-100 btn-lg mt-2">Đã giao xong</button>
                 </form>
 
                 <!-- ============ CN-05-08 Giao that bai · CN-05-09 Hoan ============ -->

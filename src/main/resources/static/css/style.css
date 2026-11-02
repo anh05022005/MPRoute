@@ -469,6 +469,9 @@ fieldset:disabled .btn {
 }
 /* Finished stops fade back so the eye skips them */
 .stop-card.is-done { opacity: 0.55; }
+/* ...but a finished stop the driver opened again must be readable */
+.stop-card.is-done:has(.collapse.show, .collapsing) { opacity: 1; }
+.stop-toggle { cursor: pointer; }
 
 .stop-card-title {
   display: flex;

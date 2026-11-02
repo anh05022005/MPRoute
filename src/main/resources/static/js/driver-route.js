@@ -1,12 +1,11 @@
 /*
  * Man hinh tai xe (CN-05-06 -> CN-05-09).
  *
- * Ba viec, deu nho:
+ * Hai viec, deu nho:
  *   1. Lay toa do GPS cua trinh duyet va dien vao form truoc khi gui (BR05-08)
- *   2. Thu khac so phai thu thi mo o ghi ly do (BR05-12)
- *   3. Chon ly do that bai la "Khac" thi mo o mo ta (BR05-06)
+ *   2. Chon ly do that bai la "Khac" thi mo o mo ta (BR05-06)
  *
- * Hai viec sau chi la TIEN NGHI. May chu van chan lai bang dung hai luat do o
+ * Viec sau chi la TIEN NGHI. May chu van chan lai bang dung luat do o
  * DeliveryService — tat JavaScript roi gui thang len van bi tu choi (CBR-15).
  */
 (function () {
@@ -18,7 +17,6 @@
     }
 
     askForPosition();
-    setUpCollectedAmount();
     setUpFailureReason();
     setUpIncidentForm();
 
@@ -57,28 +55,6 @@
         if (input) {
             input.value = value;
         }
-    }
-
-    // ==================== BR05-12 thu khac so phai thu ====================
-
-    function setUpCollectedAmount() {
-        document.querySelectorAll('.collected-amount').forEach(function (input) {
-            var box = input.closest('form').querySelector('.collection-note-box');
-            var note = input.closest('form').querySelector('.collection-note');
-            if (!box || !note) {
-                return;
-            }
-
-            input.addEventListener('input', function () {
-                var expected = parseFloat(input.dataset.expected) || 0;
-                var actual = parseFloat(input.value);
-                var different = !isNaN(actual) && actual !== expected;
-
-                box.hidden = !different;
-                // required chi bat khi o dang hien: o an ma required thi form khong gui duoc
-                note.required = different;
-            });
-        });
     }
 
     // ==================== BR05-06 ly do "Khac" ====================
