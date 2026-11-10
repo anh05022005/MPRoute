@@ -164,6 +164,7 @@ Mọi form dùng chung một khuôn (`fragments/form-header.html` + lớp `.entr
 
 - Đầu trang: đường dẫn *Danh mục › Phương tiện › Sửa phương tiện* (khúc cuối viết đủ, trùng tiêu đề), tiêu đề, nút **← Quay lại danh sách** bên phải
 - Rộng hết màn hình; ô nhập cao hơn ô lọc trên danh sách, nhãn đậm đặt trên ô
+- Nhãn trên ô nhập in đậm ở **mọi** màn, không riêng form: ô lọc trên danh sách, hộp thoại, màn tài xế, trang đăng nhập (`.form-label`, `.toolbar label`)
 - Ô số có đơn vị dính liền phía sau (`kg`, `m³`, `đ`)
 - Form không có bản đồ: nút **Lưu** · **Hủy** ở dưới cùng bên trái, sau một đường kẻ
 - Form có bản đồ (khách hàng, kho): ô nhập bên trái, bản đồ bên phải, **Hủy** · **Lưu** dưới bản đồ
