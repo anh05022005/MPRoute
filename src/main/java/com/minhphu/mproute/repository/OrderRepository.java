@@ -51,6 +51,9 @@ public interface OrderRepository extends JpaRepository<Order, Long> {
      * Man hinh danh sach don: loc theo ngay giao, trang thai, khach hang (CN-02-01).
      * Truyen null de bo qua tung dieu kien.
      *
+     * O tu khoa so voi ma don, ten khach, SDT khach va dia chi giao: dieu phoi vien
+     * hay nhan dien don qua mot trong bon thu nay khi khach goi dien hoi.
+     *
      * JOIN FETCH customer vi danh sach nao cung hien ten khach: khong nap san thi
      * moi dong sinh them mot cau SELECT rieng (van de N+1), 15 dong la 16 cau truy van.
      *
@@ -62,16 +65,29 @@ public interface OrderRepository extends JpaRepository<Order, Long> {
             WHERE (:deliveryDate IS NULL OR o.deliveryDate = :deliveryDate)
               AND (:status IS NULL OR o.status = :status)
               AND (:customerId IS NULL OR c.id = :customerId)
+              AND (:keyword IS NULL
+                   OR LOWER(o.code) LIKE LOWER(CONCAT('%', :keyword, '%'))
+                   OR LOWER(c.name) LIKE LOWER(CONCAT('%', :keyword, '%'))
+                   OR c.phone LIKE CONCAT('%', :keyword, '%')
+                   OR LOWER(o.deliveryAddress) LIKE LOWER(CONCAT('%', :keyword, '%')))
             """,
             // Phai viet tay cau dem: Spring Data khong tu suy ra duoc cau dem
-            // tu mot cau co JOIN FETCH
+            // tu mot cau co JOIN FETCH. Dieu kien WHERE phai giong het cau tren,
+            // lech mot dong la so trang bao sai
             countQuery = """
             SELECT COUNT(o) FROM Order o
+            JOIN o.customer c
             WHERE (:deliveryDate IS NULL OR o.deliveryDate = :deliveryDate)
               AND (:status IS NULL OR o.status = :status)
-              AND (:customerId IS NULL OR o.customer.id = :customerId)
+              AND (:customerId IS NULL OR c.id = :customerId)
+              AND (:keyword IS NULL
+                   OR LOWER(o.code) LIKE LOWER(CONCAT('%', :keyword, '%'))
+                   OR LOWER(c.name) LIKE LOWER(CONCAT('%', :keyword, '%'))
+                   OR c.phone LIKE CONCAT('%', :keyword, '%')
+                   OR LOWER(o.deliveryAddress) LIKE LOWER(CONCAT('%', :keyword, '%')))
             """)
-    Page<Order> search(@Param("deliveryDate") LocalDate deliveryDate,
+    Page<Order> search(@Param("keyword") String keyword,
+                       @Param("deliveryDate") LocalDate deliveryDate,
                        @Param("status") OrderStatus status,
                        @Param("customerId") Long customerId,
                        Pageable pageable);

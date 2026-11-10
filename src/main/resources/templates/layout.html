@@ -204,6 +204,9 @@
      khoi tom tat (CN-02-06). Controller nao can thi dat model.addAttribute("needsOrderJs", true) -->
 <script th:if="${needsOrderJs}" th:src="@{/js/order-form.js}"></script>
 
+<!-- Danh sach don: go toi dau tim toi do, khong tai lai trang (CN-02-01) -->
+<script th:if="${needsOrderSearchJs}" th:src="@{/js/order-search.js}"></script>
+
 <!-- Man hinh phan tuyen: ve diem giao len ban do (CN-03-02).
      Can ca canBanDo de nap Leaflet truoc.
      Man hinh su co dung lai chinh file nay de ve vi tri xe va cac diem chua giao (CN-06-06) -->

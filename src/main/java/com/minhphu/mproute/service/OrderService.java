@@ -59,9 +59,12 @@ public class OrderService {
     private final StockService stockService;
 
     @Transactional(readOnly = true)
-    public Page<Order> search(LocalDate deliveryDate, OrderStatus status, Long customerId,
-                              Pageable pageable) {
-        return orderRepository.search(deliveryDate, status, customerId, pageable);
+    public Page<Order> search(String keyword, LocalDate deliveryDate, OrderStatus status,
+                              Long customerId, Pageable pageable) {
+        // O tim kiem de trong gui len chuoi rong chu khong phai null.
+        // Doi ve null de cau JPQL bo qua dieu kien do
+        String normalizedKeyword = (keyword == null || keyword.isBlank()) ? null : keyword.trim();
+        return orderRepository.search(normalizedKeyword, deliveryDate, status, customerId, pageable);
     }
 
     @Transactional(readOnly = true)

@@ -61,11 +61,12 @@
     Cach dung:
         <div th:replace="~{fragments/pagination :: order-pager(
                  pageResult   = ${pageResult},
+                 keyword      = ${keyword},
                  deliveryDate = ${deliveryDate},
                  status       = ${status},
                  customerId   = ${customerId})}"></div>
 -->
-<div th:fragment="order-pager(pageResult, deliveryDate, status, customerId)"
+<div th:fragment="order-pager(pageResult, keyword, deliveryDate, status, customerId)"
      class="d-flex justify-content-between align-items-center"
      th:if="${pageResult.totalPages > 1}">
 
@@ -78,21 +79,21 @@
 
         <li class="page-item" th:classappend="${pageResult.first} ? 'disabled'">
             <a class="page-link"
-               th:href="@{/orders(page=${pageResult.number - 1}, deliveryDate=${deliveryDate},
+               th:href="@{/orders(page=${pageResult.number - 1}, keyword=${keyword}, deliveryDate=${deliveryDate},
                                   status=${status}, customerId=${customerId})}">Trước</a>
         </li>
 
         <li class="page-item" th:each="i : ${#numbers.sequence(0, pageResult.totalPages - 1)}"
             th:classappend="${i == pageResult.number} ? 'active'">
             <a class="page-link"
-               th:href="@{/orders(page=${i}, deliveryDate=${deliveryDate},
+               th:href="@{/orders(page=${i}, keyword=${keyword}, deliveryDate=${deliveryDate},
                                   status=${status}, customerId=${customerId})}"
                th:text="${i + 1}">1</a>
         </li>
 
         <li class="page-item" th:classappend="${pageResult.last} ? 'disabled'">
             <a class="page-link"
-               th:href="@{/orders(page=${pageResult.number + 1}, deliveryDate=${deliveryDate},
+               th:href="@{/orders(page=${pageResult.number + 1}, keyword=${keyword}, deliveryDate=${deliveryDate},
                                   status=${status}, customerId=${customerId})}">Sau</a>
         </li>
     </ul>

@@ -110,7 +110,8 @@ public class OrderController {
     // ==================== CN-02-01 Danh sach don hang ====================
 
     @GetMapping
-    public String list(@RequestParam(required = false)
+    public String list(@RequestParam(required = false) String keyword,
+                       @RequestParam(required = false)
                        @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate deliveryDate,
                        @RequestParam(required = false) OrderStatus status,
                        @RequestParam(required = false) Long customerId,
@@ -120,13 +121,15 @@ public class OrderController {
         // Don moi nhat len dau: dieu phoi vien vao man hinh nay chu yeu de xem don vua nhap
         var pageable = PageRequest.of(page, PAGE_SIZE,
                 Sort.by("deliveryDate").descending().and(Sort.by("id").descending()));
-        Page<Order> pageResult = orderService.search(deliveryDate, status, customerId, pageable);
+        Page<Order> pageResult = orderService.search(keyword, deliveryDate, status, customerId, pageable);
 
         model.addAttribute("pageResult", pageResult);
+        model.addAttribute("keyword", keyword);
         model.addAttribute("deliveryDate", deliveryDate);
         model.addAttribute("status", status);
         model.addAttribute("customerId", customerId);
         model.addAttribute("customers", activeCustomers());
+        model.addAttribute("needsOrderSearchJs", true);
         return "orders/orders";
     }
 
