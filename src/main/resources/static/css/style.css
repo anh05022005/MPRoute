@@ -395,6 +395,17 @@ fieldset:disabled .btn {
   padding-top: 0.55rem;
   padding-bottom: 0.55rem;
 }
+/* O nho trong bang (dong chi tiet don hang) giu chieu cao cu: cao bang o tren thi
+   bang dai gap ruoi ma khong them thong tin gi */
+.entry-form .form-control-sm,
+.entry-form .form-select-sm {
+  padding-top: 0.25rem;
+  padding-bottom: 0.25rem;
+}
+/* O chi de nhin (dia chi giao lay tu danh muc khach): nen xam cho biet khong go vao duoc */
+.entry-form .form-control[readonly] {
+  background-color: var(--surface-header);
+}
 /* Don vi (kg, m3, d) dinh lien sau o so: nhin la biet nhap theo don vi nao */
 .entry-form .input-group-text {
   font-size: var(--fs-label);
@@ -455,6 +466,21 @@ fieldset:disabled .btn {
 .combo-option + .combo-option { border-top: 1px solid var(--surface-header); }
 .combo-option:hover,
 .combo-option.is-active { background: var(--blue-100); }
+/* Ten khach ben trai, SDT ben phai cung dong: dieu phoi vien nghe may thuong chi nho
+   mot trong hai, nhin dong nao cung thay ca hai */
+.combo-option-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 12px;
+}
+.combo-option-name { font-weight: 600; }
+.combo-option-phone {
+  font-size: var(--fs-label);
+  color: var(--text-secondary);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
 .combo-option-sub {
   font-size: var(--fs-meta);
   color: var(--text-secondary);

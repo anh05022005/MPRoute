@@ -212,10 +212,11 @@
                 showStockHint(row, selected, boxCount);
 
                 if (isNaN(weightPerBox) || isNaN(boxCount) || boxCount <= 0) {
-                    row.querySelector('.line-weight').textContent = '—';
-                    row.querySelector('.line-volume').textContent = '—';
-                    row.querySelector('.line-unit-price').textContent = isNaN(pricePerBox) ? '—' : formatMoney(pricePerBox);
-                    row.querySelector('.line-total').textContent = '—';
+                    // Chua du san pham + so thung thi de trong o, chi hien don gia neu da chon san pham
+                    row.querySelector('.line-weight').textContent = '';
+                    row.querySelector('.line-volume').textContent = '';
+                    row.querySelector('.line-unit-price').textContent = isNaN(pricePerBox) ? '' : formatMoney(pricePerBox);
+                    row.querySelector('.line-total').textContent = '';
                     continue;
                 }
 
@@ -275,12 +276,16 @@
             })
             .map(function (option) {
                 var address = option.getAttribute('data-address') || '';
+                // Ten va SDT tach rieng de hien hai ben mot dong; thieu data-* thi lay chu cua option
+                var name = option.getAttribute('data-name') || option.textContent.trim();
+                var phone = option.getAttribute('data-phone') || '';
                 return {
                     value: option.value,
-                    label: option.textContent.trim(),
+                    name: name,
+                    phone: phone,
                     address: address,
-                    labelText: normalize(option.textContent),
-                    searchText: normalize(option.textContent + ' ' + address)
+                    labelText: normalize(name + ' ' + phone),
+                    searchText: normalize(name + ' ' + phone + ' ' + address)
                 };
             });
 
@@ -382,9 +387,19 @@
                 item.setAttribute('role', 'option');
 
                 // textContent chu khong innerHTML: ten khach do nguoi dung nhap
-                var name = document.createElement('div');
-                name.textContent = customer.label;
-                item.appendChild(name);
+                var head = document.createElement('div');
+                head.className = 'combo-option-head';
+                var name = document.createElement('span');
+                name.className = 'combo-option-name';
+                name.textContent = customer.name;
+                head.appendChild(name);
+                if (customer.phone) {
+                    var phone = document.createElement('span');
+                    phone.className = 'combo-option-phone';
+                    phone.textContent = customer.phone;
+                    head.appendChild(phone);
+                }
+                item.appendChild(head);
                 if (customer.address) {
                     var address = document.createElement('div');
                     address.className = 'combo-option-sub';
@@ -452,7 +467,7 @@
         function choose(customer) {
             var changed = customerSelect.value !== customer.value;
             customerSelect.value = customer.value;
-            input.value = customer.label;
+            input.value = customer.name;
             input.classList.remove('is-invalid');
             close();
             /*
@@ -485,10 +500,13 @@
             input.removeAttribute('aria-activedescendant');
         }
 
+        // O go chi hien ten khach: SDT da nam trong danh sach tha xuong, hien lai o day thua
         function selectedLabel() {
-            return customerSelect.value
-                ? customerSelect.options[customerSelect.selectedIndex].textContent.trim()
-                : '';
+            if (!customerSelect.value) {
+                return '';
+            }
+            var option = customerSelect.options[customerSelect.selectedIndex];
+            return option.getAttribute('data-name') || option.textContent.trim();
         }
 
         function indexOfSelected() {
